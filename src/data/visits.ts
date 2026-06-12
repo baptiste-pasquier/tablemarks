@@ -1,6 +1,7 @@
 import { getDB } from './db'
 import { newId, now } from './ids'
 import { recomputeRollup } from './rollup'
+import { emitLocalChange } from './events'
 import type { Verdict, Visit } from '../types/models'
 
 export interface VisitInput {
@@ -31,6 +32,7 @@ export async function createVisit(input: VisitInput): Promise<Visit> {
   const db = await getDB()
   await db.put('visits', record)
   await recomputeRollup(record.restaurantId)
+  emitLocalChange()
   return record
 }
 
@@ -41,6 +43,7 @@ export async function updateVisit(id: string, patch: VisitPatch): Promise<Visit>
   const next: Visit = { ...existing, ...patch, id, updated: now() }
   await db.put('visits', next)
   await recomputeRollup(next.restaurantId)
+  emitLocalChange()
   return next
 }
 
@@ -50,6 +53,7 @@ export async function removeVisit(id: string): Promise<void> {
   if (!existing) return
   await db.put('visits', { ...existing, deleted: true, updated: now() })
   await recomputeRollup(existing.restaurantId)
+  emitLocalChange()
 }
 
 /** Live visits for a restaurant, most recent first. */
@@ -59,8 +63,14 @@ export async function visitsForRestaurant(restaurantId: string): Promise<Visit[]
   return all.filter((v) => !v.deleted).sort((a, b) => (a.date < b.date ? 1 : -1))
 }
 
-/** Low-level write with no `updated` stamp — used by the sync engine. */
+/** Low-level write with no `updated` stamp and no change event — used by the sync engine. */
 export async function putVisitRaw(record: Visit): Promise<void> {
   const db = await getDB()
   await db.put('visits', record)
+}
+
+/** All visits including tombstones — the sync engine needs to see deletes. */
+export async function allVisitsForSync(): Promise<Visit[]> {
+  const db = await getDB()
+  return db.getAll('visits')
 }

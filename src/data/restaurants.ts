@@ -1,5 +1,6 @@
 import { getDB } from './db'
 import { newId, now } from './ids'
+import { emitLocalChange } from './events'
 import type { Restaurant } from '../types/models'
 
 export interface RestaurantInput {
@@ -39,6 +40,7 @@ export async function createRestaurant(input: RestaurantInput): Promise<Restaura
   }
   const db = await getDB()
   await db.put('restaurants', record)
+  emitLocalChange()
   return record
 }
 
@@ -48,6 +50,7 @@ export async function updateRestaurant(id: string, patch: RestaurantPatch): Prom
   if (!existing) throw new Error(`Restaurant ${id} not found`)
   const next: Restaurant = { ...existing, ...patch, id, updated: now() }
   await db.put('restaurants', next)
+  emitLocalChange()
   return next
 }
 
@@ -66,6 +69,7 @@ export async function removeRestaurant(id: string): Promise<void> {
     }
   }
   await tx.done
+  emitLocalChange()
 }
 
 export async function getRestaurant(id: string): Promise<Restaurant | undefined> {
@@ -80,8 +84,14 @@ export async function allRestaurants(): Promise<Restaurant[]> {
   return all.filter((r) => !r.deleted)
 }
 
-/** Low-level write with no `updated` stamp — used by the sync engine to persist reconciled records. */
+/** Low-level write with no `updated` stamp and no change event — used by the sync engine. */
 export async function putRestaurantRaw(record: Restaurant): Promise<void> {
   const db = await getDB()
   await db.put('restaurants', record)
+}
+
+/** All restaurants including tombstones — the sync engine needs to see deletes. */
+export async function allRestaurantsForSync(): Promise<Restaurant[]> {
+  const db = await getDB()
+  return db.getAll('restaurants')
 }
