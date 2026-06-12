@@ -21,10 +21,14 @@ let dbPromise: Promise<IDBPDatabase<TablemarksDB>> | null = null
 export function getDB(): Promise<IDBPDatabase<TablemarksDB>> {
   if (!dbPromise) {
     dbPromise = openDB<TablemarksDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        db.createObjectStore('restaurants', { keyPath: 'id' })
-        const visits = db.createObjectStore('visits', { keyPath: 'id' })
-        visits.createIndex('by-restaurant', 'restaurantId')
+      upgrade(db, oldVersion) {
+        // Branch on oldVersion so future version bumps add stores incrementally instead of
+        // re-running v1 creates against an existing database.
+        if (oldVersion < 1) {
+          db.createObjectStore('restaurants', { keyPath: 'id' })
+          const visits = db.createObjectStore('visits', { keyPath: 'id' })
+          visits.createIndex('by-restaurant', 'restaurantId')
+        }
       },
     })
   }

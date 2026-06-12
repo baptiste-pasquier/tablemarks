@@ -7,10 +7,26 @@
 // NOTE: the $http / router API shape is PocketBase-version-specific (targets v0.26).
 // Verify against the running binary's pb_data/types.d.ts after `pocketbase serve`.
 
+// Only Google Maps short-link hosts may be fetched. This is the SSRF guard: without it,
+// an unauthenticated caller could make the server fetch internal hosts (cloud metadata,
+// 127.0.0.1 admin API, private ranges). The full-URL path is handled client-side, so the
+// hook only ever needs the short-link hosts.
+var ALLOWED_HOSTS = ['maps.app.goo.gl', 'goo.gl']
+
+function allowedShortLink(u) {
+  var m = /^https:\/\/([^/?#]+)/i.exec(u)
+  if (!m) return false
+  var host = m[1].toLowerCase()
+  return ALLOWED_HOSTS.indexOf(host) !== -1
+}
+
 routerAdd('GET', '/api/tablemarks/resolve-short-link', (e) => {
   const url = e.request.url.query().get('url')
   if (!url) {
     return e.json(400, { error: 'missing url parameter' })
+  }
+  if (!allowedShortLink(url)) {
+    return e.json(400, { error: 'only https maps.app.goo.gl / goo.gl short links are allowed' })
   }
 
   let res

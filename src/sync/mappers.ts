@@ -1,4 +1,9 @@
-import type { Restaurant, Verdict, Visit } from '../types/models'
+import { VERDICTS, type Restaurant, type Verdict, type Visit } from '../types/models'
+
+/** Coerce a remote string to a known Verdict, guarding against corrupt/drifted remote data. */
+function asVerdict(value: string | null | undefined): Verdict | null {
+  return value && (VERDICTS as readonly string[]).includes(value) ? (value as Verdict) : null
+}
 
 // PocketBase record shapes. Two fields are renamed vs the local model:
 //   local `updated`      -> remote `syncedAt`   (PB reserves `updated` as a system autodate field)
@@ -65,7 +70,7 @@ export function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
     cuisine: r.cuisine,
     note: r.note,
     pending: r.pending,
-    latestVerdict: (r.latestVerdict as Verdict | null) ?? null,
+    latestVerdict: asVerdict(r.latestVerdict),
     latestVisitDate: r.latestVisitDate,
     visitCount: r.visitCount,
     updated: r.syncedAt,
@@ -91,7 +96,7 @@ export function visitFromRemote(v: RemoteVisit): Visit {
     id: v.id,
     restaurantId: v.restaurant,
     date: v.date,
-    verdict: v.verdict as Verdict,
+    verdict: asVerdict(v.verdict) ?? 'once_was_enough',
     note: v.note,
     updated: v.syncedAt,
     deleted: v.deleted,

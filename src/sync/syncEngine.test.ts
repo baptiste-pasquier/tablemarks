@@ -89,6 +89,26 @@ describe('fullSync', () => {
     expect((await allRestaurants()).map((r) => r.id)).not.toContain(local.id)
   })
 
+  it('recomputes a restaurant rollup after pulling its visits', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    const remote = new FakeRemote()
+    remote.restaurants.push((await getRestaurant(r.id))!) // same record, equal updated -> no-op
+    remote.visits.push({
+      id: 'v1',
+      restaurantId: r.id,
+      date: '2026-06-01',
+      verdict: 'go_back',
+      updated: '2026-06-01T00:00:00Z',
+      deleted: false,
+    })
+
+    await fullSync(remote)
+
+    const after = await getRestaurant(r.id)
+    expect(after?.visitCount).toBe(1)
+    expect(after?.latestVerdict).toBe('go_back')
+  })
+
   it('is durable across a reload and idempotent on re-sync (local store is the outbox)', async () => {
     await createRestaurant({ name: 'A', lat: 1, lng: 1 })
     await createRestaurant({ name: 'B', lat: 2, lng: 2 })

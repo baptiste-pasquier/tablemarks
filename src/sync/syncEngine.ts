@@ -4,7 +4,8 @@ import {
   putRestaurantRaw,
 } from '../data/restaurants'
 import { allVisitsForSync, putVisitRaw } from '../data/visits'
-import { onLocalChange } from '../data/events'
+import { recomputeRollup } from '../data/rollup'
+import { onLocalChange, emitStoreChange } from '../data/events'
 import { reconcile } from './reconcile'
 import { pb } from './pocketbase'
 import {
@@ -12,6 +13,8 @@ import {
   restaurantToRemote,
   visitFromRemote,
   visitToRemote,
+  type RemoteRestaurant,
+  type RemoteVisit,
 } from './mappers'
 
 /**
@@ -43,8 +46,17 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
 
   const [localV, remoteV] = await Promise.all([allVisitsForSync(), remote.listVisits()])
   const v = reconcile(localV, remoteV)
-  for (const rec of v.toWriteLocal) await putVisitRaw(rec)
+  const affected = new Set<string>()
+  for (const rec of v.toWriteLocal) {
+    await putVisitRaw(rec)
+    affected.add(rec.restaurantId)
+  }
   for (const rec of v.toPush) await remote.pushVisit(rec)
+
+  // Pulled visits change a restaurant's derived rollup, which is local-only — recompute it
+  // so visitCount/latestVerdict reflect the synced visits on this device.
+  for (const restaurantId of affected) await recomputeRollup(restaurantId)
+  if (affected.size > 0) emitStoreChange()
 
   return {
     restaurantsWritten: r.toWriteLocal.length,
@@ -64,12 +76,12 @@ export class PocketBaseRemote implements RemoteStore {
 
   async listRestaurants(): Promise<Restaurant[]> {
     const rows = await pb.collection('restaurants').getFullList()
-    return rows.map((row) => restaurantFromRemote(row as never))
+    return rows.map((row) => restaurantFromRemote(row as unknown as RemoteRestaurant))
   }
 
   async listVisits(): Promise<Visit[]> {
     const rows = await pb.collection('visits').getFullList()
-    return rows.map((row) => visitFromRemote(row as never))
+    return rows.map((row) => visitFromRemote(row as unknown as RemoteVisit))
   }
 
   async pushRestaurant(r: Restaurant): Promise<void> {
@@ -83,9 +95,14 @@ export class PocketBaseRemote implements RemoteStore {
   private async upsert(collection: string, id: string, body: object): Promise<void> {
     try {
       await pb.collection(collection).update(id, body)
-    } catch {
-      // No record with this id yet — create it (id is client-supplied).
-      await pb.collection(collection).create({ id, ...body })
+    } catch (err) {
+      // Only a genuine "not found" means the record is new — create it (id is client-supplied).
+      // Any other error (auth, validation, 5xx, network) must surface, not be masked as a create.
+      if ((err as { status?: number })?.status === 404) {
+        await pb.collection(collection).create({ id, ...body })
+      } else {
+        throw err
+      }
     }
   }
 }
@@ -102,7 +119,7 @@ export class SyncController {
   async start(remote: RemoteStore): Promise<void> {
     this.remote = remote
     this.unsubscribers.push(onLocalChange(() => this.scheduleSync()))
-    const online = () => void this.syncNow()
+    const online = () => this.runSync()
     window.addEventListener('online', online)
     this.unsubscribers.push(() => window.removeEventListener('online', online))
     void pb
@@ -113,12 +130,19 @@ export class SyncController {
       .collection('visits')
       .subscribe('*', () => this.scheduleSync())
       .then((unsub) => this.unsubscribers.push(unsub))
-    await this.syncNow()
+    // Best-effort initial reconcile — a failure here (e.g. PocketBase down on sign-in) must not
+    // prevent the controller from starting; subscriptions are registered so a later trigger recovers.
+    this.runSync()
+  }
+
+  /** Fire-and-forget sync with rejection handling, so scheduled/event-driven syncs never leak unhandled rejections. */
+  private runSync(): void {
+    this.syncNow().catch((err) => console.error('[sync] sync failed', err))
   }
 
   private scheduleSync(): void {
     if (this.timer) clearTimeout(this.timer)
-    this.timer = setTimeout(() => void this.syncNow(), 400)
+    this.timer = setTimeout(() => this.runSync(), 400)
   }
 
   async syncNow(): Promise<SyncOutcome | undefined> {
