@@ -14,6 +14,11 @@ describe('account mode', () => {
     expect((await allRestaurants()).map((r) => r.name)).toEqual(['Local only'])
   })
 
+  it('resume() is a safe no-op when not signed in (startup calls it unconditionally)', async () => {
+    expect(auth.isSignedIn).toBe(false)
+    await expect(auth.resume()).resolves.toBeUndefined()
+  })
+
   it('retains local data and clears auth on sign-out', async () => {
     await createRestaurant({ name: 'Keep me', lat: 1, lng: 1 })
     const clear = vi.spyOn(pb.authStore, 'clear')
