@@ -5,11 +5,12 @@ import { RestaurantList } from './features/RestaurantList'
 import { MapView } from './features/map/MapView'
 import { toMarkers } from './features/map/markers'
 import { AddPlace } from './features/capture/AddPlace'
+import { RestaurantDetail } from './features/visits/RestaurantDetail'
 
 export default function App() {
   const restaurants = useRestaurants()
   const { signedIn, email, signIn, signOut } = useAuth()
-  const [, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const markers = toMarkers(restaurants)
 
@@ -68,6 +69,10 @@ export default function App() {
             setSelectedId(id)
           }}
         />
+      )}
+
+      {selectedId && (
+        <RestaurantDetail restaurantId={selectedId} onClose={() => setSelectedId(null)} />
       )}
     </div>
   )
