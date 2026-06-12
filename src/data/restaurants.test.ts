@@ -15,7 +15,7 @@ beforeEach(freshDB)
 describe('restaurant repository', () => {
   it('stamps a stable id, updated, and defaults on create', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 48.85, lng: 2.35 })
-    expect(r.id).toMatch(/[0-9a-f-]{36}/)
+    expect(r.id).toMatch(/^[a-z0-9]{15}$/)
     expect(r.updated).not.toBe('')
     expect(r.deleted).toBe(false)
     expect(r.visitCount).toBe(0)
