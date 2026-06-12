@@ -1,6 +1,6 @@
 import { getDB } from './db'
 import { newId, now } from './ids'
-import { emitLocalChange } from './events'
+import { emitLocalChange, emitStoreChange } from './events'
 import type { Restaurant } from '../types/models'
 
 export interface RestaurantInput {
@@ -88,6 +88,7 @@ export async function allRestaurants(): Promise<Restaurant[]> {
 export async function putRestaurantRaw(record: Restaurant): Promise<void> {
   const db = await getDB()
   await db.put('restaurants', record)
+  emitStoreChange()
 }
 
 /** All restaurants including tombstones — the sync engine needs to see deletes. */

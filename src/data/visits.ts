@@ -1,7 +1,7 @@
 import { getDB } from './db'
 import { newId, now } from './ids'
 import { recomputeRollup } from './rollup'
-import { emitLocalChange } from './events'
+import { emitLocalChange, emitStoreChange } from './events'
 import type { Verdict, Visit } from '../types/models'
 
 export interface VisitInput {
@@ -67,6 +67,7 @@ export async function visitsForRestaurant(restaurantId: string): Promise<Visit[]
 export async function putVisitRaw(record: Visit): Promise<void> {
   const db = await getDB()
   await db.put('visits', record)
+  emitStoreChange()
 }
 
 /** All visits including tombstones — the sync engine needs to see deletes. */
