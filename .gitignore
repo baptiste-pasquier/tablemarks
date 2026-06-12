@@ -1,0 +1,22 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# PocketBase runtime data (collections schema lives in pb_migrations, which IS tracked)
+pocketbase/pb_data
+pocketbase/pocketbase
+
+# Claude worktrees
+.claude/worktrees
