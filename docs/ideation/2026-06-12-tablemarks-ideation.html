@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideation: Tablemarks</title>
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap">
+<style>
+  :root{
+    --bg:#fbf7f2; --surface:#ffffff; --ink:#241c16; --muted:#7a6f64;
+    --line:#e9ddd0; --accent:#d4561f; --accent-soft:#fbe7da; --accent-text:#9c3a12;
+    --good:#3f7d4f; --good-soft:#e3f1e6; --good-text:#2c5d39;
+    --warn:#b07400; --warn-soft:#f8edd5; --warn-text:#7a5200;
+    --info:#2f6f8f; --info-soft:#dceef4; --info-text:#1f4f66;
+    --radius:12px; --maxw:920px;
+    --fallback:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Inter",var(--fallback);font-size:15.5px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw);margin-inline:auto;padding:48px 22px 90px}
+  header.doc{border-bottom:2px solid var(--line);padding-bottom:24px;margin-bottom:8px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-text);font-weight:600}
+  h1{font-size:2.1rem;line-height:1.15;margin:.25em 0 .35em;font-weight:700;letter-spacing:-.02em}
+  .lede{color:var(--muted);max-width:70ch;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .pill{font-size:12px;font-weight:500;padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+  .pill.k{background:var(--accent-soft);border-color:transparent;color:var(--accent-text)}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 6px}
+  .stat{flex:1 1 120px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .stat b{display:block;font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
+  .stat span{font-size:12.5px;color:var(--muted)}
+  h2{font-size:1.35rem;font-weight:700;margin:48px 0 6px;letter-spacing:-.01em;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h2 .ex{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-text);font-weight:600;border:0}
+  section.block>p:first-of-type{margin-top:14px}
+  .axes{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}
+  .axes li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .axes li b{color:var(--accent-text)}
+  .grounding{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:6px 20px}
+  .grounding h3{font-size:1rem;margin:18px 0 6px;font-weight:600}
+  .grounding ul{margin:6px 0 14px;padding-left:20px}
+  .grounding li{margin:3px 0}
+  .jump{margin:16px 0 8px;padding:14px 18px;background:var(--accent-soft);border-radius:var(--radius)}
+  .jump b{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-text)}
+  .jump ol{margin:8px 0 0;padding-left:20px;columns:2;column-gap:30px}
+  .jump a{color:var(--accent-text);text-decoration:none}
+  .jump a:hover{text-decoration:underline}
+  @media(max-width:640px){.jump ol{columns:1}}
+  article.idea{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:18px 0;scroll-margin-top:20px}
+  article.idea h3{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px;font-size:1.2rem;font-weight:700}
+  .idchip{font-size:12px;font-weight:700;background:var(--accent);color:#fff;border-radius:7px;padding:2px 8px;line-height:1.5}
+  .axis-tag{font-size:11.5px;font-weight:600;color:var(--info-text);background:var(--info-soft);border-radius:999px;padding:3px 10px}
+  dl.fields{margin:14px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 16px}
+  dl.fields dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted);padding-top:2px}
+  dl.fields dd{margin:0}
+  .basis{display:inline-block;font-size:11.5px;font-weight:600;border-radius:6px;padding:1px 7px;margin-right:6px}
+  .basis.direct{background:var(--good-soft);color:var(--good-text)}
+  .basis.external{background:var(--info-soft);color:var(--info-text)}
+  .basis.reasoned{background:var(--warn-soft);color:var(--warn-text)}
+  .scorebar{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
+  .score{font-size:12px;font-weight:500;padding:4px 11px;border-radius:999px;border:1px solid var(--line)}
+  .score b{font-weight:700}
+  figure{margin:18px 0 4px;text-align:center}
+  figure svg{max-width:100%;height:auto}
+  figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;font-style:italic}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  td:first-child{font-weight:600;color:var(--accent-text);white-space:nowrap}
+  code{background:#f1e7db;border-radius:5px;padding:1px 5px;font-size:.88em}
+  .top-callout{background:var(--good-soft);border-radius:var(--radius);padding:16px 20px;margin:16px 0}
+  .top-callout b{color:var(--good-text)}
+  footer.composition-signal{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Ideation Artifact</div>
+  <h1>Tablemarks — directions worth building</h1>
+  <p class="lede">A ranked, critiqued set of directions for a personal web app that saves favorite and to-try restaurants on a map. The spec is settled; this picks the few choices that change what gets built first.</p>
+  <div class="meta">
+    <span class="pill">Date: <time datetime="2026-06-12">2026-06-12</time></span>
+    <span class="pill">Topic: tablemarks</span>
+    <span class="pill">Mode: repo-grounded (greenfield)</span>
+    <span class="pill k">Stack: React 19 · TS · Vite 7 · Tailwind v4 · PocketBase</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>36</b><span>raw ideas across 6 frames</span></div>
+    <div class="stat"><b>7</b><span>survivors, ranked</span></div>
+    <div class="stat"><b>14</b><span>cut or folded, with reasons</span></div>
+    <div class="stat"><b>5/5</b><span>topic axes covered</span></div>
+  </div>
+</header>
+
+<section class="block">
+  <h2><span class="ex">Phase 1</span>Grounding Context</h2>
+  <div class="grounding">
+    <h3>The product (greenfield)</h3>
+    <p>Tablemarks saves restaurants — favorites and to-try — on a map. Per place: address, category (burger / French / Indian…), visit date, rating, Google Maps link. It must work two ways: signed in with Google (cloud sync via PocketBase) <em>or</em> local-only with no account (localStorage). Single-user personal tool — simple and modern, not a social MVP. Free: no design that leans on paid Google Maps API quota.</p>
+    <h3>What external research established (2026)</h3>
+    <ul>
+      <li><b>Maps:</b> Leaflet + react-leaflet v5 is the pragmatic default — no API key (OSM tiles), no WebGL dependency, React 19 + TS support, custom <code>DivIcon</code> category markers, clustering via <code>react-leaflet-cluster</code>. MapLibre only if custom basemap styling is wanted.</li>
+      <li><b>Geocoding (no paid quota):</b> Nominatim / Photon (no key, ~1 req/s, typo-tolerant) or Geoapify (3k/day free key). A pasted Google Maps URL yields coords via the <code>/@lat,lng/</code> segment; shortened <code>maps.app.goo.gl</code> links need a server-side redirect resolve — the browser can't follow it cross-origin.</li>
+      <li><b>PocketBase v0.39:</b> one-line Google OAuth2; <em>no</em> built-in offline queue or CRDT. Community pattern: write localStorage always, push when online, mark a <code>synced</code> flag, <code>subscribe('*')</code> for multi-device, last-write-wins on <code>updated</code>. "Start local → sign in → migrate" is a DIY batch-create.</li>
+      <li><b>Stack:</b> React 19 (<code>useOptimistic</code> for instant marker add), Vite 7 (Node ≥20.19, ESM-only), Tailwind v4 (config-less, <code>@import "tailwindcss"</code>). Client-only SPA — no Server Components.</li>
+      <li><b>Offline:</b> vite-plugin-pwa makes it installable; a Workbox CacheFirst rule on OSM tiles (~500 cap) progressively caches seen areas. Full-city tile download (hundreds of MB) is not worth it.</li>
+      <li><b>Prior art:</b> Mapstr (map-first, tags, no rating, read-only offline), Beli (explicit been / want-to-try dual list, cuisine filter), Google Maps Saved (star affordance, named lists, but locked-in / no export). Patterns to adopt: map-first + bottom sheet, category-colored markers, status badge + filter, add-via-search OR paste-URL, PWA.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="block">
+  <h2><span class="ex">Phase 1.5</span>Topic Axes</h2>
+  <ul class="axes">
+    <li><b>1 · Capture &amp; data model</b> — the add/edit flow and what a restaurant record holds.</li>
+    <li><b>2 · Map &amp; discovery</b> — viewing on the map, markers, filtering, deciding where to eat now.</li>
+    <li><b>3 · Auth &amp; sync</b> — Google SSO, local-only mode, local→cloud migration, multi-device.</li>
+    <li><b>4 · Offline &amp; portability</b> — localStorage fallback, PWA install/offline, import/export, data ownership.</li>
+    <li><b>5 · Categorization &amp; organization</b> — categories, status, verdicts, filtering, browsing many entries.</li>
+  </ul>
+</section>
+
+<section class="block">
+  <h2><span class="ex">Phase 3</span>Ranked Ideas</h2>
+
+  <div class="jump">
+    <b>Jump to</b>
+    <ol>
+      <li><a href="#r1">Paste-a-URL capture, zero typing</a></li>
+      <li><a href="#r2">Local-first canonical architecture</a></li>
+      <li><a href="#r3">Visits as a log + returnability verdict</a></li>
+      <li><a href="#r4">"Where do I eat tonight?" decision engine</a></li>
+      <li><a href="#r5">Faceted classification &amp; filtering</a></li>
+      <li><a href="#r6">Own-your-data: export/import + PWA offline</a></li>
+      <li><a href="#r7">Sync trust layer</a></li>
+    </ol>
+  </div>
+
+  <div class="top-callout"><b>Top pick — R1.</b> Paste-a-URL capture is the highest-leverage, best-grounded move: the dominant real-world moment is "I just saw this place on Google Maps," and making a single paste the primary input removes friction exactly where abandonment happens. Build it first; it sets the shape of the add flow everything else hangs off.</div>
+
+  <!-- R1 -->
+  <article class="idea" id="r1">
+    <h3><span class="idchip">R1</span> Paste-a-URL capture, zero typing <span class="axis-tag">Capture &amp; data model</span></h3>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Make a pasted Google Maps link the primary — often the only — input. Parse coordinates client-side with <code>/@(-?\d+\.\d+),(-?\d+\.\d+)/</code> and pull the place name from the <code>/maps/place/Name/</code> path segment. For the mobile <code>maps.app.goo.gl</code> short links (Google's default share format), a small PocketBase Go hook follows the redirect server-side and returns coordinates. The marker drops instantly via <code>useOptimistic</code>; category, rating, and date are deferred-optional — fill them later, or never.</dd>
+      <dt>Basis</dt>
+      <dd><span class="basis direct">direct</span> Grounding documents the coordinate regex, the place-name path segment, and that shortened links "need a server-side redirect resolve (PocketBase hook) — browser can't follow cross-origin redirect"; <code>useOptimistic</code> is named for instant marker-add.</dd>
+      <dt>Rationale</dt>
+      <dd>The dominant capture moment is sharing a place from Google Maps. If saving it demands a 5-field form, the save never happens. One paste → a pin in under 3 seconds keeps the collection alive.</dd>
+      <dt>Downsides</dt>
+      <dd>Short-link resolution is server-side, so it isn't pure-client — and an offline short-link add can't resolve coords until reconnect (queue it). Google can change its URL format, which would break parsing.</dd>
+    </dl>
+    <figure>
+      <svg viewBox="0 0 720 200" role="img" aria-label="Capture flow: a pasted URL splits into client-side parse or a PocketBase hook, both feeding an optimistic marker">
+        <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7a6f64"/></marker></defs>
+        <rect x="14" y="78" width="150" height="44" rx="9" fill="#fbe7da" stroke="#d4561f"/>
+        <text x="89" y="98" text-anchor="middle" font-size="13" font-weight="600" fill="#9c3a12">Paste Maps URL</text>
+        <text x="89" y="114" text-anchor="middle" font-size="11" fill="#9c3a12">(full or short link)</text>
+        <line x1="164" y1="100" x2="232" y2="60" stroke="#7a6f64" marker-end="url(#ah)"/>
+        <line x1="164" y1="100" x2="232" y2="140" stroke="#7a6f64" marker-end="url(#ah)"/>
+        <rect x="236" y="36" width="232" height="48" rx="9" fill="#e3f1e6" stroke="#3f7d4f"/>
+        <text x="352" y="56" text-anchor="middle" font-size="12.5" font-weight="600" fill="#2c5d39">Full URL → client regex</text>
+        <text x="352" y="72" text-anchor="middle" font-size="11" fill="#2c5d39">coords + name, no network</text>
+        <rect x="236" y="116" width="232" height="48" rx="9" fill="#dceef4" stroke="#2f6f8f"/>
+        <text x="352" y="136" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1f4f66">Short link → PocketBase hook</text>
+        <text x="352" y="152" text-anchor="middle" font-size="11" fill="#1f4f66">server resolves redirect</text>
+        <line x1="468" y1="60" x2="548" y2="92" stroke="#7a6f64" marker-end="url(#ah)"/>
+        <line x1="468" y1="140" x2="548" y2="108" stroke="#7a6f64" marker-end="url(#ah)"/>
+        <rect x="552" y="78" width="154" height="44" rx="9" fill="#fff" stroke="#241c16"/>
+        <text x="629" y="98" text-anchor="middle" font-size="13" font-weight="700" fill="#241c16">Optimistic pin</text>
+        <text x="629" y="114" text-anchor="middle" font-size="11" fill="#7a6f64">enrich later, optional</text>
+      </svg>
+      <figcaption>Two resolve paths, one instant result — the short-link hook is the only non-client piece.</figcaption>
+    </figure>
+    <div class="scorebar">
+      <span class="score">Confidence <b>90%</b></span>
+      <span class="score">Complexity <b>Medium</b></span>
+    </div>
+  </article>
+
+  <!-- R2 -->
+  <article class="idea" id="r2">
+    <h3><span class="idchip">R2</span> Local-first canonical architecture <span class="axis-tag">Auth &amp; sync</span></h3>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>localStorage is <em>always</em> the master copy, even when signed in; PocketBase is a mirror, not the source of truth. There is no "local mode vs cloud mode" toggle to choose — everyone starts local with no account, and signing in is framed purely as "back up + sync across devices," which triggers a one-time batch-create migration of existing local records. The two required modes collapse into a single code path with one substrate.</dd>
+      <dt>Basis</dt>
+      <dd><span class="basis direct">direct</span> Grounding prescribes "write to localStorage always; push to PocketBase when online" and "Start local → sign in → migrate is DIY: batch-create local records." <span class="basis external">external</span> Obsidian's local-canonical model (sync is a feature you turn on, not a precondition).</dd>
+      <dt>Rationale</dt>
+      <dd>Removes an onboarding decision entirely, guarantees the app fully works offline / account-free, and means there's never a scary one-way "switch to cloud" door. It's also the cheapest way to satisfy the hard both-modes constraint — one path instead of two.</dd>
+      <dt>Downsides</dt>
+      <dd>The ~5 MB localStorage ceiling becomes load-bearing — a user who crosses into hundreds of entries (especially with photos) needs an escape valve to IndexedDB. The mirror-vs-master invariant has to be enforced carefully so a stale cloud read never clobbers fresh local data.</dd>
+    </dl>
+    <figure>
+      <svg viewBox="0 0 700 196" role="img" aria-label="localStorage is the master; PocketBase is an optional mirror reached by signing in">
+        <defs><marker id="ah2" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7a6f64"/></marker></defs>
+        <rect x="40" y="64" width="200" height="68" rx="11" fill="#e3f1e6" stroke="#3f7d4f" stroke-width="2"/>
+        <text x="140" y="92" text-anchor="middle" font-size="14" font-weight="700" fill="#2c5d39">localStorage</text>
+        <text x="140" y="112" text-anchor="middle" font-size="11.5" fill="#2c5d39">canonical · always written</text>
+        <text x="140" y="44" text-anchor="middle" font-size="11" font-weight="600" fill="#7a6f64">works with no account, offline</text>
+        <rect x="460" y="64" width="200" height="68" rx="11" fill="#dceef4" stroke="#2f6f8f" stroke-dasharray="5 4"/>
+        <text x="560" y="92" text-anchor="middle" font-size="14" font-weight="700" fill="#1f4f66">PocketBase</text>
+        <text x="560" y="112" text-anchor="middle" font-size="11.5" fill="#1f4f66">mirror · optional</text>
+        <line x1="240" y1="88" x2="456" y2="88" stroke="#7a6f64" marker-end="url(#ah2)"/>
+        <text x="348" y="80" text-anchor="middle" font-size="11.5" font-weight="600" fill="#241c16" paint-order="stroke" stroke="#fbf7f2" stroke-width="3">push when online</text>
+        <line x1="456" y1="110" x2="240" y2="110" stroke="#7a6f64" marker-end="url(#ah2)"/>
+        <text x="348" y="128" text-anchor="middle" font-size="11.5" font-weight="600" fill="#241c16" paint-order="stroke" stroke="#fbf7f2" stroke-width="3">sync to other devices</text>
+        <text x="348" y="158" text-anchor="middle" font-size="11" font-style="italic" fill="#7a6f64">"Sign in" = turn the mirror on (one-time migration)</text>
+      </svg>
+      <figcaption>No mode toggle — local is the substrate; the cloud is something you switch on.</figcaption>
+    </figure>
+    <div class="scorebar">
+      <span class="score">Confidence <b>88%</b></span>
+      <span class="score">Complexity <b>Medium</b></span>
+    </div>
+  </article>
+
+  <!-- R3 -->
+  <article class="idea" id="r3">
+    <h3><span class="idchip">R3</span> Visits as a log + returnability verdict <span class="axis-tag">Capture &amp; data model</span></h3>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Model a restaurant as a parent with many timestamped <em>visit</em> children (PocketBase one-to-many), not a flat record with a single <code>visit_date</code>. "To-try" becomes "zero visits"; "visited" is "≥ 1 visit" — the status field disappears as derived state. Replace the 1–5 star number with a returnability <em>verdict</em> per visit — <em>Go back / Worth a detour / Once was enough / Never again</em> — and show the latest verdict plus a visit count on the card. A one-tap "I'm here now" appends a visit.</dd>
+      <dt>Basis</dt>
+      <dd><span class="basis external">external</span> Last.fm scrobbling (append-only events make the history the asset) and Beli's been/to-try framing. <span class="basis reasoned">reasoned</span> For a personal "where do I eat" tool the actionable question is "would I return?" — a verdict answers it directly; a number obscures it. <span class="basis direct">direct</span> Grounding lists visit-date and rating as flat fields, so this is a deliberate inversion of the given model.</dd>
+      <dt>Rationale</dt>
+      <dd>The single highest-compounding schema choice. Over two years, a log of dated visits with verdicts is a personal dining memory ("been to Chez Marcel 4× → clearly a Go-back"); a flat overwritten date is just a list. Decided now it's free; retrofitted later it's a migration.</dd>
+      <dt>Downsides</dt>
+      <dd>More schema up front, and the rollup rule (show latest verdict? most frequent?) needs a call. Verdict-instead-of-stars is opinionated — some users want a number. The append-only history must stay cheap to write or the one-tap promise breaks.</dd>
+    </dl>
+    <figure>
+      <svg viewBox="0 0 720 188" role="img" aria-label="Before: one flat record with a single date and star. After: a restaurant with many timestamped visits, each carrying a verdict.">
+        <text x="170" y="26" text-anchor="middle" font-size="12" font-weight="600" letter-spacing="0.06em" fill="#7a6f64">FLAT RECORD (given)</text>
+        <rect x="40" y="40" width="260" height="120" rx="10" fill="#f8edd5" stroke="#b07400"/>
+        <text x="60" y="68" font-size="12.5" fill="#7a5200">name · address · category</text>
+        <text x="60" y="92" font-size="12.5" fill="#7a5200">visit_date  <tspan font-style="italic">(one, overwritten)</tspan></text>
+        <text x="60" y="116" font-size="12.5" fill="#7a5200">rating  <tspan font-style="italic">(1–5 number)</tspan></text>
+        <text x="60" y="140" font-size="12.5" fill="#7a5200">status  <tspan font-style="italic">(separate flag)</tspan></text>
+        <text x="550" y="26" text-anchor="middle" font-size="12" font-weight="600" letter-spacing="0.06em" fill="#2c5d39">VISITS AS A LOG</text>
+        <rect x="420" y="40" width="260" height="38" rx="10" fill="#e3f1e6" stroke="#3f7d4f"/>
+        <text x="438" y="63" font-size="12.5" font-weight="600" fill="#2c5d39">Restaurant · name · address · facets</text>
+        <rect x="448" y="90" width="232" height="22" rx="6" fill="#fff" stroke="#3f7d4f"/>
+        <text x="462" y="105" font-size="11.5" fill="#2c5d39">visit 2026-02-11 — Go back</text>
+        <rect x="448" y="116" width="232" height="22" rx="6" fill="#fff" stroke="#3f7d4f"/>
+        <text x="462" y="131" font-size="11.5" fill="#2c5d39">visit 2025-11-03 — Worth a detour</text>
+        <rect x="448" y="142" width="232" height="22" rx="6" fill="#fff" stroke="#3f7d4f"/>
+        <text x="462" y="157" font-size="11.5" fill="#2c5d39">visit 2025-08-20 — Go back</text>
+        <line x1="432" y1="78" x2="432" y2="153" stroke="#3f7d4f" stroke-width="1.5"/>
+        <line x1="432" y1="101" x2="448" y2="101" stroke="#3f7d4f" stroke-width="1.5"/>
+        <line x1="432" y1="127" x2="448" y2="127" stroke="#3f7d4f" stroke-width="1.5"/>
+        <line x1="432" y1="153" x2="448" y2="153" stroke="#3f7d4f" stroke-width="1.5"/>
+      </svg>
+      <figcaption>"To-try" = a restaurant with no visit rows; status and history fall out of the same structure.</figcaption>
+    </figure>
+    <div class="scorebar">
+      <span class="score">Confidence <b>75%</b></span>
+      <span class="score">Complexity <b>Medium</b></span>
+    </div>
+  </article>
+
+  <!-- R4 -->
+  <article class="idea" id="r4">
+    <h3><span class="idchip">R4</span> "Where do I eat tonight?" decision engine <span class="axis-tag">Map &amp; discovery</span></h3>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>A dedicated mode that turns the saved set into a <em>decision</em>, not just a catalog. The free Geolocation API + Leaflet <code>map.locate()</code> center on the user, filter to to-try places within a radius (0.5 / 1 / 5 km), combine with cuisine and verdict filters, then surface a short shortlist or a "spin the wheel" pick. It answers "what nearby did I actually want to try?" in one tap.</dd>
+      <dt>Basis</dt>
+      <dd><span class="basis reasoned">reasoned</span> The unspoken job of a to-try list is eventual decision, yet the prior-art apps (Mapstr, Beli, Google Saved) catalog without closing the decision loop. <span class="basis direct">direct</span> Geolocation API is free and built-in, <code>map.locate()</code> is documented Leaflet, and the radius filter is pure client-side logic — no quota touched.</dd>
+      <dt>Rationale</dt>
+      <dd>Shifts the success metric from "saved places" to "picked a place." A map of 80 pins is a worse decision tool than three candidates near you right now — this is the feature that earns a Friday-night open.</dd>
+      <dt>Downsides</dt>
+      <dd>The geolocation permission prompt is friction. "Open now" would need opening-hours data, which the free stack doesn't carry — so the mode is "want to try nearby," not "open near me." Radius defaults need tuning per user (urban vs rural).</dd>
+    </dl>
+    <div class="scorebar">
+      <span class="score">Confidence <b>85%</b></span>
+      <span class="score">Complexity <b>Low–Medium</b></span>
+    </div>
+  </article>
+
+  <!-- R5 -->
+  <article class="idea" id="r5">
+    <h3><span class="idchip">R5</span> Faceted classification &amp; filtering <span class="axis-tag">Categorization &amp; organization</span></h3>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Instead of one fixed "category," each place carries orthogonal facets — cuisine, status/verdict, and occasion (date-night / quick-lunch / group). The map and list filter by any combination ("Indian + to-try + near work"). A single <code>CATEGORY_COLORS</code> constant drives both the Leaflet <code>DivIcon</code> marker color and the filter chips, and non-matching markers <em>dim</em> rather than disappear, so spatial context is never lost.</dd>
+      <dt>Basis</dt>
+      <dd><span class="basis reasoned">reasoned</span> Single-category taxonomies force false choices — a place is Indian <em>and</em> date-night <em>and</em> to-try at once; library-science faceted classification solved exactly this "one item, many access paths" problem. <span class="basis external">external</span> Grounding's "cuisine filter sidebar expected" lesson from Beli.</dd>
+      <dt>Rationale</dt>
+      <dd>Faceting is what keeps a growing collection queryable instead of a flat pile. The single-source color contract stops the map and the filter UI from drifting apart as the category list grows from 5 to 20.</dd>
+      <dt>Downsides</dt>
+      <dd>More filter UI to design and a real risk of over-faceting for a personal tool — it needs sensible defaults and a way to stay out of the way. The "occasion" facet is speculative until the user actually wants it; ship cuisine + status first.</dd>
+    </dl>
+    <div class="scorebar">
+      <span class="score">Confidence <b>70%</b></span>
+      <span class="score">Complexity <b>Medium</b></span>
+    </div>
+  </article>
+
+  <!-- R6 -->
+  <article class="idea" id="r6">
+    <h3><span class="idchip">R6</span> Own-your-data: export/import + PWA offline <span class="axis-tag">Offline &amp; portability</span></h3>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Two halves of data ownership. <b>(a)</b> One-click export to JSON/GeoJSON with a stable, documented schema; import upserts by stable ID so round-trips are safe — a direct answer to the Google-Maps lock-in the research flags. <b>(b)</b> vite-plugin-pwa makes the app installable and viewable offline; a Workbox <code>CacheFirst</code> rule on OSM tiles (~500 cap) progressively caches the areas you've seen, with an optional one-time neighborhood prefetch on install so the first offline open isn't a blank grey map.</dd>
+      <dt>Basis</dt>
+      <dd><span class="basis direct">direct</span> Grounding names export as a differentiator ("Google Maps Saved is locked-in / no export"), recommends vite-plugin-pwa, specifies the Workbox CacheFirst tile rule with a ~500 cap, and rules full-city tile download out as "not worth it."</dd>
+      <dt>Rationale</dt>
+      <dd>For a personal tool, knowing you can leave with your data — and that it works on a plane or a subway platform — is a precondition for trusting it long enough to build a multi-year collection. Offline is also an explicit feature in the spec, not a nice-to-have.</dd>
+      <dt>Downsides</dt>
+      <dd>Service-worker update/staleness is a classic PWA footgun; <code>globPatterns:['**/*']</code> is required or images silently miss the cache. The export schema becomes a compatibility contract you have to version as the model evolves.</dd>
+    </dl>
+    <div class="scorebar">
+      <span class="score">Confidence <b>85%</b></span>
+      <span class="score">Complexity <b>Medium</b></span>
+    </div>
+  </article>
+
+  <!-- R7 -->
+  <article class="idea" id="r7">
+    <h3><span class="idchip">R7</span> Sync trust layer <span class="axis-tag">Auth &amp; sync</span></h3>
+    <dl class="fields">
+      <dt>Description</dt>
+      <dd>Make sync state legible rather than invisible. Each record carries a <code>synced: boolean</code>; a persistent "N unsynced" badge shows pending writes; offline writes queue and auto-flush on the next <code>online</code> event. For multi-device last-write-wins, surface the discard instead of silently overwriting — a git-merge-style ribbon: "kept the newer rating, discarded the older one · <em>undo</em>."</dd>
+      <dt>Basis</dt>
+      <dd><span class="basis direct">direct</span> Grounding's sync pattern uses the <code>synced</code> flag and accepts last-write-wins on <code>updated</code>. <span class="basis external">external</span> Git made merge conflicts a visible, recoverable event rather than a silent overwrite — the structurally identical failure mode here.</dd>
+      <dt>Rationale</dt>
+      <dd>R2 makes sync exist; this makes it <em>trustworthy</em>. Without a visible queue and conflict surfacing, a spotty-connection save that looks saved but isn't — or an edit silently dropped on another device — teaches the user to distrust sync and retreat to local-only, defeating the whole feature.</dd>
+      <dt>Downsides</dt>
+      <dd>For a single user the multi-device conflict rate is near zero, so the conflict ribbon risks being over-engineering — keep it minimal. The offline queue needs to persist correctly across reloads, which is the part that actually bites.</dd>
+    </dl>
+    <div class="scorebar">
+      <span class="score">Confidence <b>72%</b></span>
+      <span class="score">Complexity <b>Medium</b></span>
+    </div>
+  </article>
+</section>
+
+<section class="block">
+  <h2>Rejection Summary</h2>
+  <p>Considered and cut, or folded into a stronger survivor. No axis ended with zero survivors.</p>
+  <table>
+    <thead><tr><th>Idea</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>Triage inbox (capture-now, enrich-later)</td><td>Folded into R1 — the deferred-optional fields <em>are</em> the enrich-later half of the paste flow.</td></tr>
+      <tr><td>Search-as-you-type autocomplete (Photon/Nominatim)</td><td>Sound and useful, but a capture detail subsumed by R1; low standalone discussion value.</td></tr>
+      <tr><td>Client-side keyword auto-category</td><td>Nice enhancement, folded into the R1 capture flow / R5 faceting — not a direction on its own.</td></tr>
+      <tr><td>One-tap "I'm here now" check-in</td><td>Below the ambition floor as a standalone idea (a single onClick); folded into R3 as how a visit is appended.</td></tr>
+      <tr><td>Optimistic marker add (useOptimistic)</td><td>A UX implementation detail of R1, not a separate direction.</td></tr>
+      <tr><td>Category-color = filter contract</td><td>Folded into R5 as its map/filter consistency mechanism.</td></tr>
+      <tr><td>Explicit migration confirm dialog</td><td>Folded into R2 — it's the migration beat of the local-first architecture, not a separate idea.</td></tr>
+      <tr><td>Schema-first record design</td><td>An engineering-discipline practice, not a product direction; absorbed by R2 and R3.</td></tr>
+      <tr><td>Tinder-style swipe decider</td><td>Contradicts the map-first prior-art lesson; no accept/reject persistence semantics defined — pattern mismatch.</td></tr>
+      <tr><td>Journal-first IA (feed as home, map secondary)</td><td>Conflicts with the map-first expectation users bring from Mapstr/Beli without strong justification; better explored as a brainstorm variant of R4.</td></tr>
+      <tr><td>Fog-of-war coverage map + streaks</td><td>Needs neighborhood polygon data and client-side spatial joins outside the free stack; gamification is scope creep for a personal tool.</td></tr>
+      <tr><td>Freshness / revisit-cadence nudges</td><td>Arbitrary trigger (6 months) and noise risk at small collection sizes; better as a brainstorm variant once usage is real.</td></tr>
+      <tr><td>Large-collection scale survival (clustering, 5MB ceiling)</td><td>A real risk, but captured as R2's downside rather than a standalone idea — personal-scale collections rarely reach it, and the escape valve lives with the architecture decision.</td></tr>
+      <tr><td>Multi-perspective rating (shared device, his/hers)</td><td>Contradicts the single-user constraint — scope creep toward a shared/social use case the project excludes.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer class="composition-signal">Composed 2026-06-12 by ce-ideate · greenfield repo grounding + web research · raw candidates and grounding preserved at <code>/tmp/compound-engineering/ce-ideate/b58296c4/</code></footer>
+
+</div>
+</body>
+</html>
