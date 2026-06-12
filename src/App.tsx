@@ -4,11 +4,13 @@ import { useAuth } from './auth/useAuth'
 import { RestaurantList } from './features/RestaurantList'
 import { MapView } from './features/map/MapView'
 import { toMarkers } from './features/map/markers'
+import { AddPlace } from './features/capture/AddPlace'
 
 export default function App() {
   const restaurants = useRestaurants()
   const { signedIn, email, signIn, signOut } = useAuth()
   const [, setSelectedId] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
   const markers = toMarkers(restaurants)
 
   return (
@@ -42,6 +44,7 @@ export default function App() {
           <div className="border-b border-gray-100 p-3">
             <button
               type="button"
+              onClick={() => setAdding(true)}
               className="w-full rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:opacity-90"
             >
               + Add a place
@@ -56,6 +59,16 @@ export default function App() {
           <MapView markers={markers} onSelect={setSelectedId} />
         </main>
       </div>
+
+      {adding && (
+        <AddPlace
+          onClose={() => setAdding(false)}
+          onOpenExisting={(id) => {
+            setAdding(false)
+            setSelectedId(id)
+          }}
+        />
+      )}
     </div>
   )
 }
