@@ -41,20 +41,25 @@ export interface SyncOutcome {
 export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
   const [localR, remoteR] = await Promise.all([allRestaurantsForSync(), remote.listRestaurants()])
   const r = reconcile(localR, remoteR)
-  for (const rec of r.toWriteLocal) await putRestaurantRaw(rec)
+  // Recompute the rollup for every restaurant whose row OR visits we wrote. A pulled row wins LWW
+  // carrying the peer's serialized rollup; the rollup is a local-derived cache, never trusted from
+  // outside, so re-derive it from this device's visits. Keying only on written visits would leave a
+  // pulled row with a stale foreign rollup (the same bug fixed on the import path).
+  const affected = new Set<string>()
+  for (const rec of r.toWriteLocal) {
+    await putRestaurantRaw(rec)
+    affected.add(rec.id)
+  }
   for (const rec of r.toPush) await remote.pushRestaurant(rec)
 
   const [localV, remoteV] = await Promise.all([allVisitsForSync(), remote.listVisits()])
   const v = reconcile(localV, remoteV)
-  const affected = new Set<string>()
   for (const rec of v.toWriteLocal) {
     await putVisitRaw(rec)
     affected.add(rec.restaurantId)
   }
   for (const rec of v.toPush) await remote.pushVisit(rec)
 
-  // Pulled visits change a restaurant's derived rollup, which is local-only — recompute it
-  // so visitCount/latestVerdict reflect the synced visits on this device.
   for (const restaurantId of affected) await recomputeRollup(restaurantId)
   if (affected.size > 0) emitStoreChange()
 

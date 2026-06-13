@@ -47,6 +47,12 @@ The conflict-resolution rule: when the same record exists on two sides, the vers
 ### Tombstone
 A soft-delete marker — a record flagged deleted with a fresh timestamp rather than removed. Tombstones participate in Last-Write-Wins like any record, so a delete propagates across devices and a stale copy cannot resurrect it.
 
+### Export
+A user-triggered write of the entire collection — every Restaurant and Visit, including Tombstones and their sync timestamps — to a single versioned JSON file for personal backup and portability. It is full-fidelity and round-trippable, not an interchange format for other apps.
+
+### Import
+Merging a previously exported file back into the store as another Last-Write-Wins reconcile source: records upsert by stable id, the newer wins, unseen records are added, and nothing is deleted — so re-importing an unchanged file is a no-op. A malformed or unrecognized file is rejected without touching the store.
+
 ## Flagged ambiguities
 
 - "Rating" refers to the Verdict (a returnability judgment), not a numeric score — Tablemarks has no star rating.

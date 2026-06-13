@@ -9,6 +9,7 @@ import { emptyFilter, matches } from './features/facets/filter'
 import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
+import { PortabilityPanel } from './features/portability/PortabilityPanel'
 import type { GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
 
@@ -18,6 +19,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
+  const [portability, setPortability] = useState(false)
   const [anchor, setAnchor] = useState<GeoPoint | null>(DEFAULT_MAP_CENTER)
   const [filter, setFilter] = useState(emptyFilter())
   // App re-renders on every map pan/zoom (anchor state); memoize so the list and markers
@@ -68,6 +70,13 @@ export default function App() {
             >
               Where to eat?
             </button>
+            <button
+              type="button"
+              onClick={() => setPortability(true)}
+              className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              Export / Import
+            </button>
           </div>
           <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} />
           <div className="flex-1 overflow-y-auto">
@@ -100,6 +109,8 @@ export default function App() {
           }}
         />
       )}
+
+      {portability && <PortabilityPanel onClose={() => setPortability(false)} />}
 
       {selectedId && (
         <RestaurantDetail restaurantId={selectedId} onClose={() => setSelectedId(null)} />

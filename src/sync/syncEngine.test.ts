@@ -7,6 +7,7 @@ import {
   allRestaurants,
   allRestaurantsForSync,
 } from '../data/restaurants'
+import { createVisit } from '../data/visits'
 import { closeDB } from '../data/db'
 import type { Restaurant, Visit } from '../types/models'
 
@@ -62,6 +63,27 @@ describe('fullSync', () => {
     expect(remote.pushedR.map((r) => r.id)).toEqual([local.id])
     const ids = (await allRestaurantsForSync()).map((r) => r.id).sort()
     expect(ids).toEqual([local.id, 'remoteonly0001'].sort())
+  })
+
+  it('re-derives the rollup when a remote restaurant row wins but its visits are unchanged', async () => {
+    // Local r1 has 2 visits the remote does not have.
+    await createRestaurant({ id: 'r1', name: 'Local' })
+    await createVisit({ restaurantId: 'r1', date: '2026-05-01', verdict: 'go_back' })
+    await createVisit({ restaurantId: 'r1', date: '2026-05-02', verdict: 'worth_a_detour' })
+    expect((await getRestaurant('r1'))?.visitCount).toBe(2)
+
+    // Remote carries a NEWER r1 row whose serialized rollup is stale (0 visits), and no visits for r1.
+    const remote = new FakeRemote()
+    remote.restaurants.push(
+      remoteRestaurant({ id: 'r1', name: 'Remote newer', updated: '2999-01-01T00:00:00Z', visitCount: 0, latestVerdict: null, latestVisitDate: null }),
+    )
+
+    await fullSync(remote)
+
+    const after = await getRestaurant('r1')
+    expect(after?.name).toBe('Remote newer') // row won LWW
+    expect(after?.visitCount).toBe(2) // rollup re-derived from local visits, NOT the remote's 0
+    expect(after?.latestVerdict).toBe('worth_a_detour')
   })
 
   it('lets a newer remote version win locally', async () => {
