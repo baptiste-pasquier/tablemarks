@@ -34,6 +34,10 @@ const DEFAULT_VERDICT: Verdict = 'once_was_enough'
 function isString(x: unknown): x is string {
   return typeof x === 'string'
 }
+/** `updated` is the last-write-wins key (compared as a string); a non-date value would win forever. */
+function isValidTimestamp(x: unknown): x is string {
+  return isString(x) && !Number.isNaN(Date.parse(x))
+}
 function isNumberOrNull(x: unknown): x is number | null {
   return x === null || (typeof x === 'number' && Number.isFinite(x))
 }
@@ -56,7 +60,7 @@ function asRestaurant(x: unknown): Restaurant | null {
   if (!isString(r.name)) return null
   if (!isNumberOrNull(r.lat) || !isNumberOrNull(r.lng)) return null
   if (typeof r.pending !== 'boolean') return null
-  if (!isString(r.updated) || typeof r.deleted !== 'boolean') return null
+  if (!isValidTimestamp(r.updated) || typeof r.deleted !== 'boolean') return null
   if (!isOptionalString(r.address) || !isOptionalString(r.mapsUrl) || !isOptionalString(r.cuisine) || !isOptionalString(r.note)) return null
   if (!isStringOrNull(r.latestVisitDate)) return null
   if (typeof r.visitCount !== 'number') return null
@@ -70,7 +74,9 @@ function asRestaurant(x: unknown): Restaurant | null {
     cuisine: r.cuisine as string | undefined,
     note: r.note as string | undefined,
     pending: r.pending,
-    latestVerdict: r.latestVerdict === null ? null : coerceVerdict(r.latestVerdict),
+    // `== null` catches both null and an absent (undefined) field — a visit-less place must
+    // stay uncategorized, not get a fabricated default verdict.
+    latestVerdict: r.latestVerdict == null ? null : coerceVerdict(r.latestVerdict),
     latestVisitDate: r.latestVisitDate,
     visitCount: r.visitCount,
     updated: r.updated,
@@ -83,7 +89,7 @@ function asVisit(x: unknown): Visit | null {
   const v = x as Record<string, unknown>
   if (!isString(v.id) || v.id === '') return null
   if (!isString(v.restaurantId) || !isString(v.date)) return null
-  if (!isString(v.updated) || typeof v.deleted !== 'boolean') return null
+  if (!isValidTimestamp(v.updated) || typeof v.deleted !== 'boolean') return null
   if (!isOptionalString(v.note)) return null
   return {
     id: v.id,
@@ -127,16 +133,24 @@ export function validateEnvelope(parsed: unknown): ValidationResult {
 
   const migrated = migrateToCurrent({ restaurants: rawR, visits: rawV }, env.schemaVersion)
 
+  // Duplicate ids within one collection would silently collapse during reconcile (Map-keyed by id),
+  // dropping a record and skewing the import counts — reject rather than lose data quietly.
   const restaurants: Restaurant[] = []
+  const restaurantIds = new Set<string>()
   for (const raw of migrated.restaurants) {
     const r = asRestaurant(raw)
     if (!r) return { ok: false, error: 'A restaurant record is malformed.' }
+    if (restaurantIds.has(r.id)) return { ok: false, error: 'The file contains duplicate restaurant ids.' }
+    restaurantIds.add(r.id)
     restaurants.push(r)
   }
   const visits: Visit[] = []
+  const visitIds = new Set<string>()
   for (const raw of migrated.visits) {
     const v = asVisit(raw)
     if (!v) return { ok: false, error: 'A visit record is malformed.' }
+    if (visitIds.has(v.id)) return { ok: false, error: 'The file contains duplicate visit ids.' }
+    visitIds.add(v.id)
     visits.push(v)
   }
   return { ok: true, records: { restaurants, visits } }

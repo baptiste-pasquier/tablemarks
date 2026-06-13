@@ -33,8 +33,8 @@ export interface ImportCounts {
  * Merge validated records into the store, non-destructively and idempotently, by feeding them
  * through the same reconcile/LWW path sign-in uses (file = remote side, store = local). Writes
  * remote winners via the raw helpers, recomputes rollups for restaurants whose visits changed,
- * and emits a single store-change. Uses store-change (pull) semantics — import is not a user edit
- * to push; cloud convergence happens on the next sync cycle.
+ * and signals the UI to refresh once the batch has committed. Uses store-change (pull) semantics —
+ * import is not a user edit to push; cloud convergence happens on the next sync cycle.
  */
 export async function applyImport(records: ImportRecords): Promise<ImportCounts> {
   const localR = await allRestaurantsForSync()
@@ -56,9 +56,12 @@ export async function applyImport(records: ImportRecords): Promise<ImportCounts>
 
   if (r.toWriteLocal.length > 0 || v.toWriteLocal.length > 0) emitStoreChange()
 
-  const writes = [...r.toWriteLocal, ...v.toWriteLocal]
-  const knownIds = (id: string) => localRIds.has(id) || localVIds.has(id)
-  const added = writes.filter((rec) => !knownIds(rec.id)).length
+  // Count added vs updated per store — restaurant and visit ids are separate namespaces, so a
+  // unified id set would miscount a write whose id happens to exist in the other store.
+  const added =
+    r.toWriteLocal.filter((rec) => !localRIds.has(rec.id)).length +
+    v.toWriteLocal.filter((rec) => !localVIds.has(rec.id)).length
+  const writes = r.toWriteLocal.length + v.toWriteLocal.length
   const total = records.restaurants.length + records.visits.length
-  return { added, updated: writes.length - added, unchanged: total - writes.length }
+  return { added, updated: writes - added, unchanged: total - writes }
 }

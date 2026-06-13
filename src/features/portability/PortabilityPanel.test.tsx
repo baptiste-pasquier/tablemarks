@@ -44,7 +44,8 @@ describe('PortabilityPanel', () => {
     const env = JSON.parse(await captured!.text())
     expect(env.format).toBe('tablemarks-export')
     expect(env.records.restaurants.map((r: { name: string }) => r.name)).toContain('Chez Marcel')
-    expect(revoke).toHaveBeenCalled()
+    // revoke is deferred (setTimeout) so the browser can start the download first.
+    await waitFor(() => expect(revoke).toHaveBeenCalled(), { timeout: 2000 })
   })
 
   it('imports a valid file after confirmation and shows a summary', async () => {

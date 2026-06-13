@@ -1,19 +1,25 @@
-import { useId, useState } from 'react'
-import { exportCollection } from '../../sync/portability/export'
-import { parseImport, applyImport, type ImportCounts } from '../../sync/portability/import'
-import type { ImportRecords } from '../../sync/portability/schema'
-
-type Pending = { records: ImportRecords; restaurants: number; visits: number }
+import { useId, useRef, useState } from 'react'
+import { exportCollection, parseImport, applyImport, type ImportCounts, type ImportRecords } from '../../data/portability'
 
 export function PortabilityPanel({ onClose }: { onClose: () => void }) {
   const fileInputId = useId()
-  const [busy, setBusy] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  // Synchronous guard: React state updates don't flush before a second click is processed, so a
+  // state-only `busy` check can't stop a double-submit. The ref does, and also makes export/import
+  // mutually exclusive.
+  const runningRef = useRef(false)
+  const [exportBusy, setExportBusy] = useState(false)
+  const [importBusy, setImportBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState<Pending | null>(null)
+  const [pending, setPending] = useState<ImportRecords | null>(null)
   const [summary, setSummary] = useState<ImportCounts | null>(null)
 
+  const busy = exportBusy || importBusy
+
   async function exportNow() {
-    setBusy(true)
+    if (runningRef.current) return
+    runningRef.current = true
+    setExportBusy(true)
     setError(null)
     try {
       const env = await exportCollection()
@@ -23,48 +29,54 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       a.href = url
       a.download = `tablemarks-${env.exportedAt.slice(0, 10)}.json`
       a.click()
-      URL.revokeObjectURL(url)
+      // Defer revocation so the browser can start the download before the blob URL is invalidated.
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch {
       setError('Could not export your collection.')
     } finally {
-      setBusy(false)
+      setExportBusy(false)
+      runningRef.current = false
     }
   }
 
   async function pickFile(file: File) {
+    if (runningRef.current) return
+    runningRef.current = true
+    setImportBusy(true)
     setError(null)
     setSummary(null)
     setPending(null)
-    let text: string
     try {
-      text = await file.text()
+      const text = await file.text()
+      const result = parseImport(text)
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+      setPending(result.records)
     } catch {
       setError('Could not read that file.')
-      return
+    } finally {
+      setImportBusy(false)
+      runningRef.current = false
+      // Reset the input so re-selecting the same file fires onChange again.
+      if (inputRef.current) inputRef.current.value = ''
     }
-    const result = parseImport(text)
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-    setPending({
-      records: result.records,
-      restaurants: result.records.restaurants.length,
-      visits: result.records.visits.length,
-    })
   }
 
   async function confirmImport() {
-    if (!pending) return
-    setBusy(true)
+    if (runningRef.current || !pending) return
+    runningRef.current = true
+    setImportBusy(true)
     try {
-      const counts = await applyImport(pending.records)
+      const counts = await applyImport(pending)
       setSummary(counts)
       setPending(null)
     } catch {
       setError('Could not import that file.')
     } finally {
-      setBusy(false)
+      setImportBusy(false)
+      runningRef.current = false
     }
   }
 
@@ -88,7 +100,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
           disabled={busy}
           className="mt-3 w-full rounded-md bg-brand px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          {busy ? 'Working…' : 'Export collection'}
+          {exportBusy ? 'Working…' : 'Export collection'}
         </button>
 
         <div className="mt-4 border-t border-gray-100 pt-4">
@@ -97,6 +109,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
           </label>
           <input
             id={fileInputId}
+            ref={inputRef}
             type="file"
             accept="application/json,.json"
             disabled={busy}
@@ -113,9 +126,9 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
         {pending && (
           <div className="mt-3 rounded-md bg-brand-soft p-3 text-sm">
             <p>
-              Import <strong>{pending.restaurants}</strong> place{pending.restaurants === 1 ? '' : 's'} and{' '}
-              <strong>{pending.visits}</strong> visit{pending.visits === 1 ? '' : 's'}? Existing entries merge by
-              last edit; nothing is deleted.
+              Import <strong>{pending.restaurants.length}</strong> place{pending.restaurants.length === 1 ? '' : 's'} and{' '}
+              <strong>{pending.visits.length}</strong> visit{pending.visits.length === 1 ? '' : 's'}? Existing entries
+              merge by last edit; nothing is deleted.
             </p>
             <button
               type="button"
@@ -123,7 +136,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
               disabled={busy}
               className="mt-2 rounded-md bg-brand px-3 py-1.5 font-medium text-white disabled:opacity-50"
             >
-              {busy ? 'Importing…' : 'Confirm import'}
+              {importBusy ? 'Importing…' : 'Confirm import'}
             </button>
           </div>
         )}

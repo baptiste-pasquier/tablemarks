@@ -82,6 +82,34 @@ describe('parseImport', () => {
     expect(['go_back', 'worth_a_detour', 'once_was_enough', 'never_again']).toContain(res.records.visits[0].verdict)
   })
 
+  it('rejects a record whose updated is not a parseable date (would poison LWW)', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [{ id: 'r1', name: 'X', lat: 1, lng: 2, pending: false, latestVerdict: null, latestVisitDate: null, visitCount: 0, updated: 'not-a-real-timestamp', deleted: false }],
+        visits: [],
+      },
+    }))
+    expect(res.ok).toBe(false)
+  })
+
+  it('rejects duplicate ids within a collection rather than silently collapsing them', () => {
+    const dup = { id: 'r1', name: 'X', lat: 1, lng: 2, pending: false, latestVerdict: null, latestVisitDate: null, visitCount: 0, updated: '2026-05-01T00:00:00Z', deleted: false }
+    const res = parseImport(envelope({ records: { restaurants: [dup, { ...dup, name: 'Y' }], visits: [] } }))
+    expect(res.ok).toBe(false)
+  })
+
+  it('treats an absent latestVerdict as null, not a fabricated default', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [{ id: 'r1', name: 'To try', lat: 1, lng: 2, pending: false, latestVisitDate: null, visitCount: 0, updated: '2026-05-01T00:00:00Z', deleted: false }],
+        visits: [],
+      },
+    }))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.records.restaurants[0].latestVerdict).toBeNull()
+  })
+
   it('accepts the current schema version unchanged through migration', () => {
     const res = parseImport(envelope())
     expect(res.ok).toBe(true)

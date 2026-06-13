@@ -97,6 +97,27 @@ describe('applyImport', () => {
     void r
   })
 
+  it('reports added/updated/unchanged correctly for a mixed import', async () => {
+    // createRestaurant stamps updated=now(); the file timestamps below bracket it (far past / future)
+    // so the file wins one and loses the other deterministically regardless of the wall clock.
+    await createRestaurant({ id: 'r-updated', name: 'Local' })
+    await createRestaurant({ id: 'r-stale', name: 'Local newer' })
+
+    const counts = await applyImport(
+      records({
+        restaurants: [
+          restaurant({ id: 'r-new', name: 'Brand new', updated: '2026-05-01T00:00:00Z' }), // added
+          restaurant({ id: 'r-updated', name: 'Newer', updated: '2099-01-01T00:00:00Z' }), // file wins -> updated
+          restaurant({ id: 'r-stale', name: 'Older file', updated: '2000-01-01T00:00:00Z' }), // local wins -> unchanged
+        ],
+      }),
+    )
+
+    expect(counts).toEqual({ added: 1, updated: 1, unchanged: 1 })
+    expect((await getRestaurant('r-updated'))?.name).toBe('Newer')
+    expect((await getRestaurant('r-stale'))?.name).toBe('Local newer')
+  })
+
   it('never deletes a local record the file does not tombstone', async () => {
     await createRestaurant({ id: 'keep', name: 'Keep' })
     await applyImport(records({ restaurants: [restaurant({ id: 'other', name: 'Other', updated: '2026-05-01T00:00:00Z' })] }))
