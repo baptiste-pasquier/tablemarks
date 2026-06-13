@@ -16,7 +16,12 @@ export interface VisitInput {
 export type VisitPatch = Partial<Pick<Visit, 'date' | 'verdict' | 'note'>>
 
 function today(): string {
-  return now().slice(0, 10)
+  // Local calendar day, not the UTC slice of now() — a late-night visit must not roll to the
+  // next/previous day. (updated stays UTC ISO; only the visit's calendar date is local.)
+  const d = new Date()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
 }
 
 export async function createVisit(input: VisitInput): Promise<Visit> {

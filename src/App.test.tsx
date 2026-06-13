@@ -8,6 +8,7 @@ vi.mock('react-leaflet', () => ({
   TileLayer: () => null,
   Marker: () => null,
   Popup: () => null,
+  useMap: () => ({ setView: () => {}, getZoom: () => 12 }),
 }))
 
 import App from './App.tsx'

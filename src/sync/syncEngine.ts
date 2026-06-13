@@ -115,21 +115,23 @@ export class SyncController {
   private remote: RemoteStore | null = null
   private unsubscribers: Array<() => void> = []
   private timer: ReturnType<typeof setTimeout> | null = null
+  private stopped = false
 
   async start(remote: RemoteStore): Promise<void> {
     this.remote = remote
+    this.stopped = false
     this.unsubscribers.push(onLocalChange(() => this.scheduleSync()))
     const online = () => this.runSync()
     window.addEventListener('online', online)
     this.unsubscribers.push(() => window.removeEventListener('online', online))
-    void pb
-      .collection('restaurants')
-      .subscribe('*', () => this.scheduleSync())
-      .then((unsub) => this.unsubscribers.push(unsub))
-    void pb
-      .collection('visits')
-      .subscribe('*', () => this.scheduleSync())
-      .then((unsub) => this.unsubscribers.push(unsub))
+    // subscribe() is async — if stop() already ran by the time it resolves, unsubscribe
+    // immediately rather than registering a listener that stop() will never clean up.
+    const track = (unsub: () => void) => {
+      if (this.stopped) void unsub()
+      else this.unsubscribers.push(unsub)
+    }
+    void pb.collection('restaurants').subscribe('*', () => this.scheduleSync()).then(track)
+    void pb.collection('visits').subscribe('*', () => this.scheduleSync()).then(track)
     // Best-effort initial reconcile — a failure here (e.g. PocketBase down on sign-in) must not
     // prevent the controller from starting; subscriptions are registered so a later trigger recovers.
     this.runSync()
@@ -151,6 +153,7 @@ export class SyncController {
   }
 
   stop(): void {
+    this.stopped = true
     if (this.timer) clearTimeout(this.timer)
     this.timer = null
     for (const off of this.unsubscribers) off()

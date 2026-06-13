@@ -1,6 +1,23 @@
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { useEffect, useRef } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { MapMarker } from './markers'
+
+/**
+ * MapContainer's center/zoom apply only on initial render. When the map first renders empty
+ * (no markers yet) and markers load afterward, recenter once on the first marker.
+ */
+function Recenter({ markers }: { markers: MapMarker[] }) {
+  const map = useMap()
+  const centered = useRef(false)
+  useEffect(() => {
+    if (!centered.current && markers.length > 0) {
+      map.setView([markers[0].lat, markers[0].lng], map.getZoom())
+      centered.current = true
+    }
+  }, [markers, map])
+  return null
+}
 
 const pin = L.divIcon({
   className: '',
@@ -28,6 +45,7 @@ export function MapView({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <Recenter markers={markers} />
       {markers.map((m) => (
         <Marker
           key={m.id}

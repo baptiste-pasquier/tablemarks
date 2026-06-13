@@ -30,6 +30,11 @@ export function getDB(): Promise<IDBPDatabase<TablemarksDB>> {
           visits.createIndex('by-restaurant', 'restaurantId')
         }
       },
+    }).catch((err) => {
+      // Don't cache a rejected open (private-browsing / quota / transient) — clear so the
+      // next call retries instead of failing forever.
+      dbPromise = null
+      throw err
     })
   }
   return dbPromise

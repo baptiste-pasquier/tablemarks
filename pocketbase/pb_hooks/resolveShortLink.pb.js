@@ -36,18 +36,22 @@ routerAdd('GET', '/api/tablemarks/resolve-short-link', (e) => {
     return e.json(502, { error: 'failed to fetch short link', detail: String(err) })
   }
 
-  // The expanded URL after redirects (or a Location header) carries the @lat,lng segment.
-  const location =
-    res.headers && res.headers['Location'] ? res.headers['Location'][0] : ''
-  const haystack = [location, res.url || '', res.raw || ''].join(' ')
+  // Use only the final/redirected URL (never the HTML body): a body could carry a spoofed
+  // @lat,lng. Validate it resolved to a Google Maps domain before trusting its coordinates.
+  const finalUrl =
+    res.url || (res.headers && res.headers['Location'] ? res.headers['Location'][0] : '') || ''
 
-  const coords = haystack.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
+  if (!/^https?:\/\/(www\.)?google\.[a-z.]+\/maps/i.test(finalUrl)) {
+    return e.json(422, { error: 'resolved URL is not a Google Maps link' })
+  }
+
+  const coords = finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
   if (!coords) {
     return e.json(422, { error: 'could not extract coordinates from link' })
   }
 
   let name
-  const place = haystack.match(/\/maps\/place\/([^/@]+)/)
+  const place = finalUrl.match(/\/maps\/place\/([^/@]+)/)
   if (place) {
     name = decodeURIComponent(place[1].replace(/\+/g, ' '))
   }
