@@ -118,6 +118,29 @@ describe('applyImport', () => {
     expect((await getRestaurant('r-stale'))?.name).toBe('Local newer')
   })
 
+  it('re-derives the rollup from local visits when an imported restaurant row wins but its visits are unchanged', async () => {
+    // Local r1 has 2 visits the file does not know about.
+    const local = await createRestaurant({ id: 'r1', name: 'Bistro' })
+    await createVisit({ restaurantId: 'r1', date: '2026-05-01', verdict: 'go_back' })
+    await createVisit({ restaurantId: 'r1', date: '2026-05-02', verdict: 'worth_a_detour' })
+    expect((await getRestaurant('r1'))?.visitCount).toBe(2)
+
+    // File carries a NEWER r1 row whose serialized rollup is stale (0 visits), and no visits for r1.
+    await applyImport(
+      records({
+        restaurants: [
+          restaurant({ id: 'r1', name: 'Bistro renamed', updated: '2099-01-01T00:00:00Z', visitCount: 0, latestVerdict: null, latestVisitDate: null }),
+        ],
+      }),
+    )
+
+    const after = await getRestaurant('r1')
+    expect(after?.name).toBe('Bistro renamed') // row won LWW (content updated)
+    expect(after?.visitCount).toBe(2) // rollup re-derived from the 2 local visits, NOT the file's 0
+    expect(after?.latestVerdict).toBe('worth_a_detour') // latest local visit
+    void local
+  })
+
   it('never deletes a local record the file does not tombstone', async () => {
     await createRestaurant({ id: 'keep', name: 'Keep' })
     await applyImport(records({ restaurants: [restaurant({ id: 'other', name: 'Other', updated: '2026-05-01T00:00:00Z' })] }))

@@ -32,9 +32,9 @@ export interface ImportCounts {
 /**
  * Merge validated records into the store, non-destructively and idempotently, by feeding them
  * through the same reconcile/LWW path sign-in uses (file = remote side, store = local). Writes
- * remote winners via the raw helpers, recomputes rollups for restaurants whose visits changed,
- * and signals the UI to refresh once the batch has committed. Uses store-change (pull) semantics —
- * import is not a user edit to push; cloud convergence happens on the next sync cycle.
+ * remote winners via the raw helpers, then re-derives the rollup for every restaurant whose row or
+ * visits changed, and signals the UI to refresh once the batch has committed. Uses store-change
+ * (pull) semantics — import is not a user edit to push; cloud convergence happens on the next sync.
  */
 export async function applyImport(records: ImportRecords): Promise<ImportCounts> {
   const localR = await allRestaurantsForSync()
@@ -45,9 +45,13 @@ export async function applyImport(records: ImportRecords): Promise<ImportCounts>
   const localVIds = new Set(localV.map((v) => v.id))
   const v = reconcile(localV, records.visits)
 
-  for (const rec of r.toWriteLocal) await putRestaurantRaw(rec)
-
   const affected = new Set<string>()
+  for (const rec of r.toWriteLocal) {
+    await putRestaurantRaw(rec)
+    // The written row carries the file's rollup fields; the rollup is a local-derived cache, so
+    // re-derive it from this device's visits rather than trusting the imported values.
+    affected.add(rec.id)
+  }
   for (const rec of v.toWriteLocal) {
     await putVisitRaw(rec)
     affected.add(rec.restaurantId)
