@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
 import { RestaurantDetail } from './RestaurantDetail'
-import { createRestaurant } from '../../data/restaurants'
+import { createRestaurant, getRestaurant } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 
 beforeEach(freshDB)
@@ -38,6 +38,28 @@ describe('RestaurantDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Visited')).toBeInTheDocument())
     expect(screen.getByText('(1)')).toBeInTheDocument()
+  })
+
+  it('edits and persists the cuisine', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText('Cuisine'), 'French')
+    await user.tab() // blur commits the edit
+
+    await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('French'))
+  })
+
+  it('clears the cuisine, leaving the place uncategorized', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, cuisine: 'French' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.clear(await screen.findByLabelText('Cuisine'))
+    await user.tab()
+
+    await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBeUndefined())
   })
 
   it('returns a place to to-try when its last visit is deleted', async () => {

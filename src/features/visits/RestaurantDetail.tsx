@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useRestaurantDetail } from './useRestaurantDetail'
+import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
+import { updateRestaurant } from '../../data/restaurants'
+import { cuisineOptions, colorForCuisine } from '../facets/cuisines'
 import { statusLabel } from '../display'
 import { VERDICTS, VERDICT_LABELS, type Verdict } from '../../types/models'
 
@@ -30,10 +33,17 @@ export function RestaurantDetail({
   onClose: () => void
 }) {
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
+  const options = cuisineOptions(useRestaurants())
   const [logging, setLogging] = useState(false)
   const [pastDate, setPastDate] = useState('')
 
   if (!restaurant) return null
+
+  function saveCuisine(value: string) {
+    const next = value.trim() || undefined
+    if (next === (restaurant!.cuisine || undefined)) return
+    void updateRestaurant(restaurantId, { cuisine: next })
+  }
 
   async function logNow(verdict: Verdict) {
     await createVisit({ restaurantId, verdict })
@@ -59,6 +69,28 @@ export function RestaurantDetail({
           {statusLabel(restaurant)}
           {restaurant.address ? ` · ${restaurant.address}` : ''}
         </p>
+
+        <div className="mt-3 flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="inline-block h-3 w-3 shrink-0 rounded-full"
+            style={{ background: colorForCuisine(restaurant.cuisine) }}
+          />
+          <input
+            key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
+            list="detail-cuisine-options"
+            defaultValue={restaurant.cuisine ?? ''}
+            onBlur={(e) => saveCuisine(e.target.value)}
+            aria-label="Cuisine"
+            placeholder="Add a cuisine…"
+            className="w-full rounded-md border border-gray-300 p-1.5 text-sm"
+          />
+          <datalist id="detail-cuisine-options">
+            {options.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </div>
 
         <div className="mt-4">
           {logging ? (
