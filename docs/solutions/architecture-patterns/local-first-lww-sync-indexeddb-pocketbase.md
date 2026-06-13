@@ -1,6 +1,7 @@
 ---
 title: Local-first last-write-wins sync between IndexedDB and PocketBase
 date: 2026-06-13
+last_updated: 2026-06-13
 category: architecture-patterns
 module: sync + data model
 problem_type: architecture_pattern
@@ -47,7 +48,9 @@ Load-bearing rules:
 
 6. **Upsert falls through to create only on 404.** `PocketBaseRemote.upsert` updates first; only a genuine not-found (404) becomes a create. Any other error propagates instead of being masked as a create.
 
-7. **Rollup fields are local-derived and must not bump `updated`.** Denormalized aggregates (`latestVerdict`, `visitCount`) are recomputed per device from its own children (`src/data/rollup.ts`) and written without touching `updated`. If recompute bumped `updated`, a derived change would wrongly win LWW against a peer's genuine user edit. Pulled children trigger a local recompute so the rollup is correct on every device.
+7. **Rollup fields are local-derived and must not bump `updated`.** Denormalized aggregates (`latestVerdict`, `visitCount`) are recomputed per device from its own children (`src/data/rollup.ts`) and written without touching `updated`. If recompute bumped `updated`, a derived change would wrongly win LWW against a peer's genuine user edit.
+
+   **Recompute scope = every row written from an external source, not only rows whose children changed.** A parent row can win LWW carrying the *sender's* serialized rollup while its children are unchanged on this device. A derived value arriving from outside is never trusted — discard it and recompute from local children on write. Gate the recompute on "rows I wrote" (union of written parents and the parents of written children), not on "children I wrote": keying it on child-writes alone leaves a winning parent row with a stale foreign rollup, surfacing wrong counts in the UI (the bug fixed in `applyImport`, `src/sync/portability/import.ts`). The same too-narrow shape is latent in `fullSync` (`src/sync/syncEngine.ts`), which still seeds its recompute set only from written visits.
 
 ## Why This Matters
 

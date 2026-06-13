@@ -62,7 +62,7 @@ Skip any of these and the failure is quiet: a parallel merge drifts from sync se
 ```ts
 const r = reconcile(await allRestaurantsForSync(), records.restaurants) // file as the "remote" side
 for (const rec of r.toWriteLocal) await putRestaurantRaw(rec)           // same raw write path as fullSync
-// recompute rollups for affected restaurants, then one emitStoreChange()
+// recompute rollups for every written restaurant (not just those whose visits changed), then one emitStoreChange()
 ```
 
 **Validate-then-commit: the pure boundary the writer trusts.**
