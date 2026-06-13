@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
@@ -34,6 +34,7 @@ export function RestaurantDetail({
 }) {
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
   const options = cuisineOptions(useRestaurants())
+  const cuisineListId = useId()
   const [logging, setLogging] = useState(false)
   const [pastDate, setPastDate] = useState('')
 
@@ -42,7 +43,9 @@ export function RestaurantDetail({
   function saveCuisine(value: string) {
     const next = value.trim() || undefined
     if (next === (restaurant!.cuisine || undefined)) return
-    void updateRestaurant(restaurantId, { cuisine: next })
+    // Best-effort: the row may have been deleted/synced away between render and blur, in
+    // which case updateRestaurant rejects. The store listener reflects the real state either way.
+    void updateRestaurant(restaurantId, { cuisine: next }).catch(() => {})
   }
 
   async function logNow(verdict: Verdict) {
@@ -78,14 +81,14 @@ export function RestaurantDetail({
           />
           <input
             key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
-            list="detail-cuisine-options"
+            list={cuisineListId}
             defaultValue={restaurant.cuisine ?? ''}
             onBlur={(e) => saveCuisine(e.target.value)}
             aria-label="Cuisine"
             placeholder="Add a cuisine…"
             className="w-full rounded-md border border-gray-300 p-1.5 text-sm"
           />
-          <datalist id="detail-cuisine-options">
+          <datalist id={cuisineListId}>
             {options.map((o) => (
               <option key={o} value={o} />
             ))}

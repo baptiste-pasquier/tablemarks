@@ -33,6 +33,24 @@ describe('FilterBar', () => {
     expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['Thai'])
   })
 
+  it('toggles a status into the filter when its chip is clicked', async () => {
+    const onChange = vi.fn()
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={onChange} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'To try' }))
+
+    expect([...onChange.mock.calls[0][0].statuses]).toEqual(['to_try'])
+  })
+
+  it('toggles a verdict into the filter when its chip is clicked', async () => {
+    const onChange = vi.fn()
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={onChange} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Go back' }))
+
+    expect([...onChange.mock.calls[0][0].verdicts]).toEqual(['go_back'])
+  })
+
   it('offers an Uncategorized chip when some place has no cuisine', () => {
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Uncategorized' })).toBeInTheDocument()

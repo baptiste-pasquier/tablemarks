@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { capturePaste, captureSearchPick, type CaptureResult } from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
 import { updateRestaurant } from '../../data/restaurants'
@@ -20,11 +20,14 @@ export function AddPlace({
   const [candidates, setCandidates] = useState<GeoCandidate[] | null>(null)
   const [duplicate, setDuplicate] = useState<Restaurant | null>(null)
   const options = cuisineOptions(useRestaurants())
+  const cuisineListId = useId()
 
   async function handle(result: CaptureResult) {
     if (result.status === 'created' || result.status === 'provisional') {
       const c = cuisine.trim()
-      if (c) await updateRestaurant(result.restaurant.id, { cuisine: c })
+      // The place is already saved; the cuisine is a best-effort follow-up write. A failure here
+      // must not surface as "couldn't add the place" or block closing — the place exists.
+      if (c) await updateRestaurant(result.restaurant.id, { cuisine: c }).catch(() => {})
       onClose()
     } else if (result.status === 'duplicate') {
       setDuplicate(result.match)
@@ -99,13 +102,13 @@ export function AddPlace({
         </label>
         <input
           id="add-cuisine"
-          list="cuisine-options"
+          list={cuisineListId}
           value={cuisine}
           onChange={(e) => setCuisine(e.target.value)}
           className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
           placeholder="e.g. Italian, Ramen…"
         />
-        <datalist id="cuisine-options">
+        <datalist id={cuisineListId}>
           {options.map((o) => (
             <option key={o} value={o} />
           ))}
