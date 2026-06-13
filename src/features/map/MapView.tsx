@@ -90,6 +90,9 @@ export function MapView({
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          // Fetch in CORS mode so the service-worker tile cache stores non-opaque (status 200)
+          // responses — opaque responses are padded to ~7 MB each and would blow the cache bound.
+          crossOrigin="anonymous"
         />
         <Recenter markers={markers} />
         <CenterReporter onChange={onCenterChange} />

@@ -61,8 +61,8 @@ Raw sync writes use store-change only, so a pulled record refreshes the UI witho
 
 ## Offline
 
-The data layer works offline by construction. Map tiles and an installable PWA shell are planned in a later layer (see `docs/plans/`); today the map needs a connection to load tiles, while all data remains usable offline.
+The data layer works offline by construction. The app is an installable PWA: the shell and assets are precached, and map tiles viewed online are progressively cached (bounded, re-served offline) while never-browsed areas render blank. A new app version surfaces an explicit reload prompt rather than reloading silently. All data remains usable offline regardless.
 
 ## Scope built so far
 
-The storage/sync core, Google auth, paste-a-URL capture (with geocoding fallback and short-link resolution), and the visit-log/verdict UI. Deferred to later layers: the decision mode, faceted cuisine filtering, export/import + PWA, and a visible sync-status indicator.
+The storage/sync core, Google auth, paste-a-URL capture (with geocoding fallback and short-link resolution), the visit-log/verdict UI, the decision mode, faceted cuisine filtering, data export/import, and the installable PWA with offline tiles. Deferred to a later layer: a visible sync-status indicator.
