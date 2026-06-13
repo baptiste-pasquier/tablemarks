@@ -31,6 +31,26 @@ export default defineConfig({
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api\//], // keep the resolve-short-link API off the SPA fallback
         cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            // Cache OSM tiles the user actually views (progressive, no prefetch) so browsed areas
+            // render offline. CacheFirst is correct since {z}/{x}/{y} tiles are immutable.
+            urlPattern: ({ url }) => url.hostname === 'tile.openstreetmap.org',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'osm-tiles',
+              expiration: {
+                maxEntries: 500,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days — aligns with OSM's cache-header expectation
+                purgeOnQuotaError: true,
+              },
+              // Only cache 200s. Tiles are fetched in CORS mode (TileLayer crossOrigin) so responses
+              // are non-opaque — without that, opaque (status 0) responses get padded to ~7 MB each
+              // and the entry cap would not bound storage.
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+        ],
       },
       devOptions: { enabled: false },
     }),
