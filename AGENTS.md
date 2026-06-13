@@ -18,3 +18,8 @@ When asked to create or update documentation, strictly adhere to the following p
 
 * When updating a feature, evaluate if the change belongs in the `README.md` (if it affects basic setup/usage) or in the `docs/` folder (if it's an advanced or niche feature).
 * Always ensure links between the `README.md` and the `docs/` folder remain intact and accurate after updates.
+
+## Knowledge stores
+
+* `docs/solutions/` — documented solutions to past problems (bugs, best practices, architecture patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
+* `CONCEPTS.md` — shared domain vocabulary (entities, named processes, status concepts). Relevant when orienting to the codebase or discussing domain terms.
