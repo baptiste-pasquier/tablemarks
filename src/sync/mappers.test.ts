@@ -38,16 +38,16 @@ describe('mappers', () => {
     expect('updated' in remote).toBe(false)
   })
 
-  it('round-trips a restaurant back to the local shape', () => {
+  it('round-trips a restaurant back to the local shape, marked synced', () => {
     const back = restaurantFromRemote(restaurantToRemote(restaurant, 'user1'))
-    const { ...local } = restaurant
-    expect(back).toEqual(local)
+    // A pulled record is synced (needsPush: false); the marker is never sent to the remote.
+    expect(back).toEqual({ ...restaurant, needsPush: false })
   })
 
   it('maps restaurantId<->restaurant relation for visits', () => {
     const remote = visitToRemote(visit, 'user1')
     expect(remote.restaurant).toBe(visit.restaurantId)
     const back = visitFromRemote(remote)
-    expect(back).toEqual(visit)
+    expect(back).toEqual({ ...visit, needsPush: false })
   })
 })

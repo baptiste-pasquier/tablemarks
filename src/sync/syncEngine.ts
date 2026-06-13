@@ -50,7 +50,11 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
     await putRestaurantRaw(rec)
     affected.add(rec.id)
   }
-  for (const rec of r.toPush) await remote.pushRestaurant(rec)
+  for (const rec of r.toPush) {
+    await remote.pushRestaurant(rec)
+    // Confirmed pushed → mark synced locally (raw write, no `updated` bump).
+    await putRestaurantRaw({ ...rec, needsPush: false })
+  }
 
   const [localV, remoteV] = await Promise.all([allVisitsForSync(), remote.listVisits()])
   const v = reconcile(localV, remoteV)
@@ -58,7 +62,10 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
     await putVisitRaw(rec)
     affected.add(rec.restaurantId)
   }
-  for (const rec of v.toPush) await remote.pushVisit(rec)
+  for (const rec of v.toPush) {
+    await remote.pushVisit(rec)
+    await putVisitRaw({ ...rec, needsPush: false })
+  }
 
   for (const restaurantId of affected) await recomputeRollup(restaurantId)
   if (affected.size > 0) emitStoreChange()

@@ -37,6 +37,7 @@ export async function createRestaurant(input: RestaurantInput): Promise<Restaura
     visitCount: 0,
     updated: now(),
     deleted: false,
+    needsPush: true, // user-created → ahead of the cloud until pushed
   }
   const db = await getDB()
   await db.put('restaurants', record)
@@ -48,7 +49,7 @@ export async function updateRestaurant(id: string, patch: RestaurantPatch): Prom
   const db = await getDB()
   const existing = await db.get('restaurants', id)
   if (!existing) throw new Error(`Restaurant ${id} not found`)
-  const next: Restaurant = { ...existing, ...patch, id, updated: now() }
+  const next: Restaurant = { ...existing, ...patch, id, updated: now(), needsPush: true }
   await db.put('restaurants', next)
   emitLocalChange()
   return next
@@ -60,12 +61,12 @@ export async function removeRestaurant(id: string): Promise<void> {
   const tx = db.transaction(['restaurants', 'visits'], 'readwrite')
   const restaurant = await tx.objectStore('restaurants').get(id)
   if (restaurant) {
-    await tx.objectStore('restaurants').put({ ...restaurant, deleted: true, updated: now() })
+    await tx.objectStore('restaurants').put({ ...restaurant, deleted: true, updated: now(), needsPush: true })
   }
   const visits = await tx.objectStore('visits').index('by-restaurant').getAll(id)
   for (const visit of visits) {
     if (!visit.deleted) {
-      await tx.objectStore('visits').put({ ...visit, deleted: true, updated: now() })
+      await tx.objectStore('visits').put({ ...visit, deleted: true, updated: now(), needsPush: true })
     }
   }
   await tx.done

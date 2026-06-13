@@ -30,6 +30,12 @@ export interface SyncFields {
   updated: string
   /** Soft-delete tombstone — wins by recency like any change. */
   deleted: boolean
+  /**
+   * Device-local "needs push to cloud" marker — NOT synced, exported, or part of last-write-wins.
+   * A record is pending unless explicitly marked synced (`needsPush === false`), so an absent value
+   * (legacy/never-stamped/imported) reads as pending and re-pushes harmlessly under LWW.
+   */
+  needsPush?: boolean
 }
 
 export interface Restaurant extends SyncFields {
