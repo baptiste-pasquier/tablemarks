@@ -28,6 +28,14 @@ Whether a Restaurant is *to-try* or *visited* — derived from its visit count (
 ### Rollup
 The denormalized summary cached on a Restaurant — the most recent Visit's Verdict and the visit count — recomputed locally from its Visits. It is a per-device derived cache, not a synced source of truth, and recomputing it does not mark the Restaurant as changed.
 
+## Classification
+
+### Facet
+An orthogonal dimension a Restaurant can be filtered by. The facets are Cuisine, Status, and Verdict; filters combine as AND across facets and OR within one facet.
+
+### Cuisine
+A Restaurant's single optional cuisine label (e.g. burger, French, Indian) — drawn from a curated set or typed freely. Each cuisine maps to one color used for both its map marker and its filter chip; a Restaurant with no cuisine is "uncategorized."
+
 ## Sync
 
 ### Local-first canonical store

@@ -5,12 +5,22 @@ import type { MapMarker } from './markers'
 import { geolocate, type GeoPoint } from '../../lib/geolocate'
 import { DEFAULT_MAP_CENTER } from '../../lib/geo'
 
-const pin = L.divIcon({
-  className: '',
-  html: '<div style="width:14px;height:14px;border-radius:9999px;background:#d4561f;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)"></div>',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-})
+const iconCache = new Map<string, L.DivIcon>()
+
+/** A pin DivIcon in the given cuisine color, cached so same-cuisine markers share one icon. */
+function iconForColor(color: string): L.DivIcon {
+  let icon = iconCache.get(color)
+  if (!icon) {
+    icon = L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;border-radius:9999px;background:${color};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    })
+    iconCache.set(color, icon)
+  }
+  return icon
+}
 
 const DEFAULT_CENTER: [number, number] = [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]
 
@@ -87,7 +97,8 @@ export function MapView({
           <Marker
             key={m.id}
             position={[m.lat, m.lng]}
-            icon={pin}
+            icon={iconForColor(m.color)}
+            opacity={m.dimmed ? 0.3 : 1}
             eventHandlers={onSelect ? { click: () => onSelect(m.id) } : undefined}
           >
             <Popup>

@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRestaurants } from './features/useRestaurants'
 import { useAuth } from './auth/useAuth'
 import { RestaurantList } from './features/RestaurantList'
 import { MapView } from './features/map/MapView'
 import { toMarkers } from './features/map/markers'
+import { FilterBar } from './features/facets/FilterBar'
+import { emptyFilter, matches } from './features/facets/filter'
 import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
@@ -17,7 +19,11 @@ export default function App() {
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
   const [anchor, setAnchor] = useState<GeoPoint | null>(DEFAULT_MAP_CENTER)
-  const markers = toMarkers(restaurants)
+  const [filter, setFilter] = useState(emptyFilter())
+  // App re-renders on every map pan/zoom (anchor state); memoize so the list and markers
+  // aren't recomputed against every restaurant on each move.
+  const visible = useMemo(() => restaurants.filter((r) => matches(r, filter)), [restaurants, filter])
+  const markers = useMemo(() => toMarkers(restaurants, filter), [restaurants, filter])
 
   return (
     <div className="flex h-full flex-col">
@@ -63,8 +69,9 @@ export default function App() {
               Where to eat?
             </button>
           </div>
+          <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} />
           <div className="flex-1 overflow-y-auto">
-            <RestaurantList items={restaurants} onSelect={setSelectedId} />
+            <RestaurantList items={visible} onSelect={setSelectedId} />
           </div>
         </aside>
 

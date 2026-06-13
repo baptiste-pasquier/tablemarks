@@ -26,6 +26,20 @@ describe('AddPlace', () => {
     expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel')
   })
 
+  it('persists a chosen (custom) cuisine on the created place', async () => {
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText(/paste a google maps link/i), FULL_URL)
+    await user.type(screen.getByLabelText(/cuisine/i), 'Ramen') // non-curated, free-typed
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    await waitFor(async () => {
+      const r = (await allRestaurants()).find((x) => x.name === 'Chez Marcel')
+      expect(r?.cuisine).toBe('Ramen')
+    })
+  })
+
   it('offers the existing place on a near-match duplicate', async () => {
     await createRestaurant({ name: 'Existing', lat: 48.8566, lng: 2.3522 })
     render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)

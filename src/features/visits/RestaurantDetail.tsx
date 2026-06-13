@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useRestaurantDetail } from './useRestaurantDetail'
+import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
+import { updateRestaurant } from '../../data/restaurants'
+import { cuisineOptions, colorForCuisine } from '../facets/cuisines'
 import { statusLabel } from '../display'
 import { VERDICTS, VERDICT_LABELS, type Verdict } from '../../types/models'
 
@@ -30,10 +33,21 @@ export function RestaurantDetail({
   onClose: () => void
 }) {
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
+  const restaurants = useRestaurants()
+  const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
+  const cuisineListId = useId()
   const [logging, setLogging] = useState(false)
   const [pastDate, setPastDate] = useState('')
 
   if (!restaurant) return null
+
+  function saveCuisine(value: string) {
+    const next = value.trim() || undefined
+    if (next === (restaurant!.cuisine || undefined)) return
+    // Best-effort: the row may have been deleted/synced away between render and blur, in
+    // which case updateRestaurant rejects. The store listener reflects the real state either way.
+    void updateRestaurant(restaurantId, { cuisine: next }).catch(() => {})
+  }
 
   async function logNow(verdict: Verdict) {
     await createVisit({ restaurantId, verdict })
@@ -59,6 +73,31 @@ export function RestaurantDetail({
           {statusLabel(restaurant)}
           {restaurant.address ? ` · ${restaurant.address}` : ''}
         </p>
+
+        <div className="mt-3 flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="inline-block h-3 w-3 shrink-0 rounded-full"
+            style={{ background: colorForCuisine(restaurant.cuisine) }}
+          />
+          <input
+            key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
+            list={cuisineListId}
+            defaultValue={restaurant.cuisine ?? ''}
+            onBlur={(e) => saveCuisine(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur()
+            }}
+            aria-label="Cuisine"
+            placeholder="Add a cuisine…"
+            className="w-full rounded-md border border-gray-300 p-1.5 text-sm"
+          />
+          <datalist id={cuisineListId}>
+            {options.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </div>
 
         <div className="mt-4">
           {logging ? (

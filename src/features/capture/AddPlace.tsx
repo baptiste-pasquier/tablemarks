@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { capturePaste, captureSearchPick, type CaptureResult } from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
+import { updateRestaurant } from '../../data/restaurants'
+import { useRestaurants } from '../useRestaurants'
+import { cuisineOptions } from '../facets/cuisines'
 import type { Restaurant } from '../../types/models'
 
 export function AddPlace({
@@ -11,13 +14,21 @@ export function AddPlace({
   onOpenExisting: (id: string) => void
 }) {
   const [input, setInput] = useState('')
+  const [cuisine, setCuisine] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<GeoCandidate[] | null>(null)
   const [duplicate, setDuplicate] = useState<Restaurant | null>(null)
+  const restaurants = useRestaurants()
+  const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
+  const cuisineListId = useId()
 
-  function handle(result: CaptureResult) {
+  async function handle(result: CaptureResult) {
     if (result.status === 'created' || result.status === 'provisional') {
+      const c = cuisine.trim()
+      // The place is already saved; the cuisine is a best-effort follow-up write. A failure here
+      // must not surface as "couldn't add the place" or block closing — the place exists.
+      if (c) await updateRestaurant(result.restaurant.id, { cuisine: c }).catch(() => {})
       onClose()
     } else if (result.status === 'duplicate') {
       setDuplicate(result.match)
@@ -46,7 +57,7 @@ export function AddPlace({
     setError(null)
     setDuplicate(null)
     try {
-      handle(await capturePaste(input))
+      await handle(await capturePaste(input))
     } catch {
       setError('Could not add that place.')
     } finally {
@@ -57,7 +68,7 @@ export function AddPlace({
   async function pick(candidate: GeoCandidate) {
     setBusy(true)
     try {
-      handle(await captureSearchPick(candidate))
+      await handle(await captureSearchPick(candidate))
     } catch {
       setError('Could not add that place.')
     } finally {
@@ -86,6 +97,23 @@ export function AddPlace({
           className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
           placeholder="https://maps.app.goo.gl/…  or  Chez Marcel Paris"
         />
+
+        <label className="mt-3 block text-sm text-gray-600" htmlFor="add-cuisine">
+          Cuisine <span className="text-gray-400">(optional)</span>
+        </label>
+        <input
+          id="add-cuisine"
+          list={cuisineListId}
+          value={cuisine}
+          onChange={(e) => setCuisine(e.target.value)}
+          className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
+          placeholder="e.g. Italian, Ramen…"
+        />
+        <datalist id={cuisineListId}>
+          {options.map((o) => (
+            <option key={o} value={o} />
+          ))}
+        </datalist>
 
         <button
           type="button"
