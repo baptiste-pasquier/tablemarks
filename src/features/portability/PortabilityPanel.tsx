@@ -28,7 +28,10 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       const a = document.createElement('a')
       a.href = url
       a.download = `tablemarks-${env.exportedAt.slice(0, 10)}.json`
+      // Some browsers (Firefox/Safari) only fire a download for an anchor that is in the document.
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       // Defer revocation so the browser can start the download before the blob URL is invalidated.
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch {

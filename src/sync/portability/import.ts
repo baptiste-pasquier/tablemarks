@@ -1,5 +1,6 @@
-import { allRestaurantsForSync, putRestaurantRaw } from '../../data/restaurants'
-import { allVisitsForSync, putVisitRaw } from '../../data/visits'
+import { getDB } from '../../data/db'
+import { allRestaurantsForSync } from '../../data/restaurants'
+import { allVisitsForSync } from '../../data/visits'
 import { recomputeRollup } from '../../data/rollup'
 import { emitStoreChange } from '../../data/events'
 import { reconcile } from '../reconcile'
@@ -31,10 +32,12 @@ export interface ImportCounts {
 
 /**
  * Merge validated records into the store, non-destructively and idempotently, by feeding them
- * through the same reconcile/LWW path sign-in uses (file = remote side, store = local). Writes
- * remote winners via the raw helpers, then re-derives the rollup for every restaurant whose row or
- * visits changed, and signals the UI to refresh once the batch has committed. Uses store-change
- * (pull) semantics — import is not a user edit to push; cloud convergence happens on the next sync.
+ * through the same reconcile/LWW path sign-in uses (file = remote side, store = local). All winning
+ * rows commit in a single transaction (atomic — a mid-import failure rolls back rather than leaving
+ * a partial merge; import is purely local, so unlike fullSync it needn't interleave network writes),
+ * then the rollup is re-derived for every restaurant whose row or visits changed. Emits one
+ * store-change after the batch. Uses store-change (pull) semantics — import is not a user edit to
+ * push; cloud convergence happens on the next sync.
  */
 export async function applyImport(records: ImportRecords): Promise<ImportCounts> {
   const localR = await allRestaurantsForSync()
@@ -46,16 +49,20 @@ export async function applyImport(records: ImportRecords): Promise<ImportCounts>
   const v = reconcile(localV, records.visits)
 
   const affected = new Set<string>()
+  const db = await getDB()
+  const tx = db.transaction(['restaurants', 'visits'], 'readwrite')
   for (const rec of r.toWriteLocal) {
-    await putRestaurantRaw(rec)
-    // The written row carries the file's rollup fields; the rollup is a local-derived cache, so
-    // re-derive it from this device's visits rather than trusting the imported values.
+    await tx.objectStore('restaurants').put(rec)
     affected.add(rec.id)
   }
   for (const rec of v.toWriteLocal) {
-    await putVisitRaw(rec)
+    await tx.objectStore('visits').put(rec)
     affected.add(rec.restaurantId)
   }
+  await tx.done
+
+  // Re-derive the rollup for every written restaurant from this device's visits — the written row
+  // may carry the file's rollup, but the rollup is a local-derived cache, never trusted from outside.
   for (const restaurantId of affected) await recomputeRollup(restaurantId)
 
   if (r.toWriteLocal.length > 0 || v.toWriteLocal.length > 0) emitStoreChange()
