@@ -22,3 +22,27 @@ export function deriveSyncState(opts: { online: boolean; pending: number; proble
   if (pending > 0) return { status: 'pending', pending, cause: null }
   return { status: 'synced', pending, cause: null }
 }
+
+/** Consecutive non-offline push failures before the indicator escalates to a problem state. */
+export const FAILURE_THRESHOLD = 3
+
+export interface FailureState {
+  failureCount: number
+  problem: ProblemCause | null
+}
+
+/** Reset failure tracking — used on a successful sync and on going offline (offline is not a failure). */
+export const NO_FAILURE: FailureState = { failureCount: 0, problem: null }
+
+/** Classify a thrown push error: expired/denied auth vs an unreachable/erroring server. */
+export function classifyPushError(err: unknown): ProblemCause {
+  const status = (err as { status?: number } | null)?.status
+  return status === 401 || status === 403 ? 'auth' : 'server'
+}
+
+/** Fold one push failure into the failure state, escalating to a named problem at the threshold. */
+export function applyPushFailure(prev: FailureState, err: unknown, threshold = FAILURE_THRESHOLD): FailureState {
+  const failureCount = prev.failureCount + 1
+  const cause = classifyPushError(err)
+  return { failureCount, problem: failureCount >= threshold ? cause : null }
+}

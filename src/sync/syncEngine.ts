@@ -7,7 +7,7 @@ import { allVisitsForSync, putVisitRaw } from '../data/visits'
 import { recomputeRollup } from '../data/rollup'
 import { onLocalChange, onStoreChange, emitStoreChange } from '../data/events'
 import { pendingCount } from '../data/pending'
-import { deriveSyncState, type ProblemCause, type SyncState } from './syncStatus'
+import { deriveSyncState, applyPushFailure, NO_FAILURE, type FailureState, type SyncState } from './syncStatus'
 import { reconcile } from './reconcile'
 import { pb } from './pocketbase'
 import {
@@ -126,16 +126,19 @@ export class PocketBaseRemote implements RemoteStore {
  * on reconnect, and on remote realtime changes. Stopping leaves the local store untouched.
  */
 const SYNCED: SyncState = { status: 'synced', pending: 0, cause: null }
+const BACKOFF_BASE_MS = 5000
+const BACKOFF_MAX_MS = 5 * 60 * 1000
 
 export class SyncController {
   private remote: RemoteStore | null = null
   private unsubscribers: Array<() => void> = []
   private timer: ReturnType<typeof setTimeout> | null = null
+  private backoffTimer: ReturnType<typeof setTimeout> | null = null
   private stopped = false
-  // Observable sync state for the indicator (U7 trust layer). Read-only to the UI.
+  // Observable sync state for the indicator (R7 trust layer). Read-only to the UI.
   private state: SyncState = SYNCED
   private stateListeners = new Set<() => void>()
-  private problem: ProblemCause | null = null
+  private failure: FailureState = NO_FAILURE
 
   /** Current indicator state — a stable reference between changes (safe for useSyncExternalStore). */
   getState(): SyncState {
@@ -156,7 +159,7 @@ export class SyncController {
     } catch {
       // a store read failure shouldn't crash the indicator; leave the count at 0
     }
-    const next = deriveSyncState({ online: navigator.onLine, pending, problem: this.problem })
+    const next = deriveSyncState({ online: navigator.onLine, pending, problem: this.failure.problem })
     if (next.status !== this.state.status || next.pending !== this.state.pending || next.cause !== this.state.cause) {
       this.state = next
       for (const cb of this.stateListeners) cb()
@@ -166,7 +169,7 @@ export class SyncController {
   async start(remote: RemoteStore): Promise<void> {
     this.remote = remote
     this.stopped = false
-    this.problem = null
+    this.failure = NO_FAILURE
     this.unsubscribers.push(onLocalChange(() => this.scheduleSync()))
     // Recompute the indicator on any store change (user write or sync-applied clear).
     this.unsubscribers.push(onStoreChange(() => void this.refreshState()))
@@ -174,7 +177,12 @@ export class SyncController {
       void this.refreshState()
       this.runSync()
     }
-    const offline = () => void this.refreshState()
+    // Going offline is not a failure — de-escalate and stop retrying until reconnect.
+    const offline = () => {
+      this.failure = NO_FAILURE
+      this.clearBackoff()
+      void this.refreshState()
+    }
     window.addEventListener('online', online)
     window.addEventListener('offline', offline)
     this.unsubscribers.push(() => window.removeEventListener('online', online))
@@ -193,9 +201,45 @@ export class SyncController {
     this.runSync()
   }
 
-  /** Fire-and-forget sync with rejection handling, so scheduled/event-driven syncs never leak unhandled rejections. */
+  /** Fire-and-forget sync attempt with failure classification, escalation, and backoff retry. */
   private runSync(): void {
-    this.syncNow().catch((err) => console.error('[sync] sync failed', err))
+    void this.attemptSync()
+  }
+
+  private async attemptSync(): Promise<void> {
+    if (!this.remote || !navigator.onLine) {
+      // Offline / not started is not a failure — reset tracking and report offline.
+      this.failure = NO_FAILURE
+      this.clearBackoff()
+      await this.refreshState()
+      return
+    }
+    try {
+      await fullSync(this.remote)
+      this.failure = NO_FAILURE
+      this.clearBackoff()
+    } catch (err) {
+      // A non-offline push failure: count it, escalate at the threshold, and retry with backoff.
+      this.failure = applyPushFailure(this.failure, err)
+      console.error('[sync] sync failed', err)
+      this.scheduleBackoff()
+    }
+    await this.refreshState()
+  }
+
+  /** Re-attempt a failing-but-online sync after an exponential delay (so escalation/recovery don't need a user event). */
+  private scheduleBackoff(): void {
+    this.clearBackoff()
+    if (!navigator.onLine) return
+    const delay = Math.min(BACKOFF_BASE_MS * 2 ** (this.failure.failureCount - 1), BACKOFF_MAX_MS)
+    this.backoffTimer = setTimeout(() => this.runSync(), delay)
+  }
+
+  private clearBackoff(): void {
+    if (this.backoffTimer) {
+      clearTimeout(this.backoffTimer)
+      this.backoffTimer = null
+    }
   }
 
   private scheduleSync(): void {
@@ -212,10 +256,11 @@ export class SyncController {
     this.stopped = true
     if (this.timer) clearTimeout(this.timer)
     this.timer = null
+    this.clearBackoff()
     for (const off of this.unsubscribers) off()
     this.unsubscribers = []
     this.remote = null
-    this.problem = null
+    this.failure = NO_FAILURE
     // Reset to a neutral state; the indicator is hidden when signed out, but keep state honest.
     if (this.state !== SYNCED) {
       this.state = SYNCED
