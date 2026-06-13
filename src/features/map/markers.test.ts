@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { toMarkers } from './markers'
+import { colorForCuisine } from '../facets/cuisines'
 import type { Restaurant } from '../../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
@@ -22,7 +23,15 @@ describe('toMarkers', () => {
     const markers = toMarkers([
       r({ id: 'a', name: 'A', lat: 48, lng: 2, visitCount: 2, latestVerdict: 'go_back' }),
     ])
-    expect(markers).toEqual([{ id: 'a', lat: 48, lng: 2, name: 'A', label: 'Go back · 2 visits' }])
+    expect(markers).toEqual([
+      { id: 'a', lat: 48, lng: 2, name: 'A', label: 'Go back · 2 visits', color: colorForCuisine(undefined) },
+    ])
+  })
+
+  it('colors markers by cuisine, neutral when uncategorized', () => {
+    const markers = toMarkers([r({ id: 'a', cuisine: 'French' }), r({ id: 'b' })])
+    expect(markers.find((m) => m.id === 'a')!.color).toBe(colorForCuisine('French'))
+    expect(markers.find((m) => m.id === 'b')!.color).toBe(colorForCuisine(undefined))
   })
 
   it('skips provisional records and ones without coordinates', () => {
