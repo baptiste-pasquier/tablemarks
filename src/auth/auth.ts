@@ -1,5 +1,6 @@
 import { pb } from '../sync/pocketbase'
 import { PocketBaseRemote, SyncController } from '../sync/syncEngine'
+import type { SyncState } from '../sync/syncStatus'
 
 /**
  * Account mode for the local-first app. There is no local-vs-cloud toggle: the app always
@@ -40,6 +41,16 @@ export class AuthService {
 
   onChange(cb: () => void): () => void {
     return pb.authStore.onChange(cb, false)
+  }
+
+  /** Current backup/sync indicator state (read-only surface over the SyncController). */
+  get syncState(): SyncState {
+    return this.controller.getState()
+  }
+
+  /** Subscribe to sync-indicator state changes; returns an unsubscribe. */
+  onSyncStateChange(cb: () => void): () => void {
+    return this.controller.onState(cb)
   }
 }
 

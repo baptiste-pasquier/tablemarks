@@ -5,7 +5,9 @@ import {
 } from '../data/restaurants'
 import { allVisitsForSync, putVisitRaw } from '../data/visits'
 import { recomputeRollup } from '../data/rollup'
-import { onLocalChange, emitStoreChange } from '../data/events'
+import { onLocalChange, onStoreChange, emitStoreChange } from '../data/events'
+import { pendingCount } from '../data/pending'
+import { deriveSyncState, type ProblemCause, type SyncState } from './syncStatus'
 import { reconcile } from './reconcile'
 import { pb } from './pocketbase'
 import {
@@ -123,19 +125,61 @@ export class PocketBaseRemote implements RemoteStore {
  * Drives sync while signed in: an initial reconcile, then re-syncs on local writes (debounced),
  * on reconnect, and on remote realtime changes. Stopping leaves the local store untouched.
  */
+const SYNCED: SyncState = { status: 'synced', pending: 0, cause: null }
+
 export class SyncController {
   private remote: RemoteStore | null = null
   private unsubscribers: Array<() => void> = []
   private timer: ReturnType<typeof setTimeout> | null = null
   private stopped = false
+  // Observable sync state for the indicator (U7 trust layer). Read-only to the UI.
+  private state: SyncState = SYNCED
+  private stateListeners = new Set<() => void>()
+  private problem: ProblemCause | null = null
+
+  /** Current indicator state — a stable reference between changes (safe for useSyncExternalStore). */
+  getState(): SyncState {
+    return this.state
+  }
+
+  /** Subscribe to indicator-state changes; returns an unsubscribe. */
+  onState(cb: () => void): () => void {
+    this.stateListeners.add(cb)
+    return () => this.stateListeners.delete(cb)
+  }
+
+  /** Recompute the indicator state from live signals and notify if it changed. */
+  private async refreshState(): Promise<void> {
+    let pending = 0
+    try {
+      pending = await pendingCount()
+    } catch {
+      // a store read failure shouldn't crash the indicator; leave the count at 0
+    }
+    const next = deriveSyncState({ online: navigator.onLine, pending, problem: this.problem })
+    if (next.status !== this.state.status || next.pending !== this.state.pending || next.cause !== this.state.cause) {
+      this.state = next
+      for (const cb of this.stateListeners) cb()
+    }
+  }
 
   async start(remote: RemoteStore): Promise<void> {
     this.remote = remote
     this.stopped = false
+    this.problem = null
     this.unsubscribers.push(onLocalChange(() => this.scheduleSync()))
-    const online = () => this.runSync()
+    // Recompute the indicator on any store change (user write or sync-applied clear).
+    this.unsubscribers.push(onStoreChange(() => void this.refreshState()))
+    const online = () => {
+      void this.refreshState()
+      this.runSync()
+    }
+    const offline = () => void this.refreshState()
     window.addEventListener('online', online)
+    window.addEventListener('offline', offline)
     this.unsubscribers.push(() => window.removeEventListener('online', online))
+    this.unsubscribers.push(() => window.removeEventListener('offline', offline))
+    void this.refreshState()
     // subscribe() is async — if stop() already ran by the time it resolves, unsubscribe
     // immediately rather than registering a listener that stop() will never clean up.
     const track = (unsub: () => void) => {
@@ -171,5 +215,11 @@ export class SyncController {
     for (const off of this.unsubscribers) off()
     this.unsubscribers = []
     this.remote = null
+    this.problem = null
+    // Reset to a neutral state; the indicator is hidden when signed out, but keep state honest.
+    if (this.state !== SYNCED) {
+      this.state = SYNCED
+      for (const cb of this.stateListeners) cb()
+    }
   }
 }
