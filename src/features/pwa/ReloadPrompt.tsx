@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 
 /**
@@ -6,6 +7,9 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
  * Also shows a one-off "ready to work offline" note. Renders nothing when neither applies.
  */
 export function ReloadPrompt() {
+  // Synchronous guard: updateServiceWorker(true) triggers a reload, so a double-click could fire it
+  // twice before the page navigates. The ref blocks the second call without waiting for a re-render.
+  const reloadingRef = useRef(false)
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     offlineReady: [offlineReady, setOfflineReady],
@@ -23,9 +27,20 @@ export function ReloadPrompt() {
     setOfflineReady(false)
   }
 
+  function reload() {
+    if (reloadingRef.current) return
+    reloadingRef.current = true
+    void updateServiceWorker(true).catch((error) => {
+      console.error('[pwa] update failed', error)
+      reloadingRef.current = false
+    })
+  }
+
   return (
     <div
-      role="status"
+      role="region"
+      aria-live="polite"
+      aria-label="App update"
       className="fixed bottom-4 left-1/2 z-[2000] flex -translate-x-1/2 items-center gap-3 rounded-md bg-gray-900 px-4 py-2 text-sm text-white shadow-lg"
     >
       {needRefresh ? (
@@ -33,7 +48,7 @@ export function ReloadPrompt() {
           <span>A new version is available.</span>
           <button
             type="button"
-            onClick={() => void updateServiceWorker(true)}
+            onClick={reload}
             className="rounded bg-brand px-2.5 py-1 font-medium text-white hover:opacity-90"
           >
             Reload

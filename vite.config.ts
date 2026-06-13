@@ -29,7 +29,10 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//], // keep the resolve-short-link API off the SPA fallback
+        // Defensive: the resolve-short-link API runs cross-origin (PocketBase), so navigateFallback
+        // never intercepts it today — but this keeps the SPA shell off any same-origin /api/ path if
+        // PocketBase is ever co-hosted.
+        navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
@@ -40,7 +43,7 @@ export default defineConfig({
             options: {
               cacheName: 'osm-tiles',
               expiration: {
-                maxEntries: 500,
+                maxEntries: 500, // ~500 256px tiles ≈ 10-20 MB — a few browsed neighborhoods, well clear of quota
                 maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days — aligns with OSM's cache-header expectation
                 purgeOnQuotaError: true,
               },
