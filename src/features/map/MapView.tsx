@@ -98,6 +98,7 @@ export function MapView({
             key={m.id}
             position={[m.lat, m.lng]}
             icon={iconForColor(m.color)}
+            opacity={m.dimmed ? 0.3 : 1}
             eventHandlers={onSelect ? { click: () => onSelect(m.id) } : undefined}
           >
             <Popup>

@@ -1,0 +1,73 @@
+import { describe, it, expect } from 'vitest'
+import { emptyFilter, isEmptyFilter, matches, withToggled, UNCATEGORIZED } from './filter'
+import type { Restaurant, Verdict } from '../../types/models'
+
+function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
+  return {
+    name: 'R',
+    lat: 1,
+    lng: 2,
+    pending: false,
+    latestVerdict: null,
+    latestVisitDate: null,
+    visitCount: 0,
+    updated: '1',
+    deleted: false,
+    ...over,
+  }
+}
+
+describe('matches', () => {
+  it('an empty filter matches everything', () => {
+    expect(matches(r({ id: 'a' }), emptyFilter())).toBe(true)
+    expect(matches(r({ id: 'b', cuisine: 'Thai', visitCount: 3 }), emptyFilter())).toBe(true)
+  })
+
+  it('ORs within a facet and ANDs across facets (AE3)', () => {
+    // cuisine = Indian OR Thai AND status = to-try
+    const filter = { ...emptyFilter(), cuisines: new Set(['Indian', 'Thai']), statuses: new Set(['to_try' as const]) }
+
+    expect(matches(r({ id: 'thai-totry', cuisine: 'Thai' }), filter)).toBe(true)
+    expect(matches(r({ id: 'indian-totry', cuisine: 'Indian' }), filter)).toBe(true)
+    // right cuisine but visited -> fails the status facet
+    expect(matches(r({ id: 'thai-visited', cuisine: 'Thai', visitCount: 2 }), filter)).toBe(false)
+    // to-try but wrong cuisine -> fails the cuisine facet
+    expect(matches(r({ id: 'french-totry', cuisine: 'French' }), filter)).toBe(false)
+  })
+
+  it('matches cuisine case-insensitively', () => {
+    const filter = { ...emptyFilter(), cuisines: new Set(['French']) }
+    expect(matches(r({ id: 'a', cuisine: 'french' }), filter)).toBe(true)
+  })
+
+  it('filters on the latest verdict, excluding places without one', () => {
+    const filter = { ...emptyFilter(), verdicts: new Set<Verdict>(['go_back']) }
+    expect(matches(r({ id: 'a', latestVerdict: 'go_back' }), filter)).toBe(true)
+    expect(matches(r({ id: 'b', latestVerdict: 'never_again' }), filter)).toBe(false)
+    expect(matches(r({ id: 'c', latestVerdict: null }), filter)).toBe(false)
+  })
+
+  it('an uncategorized place matches only when no cuisine filter, or the uncategorized chip, is active', () => {
+    const place = r({ id: 'a' }) // no cuisine
+    expect(matches(place, emptyFilter())).toBe(true)
+    expect(matches(place, { ...emptyFilter(), cuisines: new Set(['French']) })).toBe(false)
+    expect(matches(place, { ...emptyFilter(), cuisines: new Set([UNCATEGORIZED]) })).toBe(true)
+    // a categorized place does NOT match the uncategorized chip
+    expect(matches(r({ id: 'b', cuisine: 'French' }), { ...emptyFilter(), cuisines: new Set([UNCATEGORIZED]) })).toBe(false)
+  })
+})
+
+describe('withToggled / isEmptyFilter', () => {
+  it('toggles a value in and back out without mutating the input', () => {
+    const base = new Set(['French'])
+    const added = withToggled(base, 'Thai')
+    expect([...added].sort()).toEqual(['French', 'Thai'])
+    expect([...base]).toEqual(['French']) // input untouched
+    expect([...withToggled(added, 'French')]).toEqual(['Thai'])
+  })
+
+  it('reports empty vs active filters', () => {
+    expect(isEmptyFilter(emptyFilter())).toBe(true)
+    expect(isEmptyFilter({ ...emptyFilter(), statuses: new Set(['visited' as const]) })).toBe(false)
+  })
+})
