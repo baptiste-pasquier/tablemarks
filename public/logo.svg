@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#d4561f"/>
+  <!-- map pin / bookmark mark for "saved places" -->
+  <path fill="#ffffff" d="M256 104c-66 0-120 52-120 117 0 86 104 176 116 186a6 6 0 0 0 8 0c12-10 116-100 116-186 0-65-54-117-120-117z"/>
+  <circle cx="256" cy="221" r="44" fill="#d4561f"/>
+</svg>
