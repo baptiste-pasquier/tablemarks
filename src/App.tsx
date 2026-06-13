@@ -6,12 +6,16 @@ import { MapView } from './features/map/MapView'
 import { toMarkers } from './features/map/markers'
 import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
+import { DecidePanel } from './features/decide/DecidePanel'
+import type { GeoPoint } from './features/decide/geolocate'
 
 export default function App() {
   const restaurants = useRestaurants()
   const { signedIn, email, signIn, signOut } = useAuth()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const [deciding, setDeciding] = useState(false)
+  const [anchor, setAnchor] = useState<GeoPoint | null>(null)
   const markers = toMarkers(restaurants)
 
   return (
@@ -50,6 +54,13 @@ export default function App() {
             >
               + Add a place
             </button>
+            <button
+              type="button"
+              onClick={() => setDeciding(true)}
+              className="mt-2 w-full rounded-md border border-brand px-3 py-2 text-sm font-medium text-brand hover:bg-brand-soft"
+            >
+              Where to eat?
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto">
             <RestaurantList items={restaurants} onSelect={setSelectedId} />
@@ -57,7 +68,7 @@ export default function App() {
         </aside>
 
         <main className="flex-1">
-          <MapView markers={markers} onSelect={setSelectedId} />
+          <MapView markers={markers} onSelect={setSelectedId} onCenterChange={setAnchor} />
         </main>
       </div>
 
@@ -66,6 +77,17 @@ export default function App() {
           onClose={() => setAdding(false)}
           onOpenExisting={(id) => {
             setAdding(false)
+            setSelectedId(id)
+          }}
+        />
+      )}
+
+      {deciding && (
+        <DecidePanel
+          anchor={anchor}
+          onClose={() => setDeciding(false)}
+          onOpenRestaurant={(id) => {
+            setDeciding(false)
             setSelectedId(id)
           }}
         />
