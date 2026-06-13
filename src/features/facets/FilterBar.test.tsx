@@ -30,7 +30,8 @@ describe('FilterBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Thai' }))
 
     expect(onChange).toHaveBeenCalledTimes(1)
-    expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['Thai'])
+    // Stored lowercased so matching is O(1) and case-insensitive.
+    expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['thai'])
   })
 
   it('toggles a status into the filter when its chip is clicked', async () => {
@@ -51,6 +52,17 @@ describe('FilterBar', () => {
     expect([...onChange.mock.calls[0][0].verdicts]).toEqual(['go_back'])
   })
 
+  it('renders one chip for the same cuisine typed in different cases, toggled lowercase', async () => {
+    const onChange = vi.fn()
+    const mixed = [r({ id: 'a', cuisine: 'Thai' }), r({ id: 'b', cuisine: 'thai' })]
+    render(<FilterBar restaurants={mixed} filter={emptyFilter()} onChange={onChange} />)
+
+    const chips = screen.getAllByRole('button', { name: /thai/i })
+    expect(chips).toHaveLength(1)
+    await userEvent.click(chips[0])
+    expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['thai'])
+  })
+
   it('offers an Uncategorized chip when some place has no cuisine', () => {
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Uncategorized' })).toBeInTheDocument()
@@ -58,7 +70,7 @@ describe('FilterBar', () => {
 
   it('marks the active selection as pressed and clears all filters', async () => {
     const onChange = vi.fn()
-    const filter = { ...emptyFilter(), cuisines: new Set(['Thai']) }
+    const filter = { ...emptyFilter(), cuisines: new Set(['thai']) }
     render(<FilterBar restaurants={PLACES} filter={filter} onChange={onChange} />)
 
     expect(screen.getByRole('button', { name: 'Thai' })).toHaveAttribute('aria-pressed', 'true')

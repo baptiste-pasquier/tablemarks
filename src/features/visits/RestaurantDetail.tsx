@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
@@ -33,7 +33,8 @@ export function RestaurantDetail({
   onClose: () => void
 }) {
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
-  const options = cuisineOptions(useRestaurants())
+  const restaurants = useRestaurants()
+  const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
   const cuisineListId = useId()
   const [logging, setLogging] = useState(false)
   const [pastDate, setPastDate] = useState('')
@@ -84,6 +85,9 @@ export function RestaurantDetail({
             list={cuisineListId}
             defaultValue={restaurant.cuisine ?? ''}
             onBlur={(e) => saveCuisine(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur()
+            }}
             aria-label="Cuisine"
             placeholder="Add a cuisine…"
             className="w-full rounded-md border border-gray-300 p-1.5 text-sm"

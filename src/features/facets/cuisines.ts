@@ -50,12 +50,15 @@ export function colorForCuisine(cuisine: string | null | undefined): string {
   return CURATED_BY_KEY.get(key.toLowerCase()) ?? CUSTOM_PALETTE[hashString(key.toLowerCase()) % CUSTOM_PALETTE.length]
 }
 
-/** Picker options: curated cuisines unioned with any already in use, sorted. */
+/** Picker options: curated cuisines unioned with any already in use, de-duped case-insensitively, sorted. */
 export function cuisineOptions(restaurants: ReadonlyArray<{ cuisine?: string | null }>): string[] {
-  const set = new Set<string>(CURATED_CUISINES.map((c) => c.name))
+  // Keyed by lowercase so 'french' and 'French' collapse to one option, keeping the
+  // curated casing (or the first-seen custom casing) as the display label.
+  const byKey = new Map<string, string>()
+  for (const c of CURATED_CUISINES) byKey.set(c.name.toLowerCase(), c.name)
   for (const r of restaurants) {
     const c = normalize(r.cuisine)
-    if (c) set.add(c)
+    if (c && !byKey.has(c.toLowerCase())) byKey.set(c.toLowerCase(), c)
   }
-  return [...set].sort((a, b) => a.localeCompare(b))
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b))
 }

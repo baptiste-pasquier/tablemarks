@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { capturePaste, captureSearchPick, type CaptureResult } from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
 import { updateRestaurant } from '../../data/restaurants'
@@ -19,7 +19,8 @@ export function AddPlace({
   const [error, setError] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<GeoCandidate[] | null>(null)
   const [duplicate, setDuplicate] = useState<Restaurant | null>(null)
-  const options = cuisineOptions(useRestaurants())
+  const restaurants = useRestaurants()
+  const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
   const cuisineListId = useId()
 
   async function handle(result: CaptureResult) {

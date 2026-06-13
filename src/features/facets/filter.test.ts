@@ -24,8 +24,8 @@ describe('matches', () => {
   })
 
   it('ORs within a facet and ANDs across facets (AE3)', () => {
-    // cuisine = Indian OR Thai AND status = to-try
-    const filter = { ...emptyFilter(), cuisines: new Set(['Indian', 'Thai']), statuses: new Set(['to_try' as const]) }
+    // cuisine = Indian OR Thai AND status = to-try (filter cuisines are stored lowercased)
+    const filter = { ...emptyFilter(), cuisines: new Set(['indian', 'thai']), statuses: new Set(['to_try' as const]) }
 
     expect(matches(r({ id: 'thai-totry', cuisine: 'Thai' }), filter)).toBe(true)
     expect(matches(r({ id: 'indian-totry', cuisine: 'Indian' }), filter)).toBe(true)
@@ -35,9 +35,11 @@ describe('matches', () => {
     expect(matches(r({ id: 'french-totry', cuisine: 'French' }), filter)).toBe(false)
   })
 
-  it('matches cuisine case-insensitively', () => {
-    const filter = { ...emptyFilter(), cuisines: new Set(['French']) }
+  it('matches cuisine case-insensitively (place casing varies; filter stores lowercase)', () => {
+    const filter = { ...emptyFilter(), cuisines: new Set(['french']) }
     expect(matches(r({ id: 'a', cuisine: 'french' }), filter)).toBe(true)
+    expect(matches(r({ id: 'b', cuisine: 'French' }), filter)).toBe(true)
+    expect(matches(r({ id: 'c', cuisine: 'FRENCH' }), filter)).toBe(true)
   })
 
   it('filters on the latest verdict, excluding places without one', () => {
@@ -50,7 +52,7 @@ describe('matches', () => {
   it('an uncategorized place matches only when no cuisine filter, or the uncategorized chip, is active', () => {
     const place = r({ id: 'a' }) // no cuisine
     expect(matches(place, emptyFilter())).toBe(true)
-    expect(matches(place, { ...emptyFilter(), cuisines: new Set(['French']) })).toBe(false)
+    expect(matches(place, { ...emptyFilter(), cuisines: new Set(['french']) })).toBe(false)
     expect(matches(place, { ...emptyFilter(), cuisines: new Set([UNCATEGORIZED]) })).toBe(true)
     // a categorized place does NOT match the uncategorized chip
     expect(matches(r({ id: 'b', cuisine: 'French' }), { ...emptyFilter(), cuisines: new Set([UNCATEGORIZED]) })).toBe(false)

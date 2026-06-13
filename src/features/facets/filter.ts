@@ -9,7 +9,7 @@ export const UNCATEGORIZED = '__uncategorized__'
  * An empty set imposes no constraint (matches every place on that facet).
  */
 export interface FacetFilter {
-  /** Cuisine names as displayed, plus the `UNCATEGORIZED` sentinel; matched case-insensitively. */
+  /** Lowercased cuisine names, plus the `UNCATEGORIZED` sentinel — stored normalized for O(1) matching. */
   cuisines: ReadonlySet<string>
   statuses: ReadonlySet<RestaurantStatus>
   verdicts: ReadonlySet<Verdict>
@@ -31,13 +31,9 @@ function cuisineKey(r: Pick<Restaurant, 'cuisine'>): string {
 
 /** Pure facet predicate: AND across facets, OR within each (empty facet = no constraint). */
 export function matches(r: Restaurant, f: FacetFilter): boolean {
-  if (f.cuisines.size > 0) {
-    const key = cuisineKey(r)
-    const hit = [...f.cuisines].some((c) =>
-      c === UNCATEGORIZED ? key === UNCATEGORIZED : c.toLowerCase() === key,
-    )
-    if (!hit) return false
-  }
+  // `cuisineKey` and the stored set are both lowercased (UNCATEGORIZED for no cuisine),
+  // so an O(1) lookup is correct and case-insensitive without per-call array allocation.
+  if (f.cuisines.size > 0 && !f.cuisines.has(cuisineKey(r))) return false
   if (f.statuses.size > 0 && !f.statuses.has(statusOf(r))) return false
   if (f.verdicts.size > 0 && (!r.latestVerdict || !f.verdicts.has(r.latestVerdict))) return false
   return true

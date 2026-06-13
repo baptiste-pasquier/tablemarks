@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   VERDICTS,
   VERDICT_LABELS,
@@ -57,10 +58,10 @@ export function FilterBar({
   filter: FacetFilter
   onChange: (filter: FacetFilter) => void
 }) {
-  if (restaurants.length === 0) return null
+  const cuisines = useMemo(() => presentCuisines(restaurants), [restaurants])
+  const hasUncategorized = useMemo(() => restaurants.some((r) => !r.cuisine?.trim()), [restaurants])
 
-  const cuisines = presentCuisines(restaurants)
-  const hasUncategorized = restaurants.some((r) => !r.cuisine?.trim())
+  if (restaurants.length === 0) return null
 
   return (
     <div className="space-y-2 border-b border-gray-100 p-3">
@@ -80,8 +81,8 @@ export function FilterBar({
               key={c}
               label={c}
               color={colorForCuisine(c)}
-              active={filter.cuisines.has(c)}
-              onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, c) })}
+              active={filter.cuisines.has(c.toLowerCase())}
+              onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })}
             />
           ))}
           {hasUncategorized && (

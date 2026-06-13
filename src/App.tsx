@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRestaurants } from './features/useRestaurants'
 import { useAuth } from './auth/useAuth'
 import { RestaurantList } from './features/RestaurantList'
@@ -20,8 +20,10 @@ export default function App() {
   const [deciding, setDeciding] = useState(false)
   const [anchor, setAnchor] = useState<GeoPoint | null>(DEFAULT_MAP_CENTER)
   const [filter, setFilter] = useState(emptyFilter())
-  const visible = restaurants.filter((r) => matches(r, filter))
-  const markers = toMarkers(restaurants, filter)
+  // App re-renders on every map pan/zoom (anchor state); memoize so the list and markers
+  // aren't recomputed against every restaurant on each move.
+  const visible = useMemo(() => restaurants.filter((r) => matches(r, filter)), [restaurants, filter])
+  const markers = useMemo(() => toMarkers(restaurants, filter), [restaurants, filter])
 
   return (
     <div className="flex h-full flex-col">

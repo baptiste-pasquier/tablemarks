@@ -38,7 +38,7 @@ describe('toMarkers', () => {
   })
 
   it('flags non-matching markers dimmed but still places them (R9)', () => {
-    const filter = { ...emptyFilter(), cuisines: new Set(['French']) }
+    const filter = { ...emptyFilter(), cuisines: new Set(['french']) }
     const markers = toMarkers(
       [r({ id: 'a', cuisine: 'French' }), r({ id: 'b', cuisine: 'Thai' })],
       filter,
