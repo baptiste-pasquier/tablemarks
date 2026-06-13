@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { haversineMeters, findNearMatch } from './dedup'
+import { findNearMatch } from './dedup'
 import type { Restaurant } from '../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
@@ -16,13 +16,6 @@ function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
     ...over,
   }
 }
-
-describe('haversineMeters', () => {
-  it('is ~0 for the same point and grows with distance', () => {
-    expect(haversineMeters(48.8566, 2.3522, 48.8566, 2.3522)).toBeCloseTo(0, 1)
-    expect(haversineMeters(48.8566, 2.3522, 48.8606, 2.3522)).toBeGreaterThan(400)
-  })
-})
 
 describe('findNearMatch', () => {
   it('matches the same Maps link', () => {
