@@ -10,6 +10,7 @@ import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
 import { PortabilityPanel } from './features/portability/PortabilityPanel'
+import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import type { GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
 
@@ -115,6 +116,8 @@ export default function App() {
       {selectedId && (
         <RestaurantDetail restaurantId={selectedId} onClose={() => setSelectedId(null)} />
       )}
+
+      <ReloadPrompt />
     </div>
   )
 }
