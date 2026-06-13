@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { geolocate } from './geolocate'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
 
 describe('geolocate', () => {
   it('resolves to coordinates on success', async () => {
@@ -27,5 +30,13 @@ describe('geolocate', () => {
   it('resolves to null when geolocation is unsupported', async () => {
     vi.stubGlobal('navigator', {})
     expect(await geolocate()).toBeNull()
+  })
+
+  it('resolves to null when the permission prompt is never answered (wall-clock timeout)', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('navigator', { geolocation: { getCurrentPosition: () => {} } }) // never calls back
+    const promise = geolocate(5000)
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(await promise).toBeNull()
   })
 })

@@ -7,7 +7,8 @@ import { toMarkers } from './features/map/markers'
 import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
-import type { GeoPoint } from './features/decide/geolocate'
+import type { GeoPoint } from './lib/geolocate'
+import { DEFAULT_MAP_CENTER } from './lib/geo'
 
 export default function App() {
   const restaurants = useRestaurants()
@@ -15,7 +16,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
-  const [anchor, setAnchor] = useState<GeoPoint | null>(null)
+  const [anchor, setAnchor] = useState<GeoPoint | null>(DEFAULT_MAP_CENTER)
   const markers = toMarkers(restaurants)
 
   return (

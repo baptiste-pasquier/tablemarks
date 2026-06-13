@@ -10,6 +10,15 @@ function formatDistance(m: number): string {
   return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`
 }
 
+function formatRadiusKm(km: number): string {
+  return km < 1 ? `${km * 1000} m` : `${km} km`
+}
+
+/** Only http(s) links are safe to render as an href — guards against a pasted `javascript:` URL. */
+function isHttpUrl(u: string | undefined): u is string {
+  return !!u && /^https?:\/\//i.test(u)
+}
+
 export function DecidePanel({
   anchor,
   onClose,
@@ -55,7 +64,7 @@ export function DecidePanel({
                 km === radiusKm ? 'border-brand bg-brand-soft text-brand' : 'border-gray-300'
               }`}
             >
-              {km < 1 ? `${km * 1000} m` : `${km} km`}
+              {formatRadiusKm(km)}
             </button>
           ))}
         </div>
@@ -64,14 +73,14 @@ export function DecidePanel({
           <p className="text-sm text-gray-500">Move the map to choose an area.</p>
         ) : candidates.length === 0 ? (
           <div className="text-sm text-gray-500">
-            <p>Nothing to try or worth a return within {radiusKm < 1 ? `${radiusKm * 1000} m` : `${radiusKm} km`}.</p>
+            <p>Nothing to try or worth a return within {formatRadiusKm(radiusKm)}.</p>
             {nextRadius && (
               <button
                 type="button"
                 onClick={() => setRadiusKm(nextRadius)}
                 className="mt-1 font-medium text-brand underline"
               >
-                Widen to {nextRadius < 1 ? `${nextRadius * 1000} m` : `${nextRadius} km`}
+                Widen to {formatRadiusKm(nextRadius)}
               </button>
             )}
           </div>
@@ -101,7 +110,7 @@ export function DecidePanel({
                         {rollupLabel(restaurant)} · {formatDistance(distanceM)}
                       </span>
                     </button>
-                    {restaurant.mapsUrl && (
+                    {isHttpUrl(restaurant.mapsUrl) && (
                       <a
                         href={restaurant.mapsUrl}
                         target="_blank"

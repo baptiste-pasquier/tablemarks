@@ -37,7 +37,8 @@ describe('DecidePanel', () => {
 
     await user.click(await screen.findByRole('button', { name: /pick for me/i }))
 
-    expect(container.querySelector('.bg-brand-soft')).not.toBeNull()
+    // A picked candidate highlights its <li> (not the already-highlighted radius chip button).
+    expect(container.querySelector('li.bg-brand-soft')).not.toBeNull()
   })
 
   it('shows an empty state and widens the radius', async () => {
@@ -59,5 +60,23 @@ describe('DecidePanel', () => {
 
     await user.click(await screen.findByText('Pick Me'))
     expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('prompts to move the map when there is no anchor', async () => {
+    await createRestaurant({ name: 'Nearby', lat: 48.8566, lng: 2.3522 })
+    render(<DecidePanel anchor={null} onClose={vi.fn()} onOpenRestaurant={vi.fn()} />)
+
+    expect(await screen.findByText(/move the map/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /pick for me/i })).not.toBeInTheDocument()
+  })
+
+  it('renders a Directions link only for http(s) Maps URLs', async () => {
+    await createRestaurant({ name: 'Linked', lat: 48.8566, lng: 2.3522, mapsUrl: 'https://maps.app.goo.gl/x' })
+    await createRestaurant({ name: 'Sneaky', lat: 48.8566, lng: 2.3522, mapsUrl: 'javascript:alert(1)/@48.8566,2.3522' })
+    render(<DecidePanel anchor={ANCHOR} onClose={vi.fn()} onOpenRestaurant={vi.fn()} />)
+
+    const links = await screen.findAllByRole('link', { name: /directions/i })
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', 'https://maps.app.goo.gl/x')
   })
 })

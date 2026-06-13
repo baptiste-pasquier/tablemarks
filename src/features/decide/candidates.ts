@@ -1,10 +1,9 @@
 import { haversineMeters } from '../../lib/geo'
+import type { GeoPoint } from '../../lib/geolocate'
 import type { Restaurant } from '../../types/models'
 
-export interface Anchor {
-  lat: number
-  lng: number
-}
+/** A point to measure proximity from (the map center). */
+export type Anchor = GeoPoint
 
 export interface Candidate {
   restaurant: Restaurant
@@ -12,7 +11,7 @@ export interface Candidate {
 }
 
 /** A restaurant is a decision candidate when it's to-try (no visits) or a "Go back" favorite. */
-export function isCandidatePool(r: Restaurant): boolean {
+function isCandidatePool(r: Restaurant): boolean {
   return r.visitCount === 0 || r.latestVerdict === 'go_back'
 }
 
@@ -27,7 +26,7 @@ export function decideCandidates(
 ): Candidate[] {
   const out: Candidate[] = []
   for (const r of restaurants) {
-    if (r.pending || r.lat === null || r.lng === null) continue
+    if (r.deleted || r.pending || r.lat === null || r.lng === null) continue
     if (!isCandidatePool(r)) continue
     const distanceM = haversineMeters(anchor.lat, anchor.lng, r.lat, r.lng)
     if (distanceM <= radiusM) out.push({ restaurant: r, distanceM })

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { MapMarker } from './markers'
-import { geolocate, type GeoPoint } from '../decide/geolocate'
+import { geolocate, type GeoPoint } from '../../lib/geolocate'
+import { DEFAULT_MAP_CENTER } from '../../lib/geo'
 
 const pin = L.divIcon({
   className: '',
@@ -11,7 +12,7 @@ const pin = L.divIcon({
   iconAnchor: [7, 7],
 })
 
-const DEFAULT_CENTER: [number, number] = [48.8566, 2.3522]
+const DEFAULT_CENTER: [number, number] = [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]
 
 /**
  * MapContainer's center/zoom apply only on initial render. When the map first renders empty
@@ -32,13 +33,22 @@ function Recenter({ markers }: { markers: MapMarker[] }) {
 /** Report the map's center to the consumer on mount and on every move, so it can serve as an anchor. */
 function CenterReporter({ onChange }: { onChange?: (center: GeoPoint) => void }) {
   const map = useMap()
-  const report = () => {
-    if (!onChange) return
-    const c = map.getCenter()
-    onChange({ lat: c.lat, lng: c.lng })
-  }
-  useEffect(report, [map]) // eslint-disable-line react-hooks/exhaustive-deps
-  useMapEvents({ moveend: report })
+  // Keep the latest onChange in a ref so the effect depends only on `map` (stable) — no
+  // stale closure, and `moveend` is subscribed once per map rather than re-bound each render.
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
+  useEffect(() => {
+    const emit = () => {
+      const c = map.getCenter()
+      onChangeRef.current?.({ lat: c.lat, lng: c.lng })
+    }
+    emit() // initial center
+    map.on('moveend', emit)
+    return () => {
+      map.off('moveend', emit)
+    }
+  }, [map])
   return null
 }
 

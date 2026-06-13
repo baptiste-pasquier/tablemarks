@@ -1,3 +1,8 @@
+import type { GeoPoint } from './geolocate'
+
+/** Fallback map center (Paris) used before a real anchor is known. */
+export const DEFAULT_MAP_CENTER: GeoPoint = { lat: 48.8566, lng: 2.3522 }
+
 const EARTH_RADIUS_M = 6_371_000
 
 /** Great-circle distance between two lat/lng points, in meters. */
