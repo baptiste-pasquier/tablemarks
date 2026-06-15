@@ -33,6 +33,7 @@ export async function createVisit(input: VisitInput): Promise<Visit> {
     note: input.note,
     updated: now(),
     deleted: false,
+    needsPush: true,
   }
   const db = await getDB()
   await db.put('visits', record)
@@ -45,7 +46,7 @@ export async function updateVisit(id: string, patch: VisitPatch): Promise<Visit>
   const db = await getDB()
   const existing = await db.get('visits', id)
   if (!existing) throw new Error(`Visit ${id} not found`)
-  const next: Visit = { ...existing, ...patch, id, updated: now() }
+  const next: Visit = { ...existing, ...patch, id, updated: now(), needsPush: true }
   await db.put('visits', next)
   await recomputeRollup(next.restaurantId)
   emitLocalChange()
@@ -56,7 +57,7 @@ export async function removeVisit(id: string): Promise<void> {
   const db = await getDB()
   const existing = await db.get('visits', id)
   if (!existing) return
-  await db.put('visits', { ...existing, deleted: true, updated: now() })
+  await db.put('visits', { ...existing, deleted: true, updated: now(), needsPush: true })
   await recomputeRollup(existing.restaurantId)
   emitLocalChange()
 }

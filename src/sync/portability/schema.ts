@@ -6,6 +6,10 @@ export const EXPORT_SCHEMA_VERSION = 1
 /** Identity guard so a non-Tablemarks JSON file is rejected before any record processing. */
 export const EXPORT_FORMAT = 'tablemarks-export'
 
+/** Record shapes in the export file — needsPush is device-local and never serialized. */
+export type ExportRestaurant = Omit<Restaurant, 'needsPush'>
+export type ExportVisit = Omit<Visit, 'needsPush'>
+
 /** A full-fidelity, versioned, round-trippable snapshot of the collection. */
 export interface ExportEnvelope {
   format: typeof EXPORT_FORMAT
@@ -14,8 +18,8 @@ export interface ExportEnvelope {
   /** ISO timestamp the file was produced. Metadata only. */
   exportedAt: string
   records: {
-    restaurants: Restaurant[]
-    visits: Visit[]
+    restaurants: ExportRestaurant[]
+    visits: ExportVisit[]
   }
 }
 
@@ -81,6 +85,8 @@ function asRestaurant(x: unknown): Restaurant | null {
     visitCount: r.visitCount,
     updated: r.updated,
     deleted: r.deleted,
+    // Imported records are local-ahead-of-cloud until the next sync pushes them.
+    needsPush: true,
   }
 }
 
@@ -99,6 +105,8 @@ function asVisit(x: unknown): Visit | null {
     note: v.note as string | undefined,
     updated: v.updated,
     deleted: v.deleted,
+    // Imported records are local-ahead-of-cloud until the next sync pushes them.
+    needsPush: true,
   }
 }
 

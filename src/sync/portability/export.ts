@@ -4,7 +4,8 @@ import { now } from '../../data/ids'
 import { EXPORT_FORMAT, EXPORT_SCHEMA_VERSION, type ExportEnvelope } from './schema'
 import type { Restaurant, Visit } from '../../types/models'
 
-/** Wrap records in the versioned envelope. Pure — `exportedAt` is supplied by the caller. */
+/** Wrap records in the versioned envelope. Pure — `exportedAt` is supplied by the caller.
+ * `needsPush` is device-local and stripped from the exported envelope. */
 export function buildExport(
   restaurants: Restaurant[],
   visits: Visit[],
@@ -14,7 +15,10 @@ export function buildExport(
     format: EXPORT_FORMAT,
     schemaVersion: EXPORT_SCHEMA_VERSION,
     exportedAt,
-    records: { restaurants, visits },
+    records: {
+      restaurants: restaurants.map(({ needsPush: _, ...r }) => r),
+      visits: visits.map(({ needsPush: _, ...v }) => v),
+    },
   }
 }
 

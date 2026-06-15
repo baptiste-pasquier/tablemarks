@@ -17,11 +17,12 @@ function restaurant(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'updated
     latestVisitDate: null,
     visitCount: 0,
     deleted: false,
+    needsPush: true,
     ...over,
   }
 }
 function visit(over: Partial<Visit> & Pick<Visit, 'id' | 'restaurantId' | 'updated'>): Visit {
-  return { date: '2026-01-01', verdict: 'go_back', deleted: false, ...over }
+  return { date: '2026-01-01', verdict: 'go_back', deleted: false, needsPush: true, ...over }
 }
 function records(over: Partial<ImportRecords> = {}): ImportRecords {
   return { restaurants: [], visits: [], ...over }
@@ -145,5 +146,16 @@ describe('applyImport', () => {
     await createRestaurant({ id: 'keep', name: 'Keep' })
     await applyImport(records({ restaurants: [restaurant({ id: 'other', name: 'Other', updated: '2026-05-01T00:00:00Z' })] }))
     expect((await allRestaurants()).map((x) => x.id).sort()).toEqual(['keep', 'other'])
+  })
+
+  it('imported winners have needsPush=true so they converge to the cloud on next sync', async () => {
+    await applyImport(
+      records({
+        restaurants: [restaurant({ id: 'r-imported', name: 'Imported', updated: '2099-01-01T00:00:00Z' })],
+        visits: [visit({ id: 'v-imported', restaurantId: 'r-imported', updated: '2099-01-01T00:00:00Z' })],
+      }),
+    )
+    const r = await getRestaurant('r-imported')
+    expect(r?.needsPush).toBe(true)
   })
 })

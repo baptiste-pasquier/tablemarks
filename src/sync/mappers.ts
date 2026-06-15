@@ -75,6 +75,7 @@ export function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
     visitCount: r.visitCount,
     updated: r.syncedAt,
     deleted: r.deleted,
+    needsPush: false,
   }
 }
 
@@ -100,5 +101,6 @@ export function visitFromRemote(v: RemoteVisit): Visit {
     note: v.note,
     updated: v.syncedAt,
     deleted: v.deleted,
+    needsPush: false,
   }
 }

@@ -17,6 +17,7 @@ function restaurant(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaur
     visitCount: 0,
     updated: '2026-01-01T00:00:00Z',
     deleted: false,
+    needsPush: false,
     ...over,
   }
 }
@@ -24,7 +25,7 @@ function restaurant(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaur
 describe('buildExport', () => {
   it('wraps records in the versioned envelope, preserving id/updated/cuisine/deleted', () => {
     const r = restaurant({ id: 'r1', cuisine: 'French', updated: '2026-02-02T00:00:00Z' })
-    const v: Visit = { id: 'v1', restaurantId: 'r1', date: '2026-02-01', verdict: 'go_back', updated: '2026-02-01T00:00:00Z', deleted: false }
+    const v: Visit = { id: 'v1', restaurantId: 'r1', date: '2026-02-01', verdict: 'go_back', updated: '2026-02-01T00:00:00Z', deleted: false, needsPush: false }
     const env = buildExport([r], [v], '2026-06-13T00:00:00Z')
 
     expect(env.format).toBe(EXPORT_FORMAT)
@@ -32,6 +33,14 @@ describe('buildExport', () => {
     expect(env.exportedAt).toBe('2026-06-13T00:00:00Z')
     expect(env.records.restaurants[0]).toMatchObject({ id: 'r1', cuisine: 'French', updated: '2026-02-02T00:00:00Z', deleted: false })
     expect(env.records.visits[0]).toMatchObject({ id: 'v1', restaurantId: 'r1', verdict: 'go_back' })
+  })
+
+  it('strips needsPush from exported records (device-local marker never serialized)', () => {
+    const r = restaurant({ id: 'r1', needsPush: true })
+    const v: Visit = { id: 'v1', restaurantId: 'r1', date: '2026-02-01', verdict: 'go_back', updated: '2026-02-01T00:00:00Z', deleted: false, needsPush: true }
+    const env = buildExport([r], [v], '2026-06-13T00:00:00Z')
+    expect('needsPush' in env.records.restaurants[0]).toBe(false)
+    expect('needsPush' in env.records.visits[0]).toBe(false)
   })
 
   it('produces a valid empty envelope for an empty collection', () => {

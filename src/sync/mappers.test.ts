@@ -19,6 +19,8 @@ const restaurant: Restaurant = {
   visitCount: 3,
   updated: '2026-02-01T10:00:00.000Z',
   deleted: false,
+  // needsPush is local-only — a remote round-trip always clears it to false
+  needsPush: false,
 }
 
 const visit: Visit = {
@@ -28,6 +30,7 @@ const visit: Visit = {
   verdict: 'go_back',
   updated: '2026-02-01T10:00:00.000Z',
   deleted: false,
+  needsPush: false,
 }
 
 describe('mappers', () => {

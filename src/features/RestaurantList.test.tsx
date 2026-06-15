@@ -13,6 +13,7 @@ function r(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'name'>): Restaur
     visitCount: 0,
     updated: '1',
     deleted: false,
+    needsPush: false,
     ...over,
   }
 }

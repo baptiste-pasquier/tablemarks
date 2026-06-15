@@ -2,7 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Restaurant, Visit } from '../types/models'
 
 const DB_NAME = 'tablemarks'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 interface TablemarksDB extends DBSchema {
   restaurants: {
@@ -21,13 +21,25 @@ let dbPromise: Promise<IDBPDatabase<TablemarksDB>> | null = null
 export function getDB(): Promise<IDBPDatabase<TablemarksDB>> {
   if (!dbPromise) {
     dbPromise = openDB<TablemarksDB>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
+      async upgrade(db, oldVersion, _newVersion, tx) {
         // Branch on oldVersion so future version bumps add stores incrementally instead of
         // re-running v1 creates against an existing database.
         if (oldVersion < 1) {
           db.createObjectStore('restaurants', { keyPath: 'id' })
           const visits = db.createObjectStore('visits', { keyPath: 'id' })
           visits.createIndex('by-restaurant', 'restaurantId')
+        }
+        if (oldVersion < 2) {
+          // Backfill needsPush=true on all existing records — treat pre-migration data as
+          // pending so the next sync re-pushes it. Re-pushing is idempotent under LWW.
+          const rStore = tx.objectStore('restaurants')
+          for (const r of await rStore.getAll()) {
+            await rStore.put({ ...r, needsPush: true })
+          }
+          const vStore = tx.objectStore('visits')
+          for (const v of await vStore.getAll()) {
+            await vStore.put({ ...v, needsPush: true })
+          }
         }
       },
     }).catch((err) => {

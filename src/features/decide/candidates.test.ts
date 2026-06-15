@@ -17,6 +17,7 @@ function r(
     visitCount: 0,
     updated: '1',
     deleted: false,
+    needsPush: false,
     ...over,
   }
 }

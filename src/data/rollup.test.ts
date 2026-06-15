@@ -8,7 +8,7 @@ import type { Visit } from '../types/models'
 beforeEach(freshDB)
 
 function visit(date: string, verdict: Visit['verdict'], deleted = false): Visit {
-  return { id: date, restaurantId: 'r', date, verdict, updated: date, deleted }
+  return { id: date, restaurantId: 'r', date, verdict, updated: date, deleted, needsPush: false }
 }
 
 describe('rollupOf (pure)', () => {

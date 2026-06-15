@@ -45,6 +45,7 @@ function remoteRestaurant(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'u
     latestVisitDate: null,
     visitCount: 0,
     deleted: false,
+    needsPush: false,
     ...over,
   }
 }
@@ -122,6 +123,7 @@ describe('fullSync', () => {
       verdict: 'go_back',
       updated: '2026-06-01T00:00:00Z',
       deleted: false,
+      needsPush: false,
     })
 
     await fullSync(remote)

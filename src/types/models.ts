@@ -48,6 +48,8 @@ export interface Restaurant extends SyncFields {
   latestVerdict: Verdict | null
   latestVisitDate: string | null
   visitCount: number
+  /** Local-only. true = local state is ahead of the cloud (not yet pushed). Never synced or exported. */
+  needsPush: boolean
 }
 
 export interface Visit extends SyncFields {
@@ -56,6 +58,8 @@ export interface Visit extends SyncFields {
   date: string
   verdict: Verdict
   note?: string
+  /** Local-only. true = local state is ahead of the cloud (not yet pushed). Never synced or exported. */
+  needsPush: boolean
 }
 
 export type RestaurantStatus = 'to_try' | 'visited'
