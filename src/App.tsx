@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useRestaurants } from './features/useRestaurants'
 import { useAuth } from './auth/useAuth'
+import { useSyncStatus } from './sync/useSyncStatus'
+import { SyncStatusIndicator } from './features/SyncStatusIndicator'
 import { RestaurantList } from './features/RestaurantList'
 import { MapView } from './features/map/MapView'
 import { toMarkers } from './features/map/markers'
@@ -17,6 +19,7 @@ import { DEFAULT_MAP_CENTER } from './lib/geo'
 export default function App() {
   const restaurants = useRestaurants()
   const { signedIn, email, signIn, signOut } = useAuth()
+  const syncStatus = useSyncStatus()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
@@ -34,6 +37,7 @@ export default function App() {
         <h1 className="text-lg font-bold text-brand">Tablemarks</h1>
         {signedIn ? (
           <div className="flex items-center gap-3 text-sm">
+            <SyncStatusIndicator state={syncStatus} />
             <span className="text-gray-500">{email}</span>
             <button
               type="button"
