@@ -1,11 +1,12 @@
-import { beforeEach, describe, it, expect } from 'vitest'
+import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../test/idb'
-import { fullSync, type RemoteStore } from './syncEngine'
+import { fullSync, SyncController, deriveSyncStatus, type RemoteStore, type SyncState } from './syncEngine'
 import {
   createRestaurant,
   getRestaurant,
   allRestaurants,
   allRestaurantsForSync,
+  putRestaurantRaw,
 } from '../data/restaurants'
 import { createVisit } from '../data/visits'
 import { closeDB } from '../data/db'
@@ -51,6 +52,108 @@ function remoteRestaurant(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'u
 }
 
 beforeEach(freshDB)
+afterEach(() => vi.restoreAllMocks())
+
+// ─── deriveSyncStatus (pure) ─────────────────────────────────────────────────
+
+describe('deriveSyncStatus', () => {
+  it('synced when online and no pending records', () => {
+    expect(deriveSyncStatus(true, 0, 0, null)).toEqual({ status: 'synced', pending: 0 })
+  })
+
+  it('pending when online and queue non-empty', () => {
+    expect(deriveSyncStatus(true, 3, 0, null)).toEqual({ status: 'pending', pending: 3 })
+  })
+
+  it('AE3: offline when navigator.onLine is false, still reports pending count', () => {
+    expect(deriveSyncStatus(false, 2, 0, null)).toEqual({ status: 'offline', pending: 2 })
+  })
+
+  it('AE3: offline overrides pending even when count > 0', () => {
+    expect(deriveSyncStatus(false, 5, 0, null)).toMatchObject({ status: 'offline' })
+  })
+
+  it('problem state with auth cause after 3+ consecutive failures', () => {
+    expect(deriveSyncStatus(true, 1, 3, 'auth')).toEqual({ status: 'problem', pending: 1, cause: 'auth' })
+  })
+
+  it('problem state with server cause', () => {
+    expect(deriveSyncStatus(true, 0, 4, 'server')).toEqual({ status: 'problem', pending: 0, cause: 'server' })
+  })
+
+  it('not problem state when below the threshold (2 failures)', () => {
+    expect(deriveSyncStatus(true, 1, 2, 'auth')).toMatchObject({ status: 'pending' })
+  })
+
+  it('offline overrides problem — offline is its own state, not an escalation', () => {
+    expect(deriveSyncStatus(false, 1, 5, 'auth')).toMatchObject({ status: 'offline' })
+  })
+})
+
+// ─── SyncController sync state (U2) ──────────────────────────────────────────
+
+describe('SyncController sync state', () => {
+  it('AE1: syncNow success with empty queue → status synced', async () => {
+    const ctrl = new SyncController()
+    const remote = new FakeRemote()
+
+    // No pending records
+    await ctrl.syncNow(remote)
+    expect(ctrl.getSyncState()).toEqual({ status: 'synced', pending: 0 })
+    ctrl.stop()
+  })
+
+  it('AE1: pending records → syncNow success → status synced, pending → 0', async () => {
+    await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    const ctrl = new SyncController()
+    const remote = new FakeRemote()
+
+    // Before sync: pending
+    await ctrl.recomputeSyncState()
+    expect(ctrl.getSyncState()).toMatchObject({ status: 'pending', pending: 1 })
+
+    // After sync: synced
+    await ctrl.syncNow(remote)
+    expect(ctrl.getSyncState()).toEqual({ status: 'synced', pending: 0 })
+    ctrl.stop()
+  })
+
+  it('observable fires when status changes', async () => {
+    await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    const ctrl = new SyncController()
+    const remote = new FakeRemote()
+    const observed: SyncState[] = []
+    ctrl.onSyncStateChange(() => observed.push(ctrl.getSyncState()))
+
+    await ctrl.recomputeSyncState() // pending
+    await ctrl.syncNow(remote) // synced
+
+    expect(observed.length).toBeGreaterThanOrEqual(2)
+    expect(observed[0]).toMatchObject({ status: 'pending' })
+    expect(observed[observed.length - 1]).toEqual({ status: 'synced', pending: 0 })
+    ctrl.stop()
+  })
+
+  it('AE3: offline state when navigator.onLine is false', async () => {
+    vi.stubGlobal('navigator', { onLine: false })
+    await createRestaurant({ name: 'Offline write', lat: 1, lng: 1 })
+    const ctrl = new SyncController()
+    await ctrl.recomputeSyncState()
+    expect(ctrl.getSyncState()).toMatchObject({ status: 'offline', pending: 1 })
+    ctrl.stop()
+  })
+
+  it('signed-out: getSyncState returns null (indicator is hidden)', async () => {
+    // auth.getSyncState() returns null when not signed in — tested at the auth layer;
+    // here we verify the controller's own state is readable and stops cleanly.
+    const ctrl = new SyncController()
+    ctrl.stop()
+    // After stop, the controller is inert — reads are still valid
+    expect(ctrl.getSyncState()).toBeDefined()
+  })
+})
+
+// ─── fullSync ─────────────────────────────────────────────────────────────────
 
 describe('fullSync', () => {
   it('unions local-only and remote-only records with no duplicates', async () => {

@@ -1,5 +1,5 @@
 import { pb } from '../sync/pocketbase'
-import { PocketBaseRemote, SyncController } from '../sync/syncEngine'
+import { PocketBaseRemote, SyncController, type SyncState } from '../sync/syncEngine'
 
 /**
  * Account mode for the local-first app. There is no local-vs-cloud toggle: the app always
@@ -40,6 +40,19 @@ export class AuthService {
 
   onChange(cb: () => void): () => void {
     return pb.authStore.onChange(cb, false)
+  }
+
+  /** Returns null when signed out — the indicator is a backup-state concept, hidden without a cloud account. */
+  getSyncState(): SyncState | null {
+    if (!this.isSignedIn) return null
+    return this.controller.getSyncState()
+  }
+
+  /** Subscribe to sync-state changes. Fires when auth changes (sign in/out) or sync state changes. */
+  onSyncStateChange(cb: () => void): () => void {
+    const offAuth = this.onChange(cb)
+    const offSync = this.controller.onSyncStateChange(cb)
+    return () => { offAuth(); offSync() }
   }
 }
 

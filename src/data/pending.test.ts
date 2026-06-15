@@ -4,8 +4,24 @@ import { freshDB } from '../test/idb'
 import { pendingCount } from './pending'
 import { createRestaurant, updateRestaurant, removeRestaurant, putRestaurantRaw, getRestaurant } from './restaurants'
 import { createVisit, updateVisit, removeVisit, putVisitRaw } from './visits'
+import { fullSync, type RemoteStore } from '../sync/syncEngine'
 import { getDB, closeDB, DB } from './db'
 import type { Restaurant, Visit } from '../types/models'
+
+class FakeRemote implements RemoteStore {
+  restaurants: Restaurant[] = []
+  visits: Visit[] = []
+  async listRestaurants() { return structuredClone(this.restaurants) }
+  async listVisits() { return structuredClone(this.visits) }
+  async pushRestaurant(r: Restaurant) {
+    const i = this.restaurants.findIndex((x) => x.id === r.id)
+    if (i >= 0) this.restaurants[i] = r; else this.restaurants.push(r)
+  }
+  async pushVisit(v: Visit) {
+    const i = this.visits.findIndex((x) => x.id === v.id)
+    if (i >= 0) this.visits[i] = v; else this.visits.push(v)
+  }
+}
 
 beforeEach(freshDB)
 
@@ -124,6 +140,13 @@ describe('pendingCount', () => {
 
     await removeVisit(v.id)
     expect(await pendingCount()).toBe(1)
+  })
+
+  it('a successful fullSync push clears needsPush=false on the pushed records', async () => {
+    await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    expect(await pendingCount()).toBe(1)
+    await fullSync(new FakeRemote())
+    expect(await pendingCount()).toBe(0)
   })
 
   it('deleted records do not contribute to the pending count', async () => {
