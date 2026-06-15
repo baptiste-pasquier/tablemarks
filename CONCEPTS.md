@@ -53,6 +53,12 @@ A user-triggered write of the entire collection — every Restaurant and Visit, 
 ### Import
 Merging a previously exported file back into the store as another Last-Write-Wins reconcile source: records upsert by stable id, the newer wins, unseen records are added, and nothing is deleted — so re-importing an unchanged file is a no-op. A malformed or unrecognized file is rejected without touching the store.
 
+### needsPush
+A local-only boolean on each Restaurant and Visit: `true` when the record has been written locally but not yet pushed to the cloud. Set by every user-facing mutator; cleared by a successful push or by a pulled remote winner. Never synced, exported, or part of Last-Write-Wins. The pending count is derived from this field, making it offline-correct and reload-proof.
+
+### SyncState
+The observable backup status exposed by `SyncController` and consumed by the header pill. One of four values: **synced** (online, nothing pending), **pending** (online, queue non-empty), **offline** (`!navigator.onLine`, regardless of queue), or **problem** (three or more consecutive non-offline push failures). A problem carries a cause — `auth` (expired credentials) or `server` (network or 5xx).
+
 ## Flagged ambiguities
 
 - "Rating" refers to the Verdict (a returnability judgment), not a numeric score — Tablemarks has no star rating.

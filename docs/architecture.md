@@ -63,6 +63,19 @@ Raw sync writes use store-change only, so a pulled record refreshes the UI witho
 
 The data layer works offline by construction. The app is an installable PWA: the shell and assets are precached, and map tiles viewed online are progressively cached (bounded, re-served offline) while never-browsed areas render blank. A new app version surfaces an explicit reload prompt rather than reloading silently. All data remains usable offline regardless.
 
+## Sync trust layer
+
+Each Restaurant and Visit carries a local-only `needsPush` boolean: `true` when the record is ahead of the cloud, `false` after a successful push or when a remote winner overwrites it. The pending count is derived from this field alone — no remote fetch required — so it is correct offline and survives reloads.
+
+`SyncController` exposes a `SyncState` observable (`synced | pending | offline | problem` plus a count). The UI subscribes via `useSyncStatus()` and renders a single header pill. The state machine:
+
+- **synced** — online, zero pending records.
+- **pending** — online, one or more records not yet pushed.
+- **offline** — `!navigator.onLine`, regardless of the queue.
+- **problem** — three or more consecutive non-offline push failures, with a named cause (`auth` or `server`).
+
+Going offline resets the failure counter (offline is never an escalation). A success resets it. While online and failing, an exponential backoff timer reschedules the sync automatically (≈5s → 5 min cap), cleared on `stop()`.
+
 ## Scope built so far
 
-The storage/sync core, Google auth, paste-a-URL capture (with geocoding fallback and short-link resolution), the visit-log/verdict UI, the decision mode, faceted cuisine filtering, data export/import, and the installable PWA with offline tiles. Deferred to a later layer: a visible sync-status indicator.
+The storage/sync core, Google auth, paste-a-URL capture (with geocoding fallback and short-link resolution), the visit-log/verdict UI, the decision mode, faceted cuisine filtering, data export/import, the installable PWA with offline tiles, and the sync trust layer (backup-status indicator with failure escalation and backoff retry).
