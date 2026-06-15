@@ -238,7 +238,10 @@ export class SyncController {
   /** Exposed for testing: run a sync against the given remote (or the registered one). */
   async syncNow(remote?: RemoteStore): Promise<SyncOutcome | undefined> {
     const r = remote ?? this._remote
-    if (!r || !navigator.onLine) return undefined
+    if (!r || !navigator.onLine) {
+      await this.recomputeSyncState()
+      return undefined
+    }
     try {
       const outcome = await fullSync(r)
       this._consecutiveFailures = 0

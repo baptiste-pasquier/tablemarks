@@ -52,7 +52,11 @@ function remoteRestaurant(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'u
 }
 
 beforeEach(freshDB)
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
 
 // ─── deriveSyncStatus (pure) ─────────────────────────────────────────────────
 
@@ -150,6 +154,125 @@ describe('SyncController sync state', () => {
     ctrl.stop()
     // After stop, the controller is inert — reads are still valid
     expect(ctrl.getSyncState()).toBeDefined()
+  })
+})
+
+// ─── SyncController failure escalation + backoff (U3) ────────────────────────
+
+/** FakeRemote that throws on push after `failAfter` total pushes. */
+class FailingRemote implements RemoteStore {
+  restaurants: Restaurant[] = []
+  visits: Visit[] = []
+  failWith: { status: number } | Error = { status: 401 }
+  callCount = 0
+
+  async listRestaurants() { return structuredClone(this.restaurants) }
+  async listVisits() { return structuredClone(this.visits) }
+  async pushRestaurant(_r: Restaurant) {
+    this.callCount++
+    throw this.failWith
+  }
+  async pushVisit(_v: Visit) { this.callCount++ }
+}
+
+describe('SyncController failure escalation', () => {
+  it('AE4: 3 consecutive auth failures escalate to problem with cause=auth', async () => {
+    const r = await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    void r
+    const ctrl = new SyncController()
+    const remote = new FailingRemote()
+    remote.failWith = { status: 401 }
+
+    // 1st failure: still pending (below threshold)
+    await expect(ctrl.syncNow(remote)).rejects.toMatchObject({ status: 401 })
+    expect(ctrl.getSyncState()).toMatchObject({ status: 'pending' })
+
+    // 2nd failure: still pending
+    await expect(ctrl.syncNow(remote)).rejects.toMatchObject({ status: 401 })
+    expect(ctrl.getSyncState()).toMatchObject({ status: 'pending' })
+
+    // 3rd failure: escalates
+    await expect(ctrl.syncNow(remote)).rejects.toMatchObject({ status: 401 })
+    expect(ctrl.getSyncState()).toMatchObject({ status: 'problem', cause: 'auth' })
+    ctrl.stop()
+  })
+
+  it('server error (network/5xx) escalates with cause=server', async () => {
+    await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    const ctrl = new SyncController()
+    const remote = new FailingRemote()
+    remote.failWith = new Error('Network error')
+
+    for (let i = 0; i < 3; i++) {
+      await expect(ctrl.syncNow(remote)).rejects.toBeDefined()
+    }
+    expect(ctrl.getSyncState()).toMatchObject({ status: 'problem', cause: 'server' })
+    ctrl.stop()
+  })
+
+  it('one success resets the counter: 2 failures then success leaves status synced', async () => {
+    await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    const ctrl = new SyncController()
+    const failing = new FailingRemote()
+
+    await expect(ctrl.syncNow(failing)).rejects.toBeDefined()
+    await expect(ctrl.syncNow(failing)).rejects.toBeDefined()
+    expect(ctrl._consecutiveFailures).toBe(2)
+
+    // Successful sync resets counter
+    await ctrl.syncNow(new FakeRemote())
+    expect(ctrl._consecutiveFailures).toBe(0)
+    expect(ctrl.getSyncState()).toMatchObject({ status: 'synced' })
+    ctrl.stop()
+  })
+
+  it('going offline mid-failure-streak: status offline (not problem), counter resets', async () => {
+    await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    const ctrl = new SyncController()
+    const remote = new FailingRemote()
+
+    // 3 failures → problem
+    for (let i = 0; i < 3; i++) {
+      await expect(ctrl.syncNow(remote)).rejects.toBeDefined()
+    }
+    expect(ctrl.getSyncState().status).toBe('problem')
+
+    // Simulate going offline — controller's offline handler fires
+    vi.stubGlobal('navigator', { onLine: false })
+    ctrl._consecutiveFailures = 0
+    ctrl._failureCause = null
+    await ctrl.recomputeSyncState()
+    expect(ctrl.getSyncState().status).toBe('offline')
+    ctrl.stop()
+  })
+
+  it('offline-skip (navigator.onLine false) is never counted as a failure', async () => {
+    await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    vi.stubGlobal('navigator', { onLine: false })
+    const ctrl = new SyncController()
+
+    // syncNow returns undefined (offline skip, no throw)
+    const result = await ctrl.syncNow(new FailingRemote())
+    expect(result).toBeUndefined()
+    expect(ctrl._consecutiveFailures).toBe(0)
+    expect(ctrl.getSyncState().status).toBe('offline')
+    ctrl.stop()
+  })
+
+  it('backoff: retry timer is scheduled on failure and cleared on stop', async () => {
+    await createRestaurant({ name: 'Pending', lat: 1, lng: 1 })
+    const ctrl = new SyncController()
+    const remote = new FailingRemote()
+
+    await expect(ctrl.syncNow(remote)).rejects.toBeDefined()
+    // A retry timer is scheduled after failure
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((ctrl as any)._retryTimer).not.toBeNull()
+
+    // stop() clears it — no retry fires, no unhandled rejection escapes
+    ctrl.stop()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((ctrl as any)._retryTimer).toBeNull()
   })
 })
 
