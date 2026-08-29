@@ -16,6 +16,10 @@
   --color-verdict-never: #8b3a3a;
   --color-verdict-neutral: #8a7a68;
 
+  /* Base height of the mobile List/Map toggle bar (KTD4); safe-area inset is added
+     on top of this wherever the bar itself or clearance for it is computed. */
+  --spacing-toggle-bar: 3.75rem;
+
   /* Carnet culinaire ramp — warm, sepia-tinted parchment neutrals
      replacing Tailwind's default cool grays; distinct from feat/ui-polish's
      stone ramp (superseded), for the paper-editorial identity. */
