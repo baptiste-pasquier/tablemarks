@@ -2,13 +2,12 @@ import { useMemo } from 'react'
 import {
   VERDICTS,
   VERDICT_LABELS,
+  STATUS_LABELS,
   type RestaurantStatus,
   type Restaurant,
 } from '../../types/models'
 import { colorForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
-
-const STATUS_LABELS: Record<RestaurantStatus, string> = { to_try: 'To try', visited: 'Visited' }
 
 function Chip({
   label,

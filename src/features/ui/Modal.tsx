@@ -21,6 +21,12 @@ export function Modal({
   panelClassName?: string
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
+  // Keep the latest onClose in a ref so the effect depends on nothing that changes identity
+  // every render (every caller passes an inline arrow) — otherwise it would tear down and
+  // re-run on any unrelated re-render while open (e.g. a map pan or a background sync update),
+  // stealing focus back to the panel's first focusable element mid-interaction.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
@@ -28,7 +34,7 @@ export function Modal({
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab' || !panelRef.current) return
@@ -50,7 +56,7 @@ export function Modal({
       document.removeEventListener('keydown', onKeyDown)
       previouslyFocused?.focus()
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div

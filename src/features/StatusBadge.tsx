@@ -1,4 +1,5 @@
-import { VERDICT_LABELS, type Restaurant, type Verdict } from '../types/models'
+import { badgeState } from './display'
+import { STATUS_LABELS, VERDICT_LABELS, type Restaurant, type Verdict } from '../types/models'
 
 const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
   go_back: 'bg-verdict-go-back',
@@ -24,16 +25,17 @@ export function VerdictBadge({ verdict }: { verdict: Verdict }) {
 
 /**
  * Fused status+verdict badge (R8, R9, KTD3): one element in place of a separate status pill and
- * rollup line. Reads pending/visit-count/latest-verdict directly instead of composing
- * statusLabel()+rollupLabel(), so it never carries a "· N visits" suffix (AE3).
+ * rollup line. Built from the same classification `rollupLabel` uses, so it never carries a
+ * "· N visits" suffix (AE3) — it just renders that classification without the count.
  */
 export function StatusBadge({
   restaurant,
 }: {
   restaurant: Pick<Restaurant, 'pending' | 'visitCount' | 'latestVerdict'>
 }) {
-  if (restaurant.pending) return <Badge text="Resolving…" className="bg-verdict-neutral" />
-  if (restaurant.visitCount === 0) return <Badge text="To try" className="bg-verdict-neutral" />
-  if (restaurant.latestVerdict) return <VerdictBadge verdict={restaurant.latestVerdict} />
-  return <Badge text="Visited" className="bg-verdict-neutral" />
+  const state = badgeState(restaurant)
+  if (state.kind === 'pending') return <Badge text="Resolving…" className="bg-verdict-neutral" />
+  if (state.kind === 'to_try') return <Badge text={STATUS_LABELS.to_try} className="bg-verdict-neutral" />
+  if (state.verdict) return <VerdictBadge verdict={state.verdict} />
+  return <Badge text={STATUS_LABELS.visited} className="bg-verdict-neutral" />
 }

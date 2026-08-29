@@ -8,7 +8,6 @@
   --color-brand-soft: #fbe7da;
   --color-brand-strong: #b8431a;
   --color-teal: #1f6f68;
-  --color-teal-strong: #154d48;
 
   --color-verdict-go-back: var(--color-teal);
   --color-verdict-detour: #a66a2e;
@@ -20,9 +19,8 @@
      on top of this wherever the bar itself or clearance for it is computed. */
   --spacing-toggle-bar: 3.75rem;
 
-  /* Carnet culinaire ramp — warm, sepia-tinted parchment neutrals
-     replacing Tailwind's default cool grays; distinct from feat/ui-polish's
-     stone ramp (superseded), for the paper-editorial identity. */
+  /* Carnet culinaire ramp — warm, sepia-tinted parchment neutrals replacing
+     Tailwind's default cool grays, for the paper-editorial identity. */
   --color-gray-50: #fbf6ee;
   --color-gray-100: #f3e9da;
   --color-gray-200: #e7d9c2;

@@ -66,6 +66,8 @@ export interface Visit extends SyncFields {
 
 export type RestaurantStatus = 'to_try' | 'visited'
 
+export const STATUS_LABELS: Record<RestaurantStatus, string> = { to_try: 'To try', visited: 'Visited' }
+
 /** Status is derived from visit count — never stored. */
 export function statusOf(r: Pick<Restaurant, 'visitCount'>): RestaurantStatus {
   return r.visitCount > 0 ? 'visited' : 'to_try'
