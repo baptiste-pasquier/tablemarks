@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { colorForCuisine, cuisineOptions, CURATED_CUISINES, UNCATEGORIZED_COLOR } from './cuisines'
+import {
+  colorForCuisine,
+  cuisineOptions,
+  emojiForCuisine,
+  CURATED_CUISINES,
+  UNCATEGORIZED_COLOR,
+  UNCATEGORIZED_EMOJI,
+  GENERIC_CUISINE_EMOJI,
+} from './cuisines'
 
 describe('colorForCuisine', () => {
   it('returns the fixed color for a curated cuisine (case-insensitive)', () => {
@@ -24,6 +32,51 @@ describe('colorForCuisine', () => {
     for (const c of [...CURATED_CUISINES.map((x) => x.name), 'Ethiopian', 'Peruvian', 'Ramen']) {
       expect(colorForCuisine(c)).not.toBe(UNCATEGORIZED_COLOR)
     }
+  })
+})
+
+describe('emojiForCuisine', () => {
+  it('returns the curated emoji for a curated cuisine (case-insensitive)', () => {
+    expect(emojiForCuisine('French')).toBe('🥖')
+    expect(emojiForCuisine('french')).toBe('🥖')
+  })
+
+  it('returns the Uncategorized emoji for empty/undefined, distinct from the generic fallback', () => {
+    expect(emojiForCuisine(undefined)).toBe(UNCATEGORIZED_EMOJI)
+    expect(emojiForCuisine('')).toBe(UNCATEGORIZED_EMOJI)
+    expect(emojiForCuisine('   ')).toBe(UNCATEGORIZED_EMOJI)
+    expect(UNCATEGORIZED_EMOJI).not.toBe(GENERIC_CUISINE_EMOJI)
+  })
+
+  it('returns the generic fallback emoji for a free-text cuisine not in the curated map', () => {
+    expect(emojiForCuisine('Ethiopian')).toBe(GENERIC_CUISINE_EMOJI)
+  })
+
+  it('maps each curated cuisine to its own specific assigned emoji', () => {
+    const expected: Record<string, string> = {
+      Burger: '🍔',
+      French: '🥖',
+      Italian: '🍝',
+      Indian: '🍛',
+      Japanese: '🍣',
+      Chinese: '🥡',
+      Thai: '🍜',
+      Mexican: '🌮',
+      Pizza: '🍕',
+      Korean: '🍲',
+      Vietnamese: '🥢',
+      Café: '☕️',
+    }
+    expect(Object.keys(expected).sort()).toEqual(CURATED_CUISINES.map((c) => c.name).sort())
+    for (const c of CURATED_CUISINES) {
+      expect(emojiForCuisine(c.name)).toBe(expected[c.name])
+    }
+  })
+
+  it('falls back to the generic emoji instead of leaking an Object.prototype member', () => {
+    expect(emojiForCuisine('constructor')).toBe(GENERIC_CUISINE_EMOJI)
+    expect(emojiForCuisine('__proto__')).toBe(GENERIC_CUISINE_EMOJI)
+    expect(emojiForCuisine('hasOwnProperty')).toBe(GENERIC_CUISINE_EMOJI)
   })
 })
 
