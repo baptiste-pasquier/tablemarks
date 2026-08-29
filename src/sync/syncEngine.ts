@@ -7,7 +7,7 @@ import {
 import { allVisitsForSync, putVisitRaw, markVisitSynced } from '../data/visits'
 import { recomputeRollup } from '../data/rollup'
 import { onLocalChange, emitStoreChange } from '../data/events'
-import { isOnline } from './onlineStatus'
+import { isOnline, onOnlineChange } from './onlineStatus'
 import { nextRetryDelayMs, classifyFailure } from './backoff'
 import { recomputePending, setSyncState, getSyncStatus } from './syncStatus'
 import { reconcile } from './reconcile'
@@ -51,9 +51,10 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
   // pulled row with a stale foreign rollup (the same bug fixed on the import path).
   const affected = new Set<string>()
   for (const rec of r.toWriteLocal) {
-    await putRestaurantRaw(rec)
+    // Stamp synced in the same write as the pull — markRestaurantSynced afterward would be a
+    // redundant read-modify-write and a second store-change emit for a record already in hand.
+    await putRestaurantRaw({ ...rec, syncedUpdated: rec.updated })
     affected.add(rec.id)
-    await markRestaurantSynced(rec.id, rec.updated)
   }
   for (const rec of r.toPush) {
     await remote.pushRestaurant(rec)
@@ -68,9 +69,8 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
   const [localV, remoteV] = await Promise.all([allVisitsForSync(), remote.listVisits()])
   const v = reconcile(localV, remoteV)
   for (const rec of v.toWriteLocal) {
-    await putVisitRaw(rec)
+    await putVisitRaw({ ...rec, syncedUpdated: rec.updated })
     affected.add(rec.restaurantId)
-    await markVisitSynced(rec.id, rec.updated)
   }
   for (const rec of v.toPush) {
     await remote.pushVisit(rec)
@@ -173,9 +173,7 @@ export class SyncController {
     this.remote = remote
     this.stopped = false
     this.unsubscribers.push(onLocalChange(() => this.scheduleSync()))
-    const online = () => this.runSync()
-    window.addEventListener('online', online)
-    this.unsubscribers.push(() => window.removeEventListener('online', online))
+    this.unsubscribers.push(onOnlineChange(() => { if (isOnline()) this.runSync() }))
     // subscribe() is async — if stop() already ran by the time it resolves, unsubscribe
     // immediately rather than registering a listener that stop() will never clean up.
     const track = (unsub: () => void) => {
@@ -251,7 +249,7 @@ export class SyncController {
         this.backoffTimer = null
       }
       await recomputePending()
-      setSyncState(getSyncStatus().pendingCount > 0 ? 'pending' : 'synced')
+      this.reportPendingOrSynced()
       return outcome
     } catch (err) {
       this.consecutiveFailures += 1
@@ -259,11 +257,16 @@ export class SyncController {
       if (this.consecutiveFailures >= ESCALATION_THRESHOLD) {
         setSyncState('problem', classifyFailure(err))
       } else {
-        setSyncState(getSyncStatus().pendingCount > 0 ? 'pending' : 'synced')
+        this.reportPendingOrSynced()
       }
       this.scheduleBackoff()
       return undefined
     }
+  }
+
+  /** Reports 'pending' or 'synced' from the current pending count — shared by the success and below-threshold-failure branches. */
+  private reportPendingOrSynced(): void {
+    setSyncState(getSyncStatus().pendingCount > 0 ? 'pending' : 'synced')
   }
 
   private scheduleBackoff(): void {

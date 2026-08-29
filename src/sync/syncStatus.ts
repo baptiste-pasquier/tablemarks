@@ -58,8 +58,10 @@ function isPending(record: { updated: string; syncedUpdated?: string }): boolean
 export async function recomputePending(): Promise<number> {
   const [restaurants, visits] = await Promise.all([allRestaurantsForSync(), allVisitsForSync()])
   const pendingCount = restaurants.filter(isPending).length + visits.filter(isPending).length
-  current = { ...current, pendingCount }
-  emit()
+  if (pendingCount !== current.pendingCount) {
+    current = { ...current, pendingCount }
+    emit()
+  }
   return pendingCount
 }
 
@@ -68,7 +70,9 @@ export async function recomputePending(): Promise<number> {
  * Used by `SyncController` to report the outcome of each sync attempt.
  */
 export function setSyncState(state: SyncState, cause?: FailureCause): void {
-  current = { ...current, state, cause: state === 'problem' ? cause : undefined }
+  const nextCause = state === 'problem' ? cause : undefined
+  if (state === current.state && nextCause === current.cause) return
+  current = { ...current, state, cause: nextCause }
   emit()
 }
 

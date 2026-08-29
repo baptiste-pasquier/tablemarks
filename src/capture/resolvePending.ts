@@ -1,6 +1,7 @@
 import { allRestaurants, updateRestaurant, type RestaurantPatch } from '../data/restaurants'
 import { resolveShortLink } from '../sync/pocketbase'
 import { nextRetryDelayMs } from '../sync/backoff'
+import { isOnline, onOnlineChange } from '../sync/onlineStatus'
 import { reverseGeocode } from './geocode'
 
 let inFlight = false
@@ -20,7 +21,7 @@ const retryState = new Map<string, { attempt: number; nextAttemptAt: number }>()
  * so a permanently-bad link isn't re-attempted on every reconnect. Returns the number resolved.
  */
 export async function resolvePendingRestaurants(): Promise<number> {
-  if (inFlight || !navigator.onLine) return 0
+  if (inFlight || !isOnline()) return 0
   inFlight = true
   try {
     const pending = (await allRestaurants()).filter((r) => r.pending && r.mapsUrl)
@@ -55,7 +56,7 @@ export async function resolvePendingRestaurants(): Promise<number> {
 /** Run the resolver now and on every reconnect. Returns an unsubscribe fn. Independent of sign-in. */
 export function startPendingResolver(): () => void {
   void resolvePendingRestaurants().catch(() => {})
-  const onOnline = () => void resolvePendingRestaurants().catch(() => {})
-  window.addEventListener('online', onOnline)
-  return () => window.removeEventListener('online', onOnline)
+  return onOnlineChange(() => {
+    if (isOnline()) void resolvePendingRestaurants().catch(() => {})
+  })
 }

@@ -30,6 +30,12 @@ export interface SyncFields {
   updated: string
   /** Soft-delete tombstone — wins by recency like any change. */
   deleted: boolean
+  /**
+   * Local-only: the `updated` value as of the last successful push to PocketBase. Unset until the
+   * first push. The record is pending sync whenever this differs from `updated` (or is unset).
+   * Never sent to or read from the remote — must not appear in `src/sync/mappers.ts`.
+   */
+  syncedUpdated?: string
 }
 
 export interface Restaurant extends SyncFields {
@@ -48,12 +54,6 @@ export interface Restaurant extends SyncFields {
   latestVerdict: Verdict | null
   latestVisitDate: string | null
   visitCount: number
-  /**
-   * Local-only: the `updated` value as of the last successful push to PocketBase. Unset until the
-   * first push. The record is pending sync whenever this differs from `updated` (or is unset).
-   * Never sent to or read from the remote — must not appear in `src/sync/mappers.ts`.
-   */
-  syncedUpdated?: string
 }
 
 export interface Visit extends SyncFields {
@@ -62,12 +62,6 @@ export interface Visit extends SyncFields {
   date: string
   verdict: Verdict
   note?: string
-  /**
-   * Local-only: the `updated` value as of the last successful push to PocketBase. Unset until the
-   * first push. The record is pending sync whenever this differs from `updated` (or is unset).
-   * Never sent to or read from the remote — must not appear in `src/sync/mappers.ts`.
-   */
-  syncedUpdated?: string
 }
 
 export type RestaurantStatus = 'to_try' | 'visited'
