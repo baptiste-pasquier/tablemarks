@@ -5,6 +5,7 @@ import { createVisit, removeVisit } from '../../data/visits'
 import { updateRestaurant } from '../../data/restaurants'
 import { cuisineOptions, colorForCuisine } from '../facets/cuisines'
 import { statusLabel } from '../display'
+import { Modal } from '../ui/Modal'
 import { VERDICTS, VERDICT_LABELS, type Verdict } from '../../types/models'
 
 function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; disabled?: boolean }) {
@@ -61,103 +62,101 @@ export function RestaurantDetail({
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-start justify-center bg-black/30 p-4 pt-16">
-      <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
-        <div className="mb-1 flex items-start justify-between">
-          <h2 className="text-lg font-semibold">{restaurant.name}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
-        </div>
-        <p className="text-sm text-gray-500">
-          {statusLabel(restaurant)}
-          {restaurant.address ? ` · ${restaurant.address}` : ''}
-        </p>
-
-        <div className="mt-3 flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="inline-block h-3 w-3 shrink-0 rounded-full"
-            style={{ background: colorForCuisine(restaurant.cuisine) }}
-          />
-          <input
-            key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
-            list={cuisineListId}
-            defaultValue={restaurant.cuisine ?? ''}
-            onBlur={(e) => saveCuisine(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur()
-            }}
-            aria-label="Cuisine"
-            placeholder="Add a cuisine…"
-            className="w-full rounded-md border border-gray-300 p-1.5 text-sm"
-          />
-          <datalist id={cuisineListId}>
-            {options.map((o) => (
-              <option key={o} value={o} />
-            ))}
-          </datalist>
-        </div>
-
-        <div className="mt-4">
-          {logging ? (
-            <div>
-              <p className="mb-2 text-sm font-medium">How was it?</p>
-              <VerdictButtons onPick={(v) => void logNow(v)} />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setLogging(true)}
-              className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-            >
-              I’m here now
-            </button>
-          )}
-        </div>
-
-        <div className="mt-5">
-          <h3 className="text-sm font-semibold text-gray-700">
-            Visits {visits.length > 0 && <span className="font-normal text-gray-400">({visits.length})</span>}
-          </h3>
-          {visits.length === 0 ? (
-            <p className="mt-1 text-sm text-gray-500">No visits yet — it’s on your to-try list.</p>
-          ) : (
-            <ul className="mt-1 divide-y divide-gray-100">
-              {visits.map((v) => (
-                <li key={v.id} className="flex items-center justify-between py-2 text-sm">
-                  <span>
-                    <span className="font-medium">{VERDICT_LABELS[v.verdict]}</span>
-                    <span className="ml-2 text-gray-400">{v.date}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void removeVisit(v.id)}
-                    aria-label={`Delete visit on ${v.date}`}
-                    className="text-gray-400 hover:text-red-600"
-                  >
-                    ✕
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm text-gray-600">Add a past visit</summary>
-          <div className="mt-2 space-y-2">
-            <input
-              type="date"
-              value={pastDate}
-              onChange={(e) => setPastDate(e.target.value)}
-              aria-label="Visit date"
-              className="rounded-md border border-gray-300 p-1.5 text-sm"
-            />
-            <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
-          </div>
-        </details>
+    <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
+      <div className="mb-1 flex items-start justify-between">
+        <h2 className="text-lg font-semibold">{restaurant.name}</h2>
+        <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
+          ✕
+        </button>
       </div>
-    </div>
+      <p className="text-sm text-gray-500">
+        {statusLabel(restaurant)}
+        {restaurant.address ? ` · ${restaurant.address}` : ''}
+      </p>
+
+      <div className="mt-3 flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="inline-block h-3 w-3 shrink-0 rounded-full"
+          style={{ background: colorForCuisine(restaurant.cuisine) }}
+        />
+        <input
+          key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
+          list={cuisineListId}
+          defaultValue={restaurant.cuisine ?? ''}
+          onBlur={(e) => saveCuisine(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+          }}
+          aria-label="Cuisine"
+          placeholder="Add a cuisine…"
+          className="w-full rounded-md border border-gray-300 p-1.5 text-sm"
+        />
+        <datalist id={cuisineListId}>
+          {options.map((o) => (
+            <option key={o} value={o} />
+          ))}
+        </datalist>
+      </div>
+
+      <div className="mt-4">
+        {logging ? (
+          <div>
+            <p className="mb-2 text-sm font-medium">How was it?</p>
+            <VerdictButtons onPick={(v) => void logNow(v)} />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setLogging(true)}
+            className="rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+          >
+            I’m here now
+          </button>
+        )}
+      </div>
+
+      <div className="mt-5">
+        <h3 className="text-sm font-semibold text-gray-700">
+          Visits {visits.length > 0 && <span className="font-normal text-gray-400">({visits.length})</span>}
+        </h3>
+        {visits.length === 0 ? (
+          <p className="mt-1 text-sm text-gray-500">No visits yet — it’s on your to-try list.</p>
+        ) : (
+          <ul className="mt-1 divide-y divide-gray-100">
+            {visits.map((v) => (
+              <li key={v.id} className="flex items-center justify-between py-2 text-sm">
+                <span>
+                  <span className="font-medium">{VERDICT_LABELS[v.verdict]}</span>
+                  <span className="ml-2 text-gray-400">{v.date}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void removeVisit(v.id)}
+                  aria-label={`Delete visit on ${v.date}`}
+                  className="text-gray-400 hover:text-red-600"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <details className="mt-4">
+        <summary className="cursor-pointer text-sm text-gray-600">Add a past visit</summary>
+        <div className="mt-2 space-y-2">
+          <input
+            type="date"
+            value={pastDate}
+            onChange={(e) => setPastDate(e.target.value)}
+            aria-label="Visit date"
+            className="rounded-md border border-gray-300 p-1.5 text-sm"
+          />
+          <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
+        </div>
+      </details>
+    </Modal>
   )
 }
