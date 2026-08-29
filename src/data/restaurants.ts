@@ -96,3 +96,15 @@ export async function allRestaurantsForSync(): Promise<Restaurant[]> {
   const db = await getDB()
   return db.getAll('restaurants')
 }
+
+/**
+ * Stamp the local-only `syncedUpdated` marker after a successful push — no `updated` bump, no
+ * change event, used by the sync engine. No-op if the record no longer exists.
+ */
+export async function markRestaurantSynced(id: string, syncedUpdated: string): Promise<void> {
+  const db = await getDB()
+  const existing = await db.get('restaurants', id)
+  if (!existing) return
+  await db.put('restaurants', { ...existing, syncedUpdated })
+  emitStoreChange()
+}

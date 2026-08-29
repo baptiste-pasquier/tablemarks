@@ -80,3 +80,15 @@ export async function allVisitsForSync(): Promise<Visit[]> {
   const db = await getDB()
   return db.getAll('visits')
 }
+
+/**
+ * Stamp the local-only `syncedUpdated` marker after a successful push — no `updated` bump, no
+ * change event, used by the sync engine. No-op if the record no longer exists.
+ */
+export async function markVisitSynced(id: string, syncedUpdated: string): Promise<void> {
+  const db = await getDB()
+  const existing = await db.get('visits', id)
+  if (!existing) return
+  await db.put('visits', { ...existing, syncedUpdated })
+  emitStoreChange()
+}
