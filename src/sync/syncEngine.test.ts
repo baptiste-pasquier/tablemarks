@@ -369,4 +369,61 @@ describe('SyncController', () => {
 
     expect(remote.attempts).toBe(1) // no extra attempt ran early
   })
+
+  it('a bare "offline" transition mid-session, with nothing else pending, reports state offline (review #3)', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    stubRealtime()
+    const remote = new FakeRemote()
+
+    controller = new SyncController()
+    await controller.start(remote)
+    await flush()
+    expect(getSyncStatus().state).toBe('synced')
+
+    // Connectivity drops with no local write, no reconnect, and no realtime message — only the
+    // shared online/offline listener can notice, so this is the only path that can report it.
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    window.dispatchEvent(new Event('offline'))
+    await flush()
+
+    expect(getSyncStatus()).toMatchObject({ state: 'offline', cause: undefined })
+  })
+
+  it('a reused SyncController does not inherit the prior session\'s failure count across stop()/start() (review #1)', async () => {
+    await createRestaurant({ name: 'A', lat: 1, lng: 1 })
+    stubRealtime()
+    const remote = new FailingRemote()
+
+    controller = new SyncController()
+    await controller.start(remote) // session A, failure #1
+    await flush()
+    await controller.syncNow() // session A, failure #2 — still below threshold
+    expect(getSyncStatus().state).toBe('pending')
+
+    controller.stop()
+    await controller.start(remote) // session B, on the SAME controller instance — failure #1 of B
+    await flush()
+
+    // Without the reset, consecutiveFailures would already be 2 entering session B, so this single
+    // new failure would push it to 3 and escalate to 'problem' after only one failure in session B.
+    expect(getSyncStatus()).toMatchObject({ state: 'pending', cause: undefined })
+  })
+
+  it('an online/reconnect event does not bypass an already-scheduled backoff retry (review #4)', async () => {
+    stubRealtime()
+    const remote = new FailingRemote()
+
+    controller = new SyncController()
+    await controller.start(remote) // failure #1 schedules a ~5s backoff retry
+    await flush()
+    expect(remote.attempts).toBe(1)
+    expect(getSyncStatus().state).not.toBe('problem')
+
+    // A reconnect fires while the backoff retry is pending — must not launch an immediate attempt
+    // that bypasses the scheduled backoff delay.
+    window.dispatchEvent(new Event('online'))
+    await flush()
+
+    expect(remote.attempts).toBe(1) // no extra attempt ran early
+  })
 })

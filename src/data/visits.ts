@@ -83,12 +83,19 @@ export async function allVisitsForSync(): Promise<Visit[]> {
 
 /**
  * Stamp the local-only `syncedUpdated` marker after a successful push — no `updated` bump, no
- * change event, used by the sync engine. No-op if the record no longer exists.
+ * change event, used by the sync engine. Get-and-put run in a single readwrite transaction, and
+ * the stamp is only written if the record's `updated` still matches `syncedUpdated` (the value the
+ * caller read before pushing) — otherwise a concurrent edit or delete raced the push, and blindly
+ * writing here would revert that newer change while falsely marking it synced. No-op if the record
+ * no longer exists or has moved on.
  */
 export async function markVisitSynced(id: string, syncedUpdated: string): Promise<void> {
   const db = await getDB()
-  const existing = await db.get('visits', id)
-  if (!existing) return
-  await db.put('visits', { ...existing, syncedUpdated })
-  emitStoreChange()
+  const tx = db.transaction('visits', 'readwrite')
+  const store = tx.objectStore('visits')
+  const existing = await store.get(id)
+  const stamped = existing !== undefined && existing.updated === syncedUpdated
+  if (stamped) await store.put({ ...existing, syncedUpdated })
+  await tx.done
+  if (stamped) emitStoreChange()
 }

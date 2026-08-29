@@ -58,6 +58,19 @@ describe('visit repository', () => {
     expect(after?.verdict).toBe(v.verdict)
   })
 
+  it('markVisitSynced skips the stamp when the record changed since the caller read it (review #2)', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    const v = await createVisit({ restaurantId: r.id, verdict: 'go_back' })
+
+    await markVisitSynced(v.id, 'stale-value-that-does-not-match-current-updated')
+
+    const all = await allVisitsForSync()
+    const after = all.find((x) => x.id === v.id)
+    expect(after?.syncedUpdated).toBeUndefined() // stale stamp was not written
+    expect(after?.updated).toBe(v.updated) // record itself untouched
+    expect(after?.verdict).toBe(v.verdict)
+  })
+
   it('allVisitsForSync distinguishes synced from pending records', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
     const synced = await createVisit({ restaurantId: r.id, verdict: 'go_back' })

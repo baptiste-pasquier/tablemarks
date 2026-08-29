@@ -173,7 +173,7 @@ export class SyncController {
     this.remote = remote
     this.stopped = false
     this.unsubscribers.push(onLocalChange(() => this.scheduleSync()))
-    this.unsubscribers.push(onOnlineChange(() => { if (isOnline()) this.runSync() }))
+    this.unsubscribers.push(onOnlineChange(() => this.runSync()))
     // subscribe() is async — if stop() already ran by the time it resolves, unsubscribe
     // immediately rather than registering a listener that stop() will never clean up.
     const track = (unsub: () => void) => {
@@ -187,8 +187,15 @@ export class SyncController {
     this.runSync()
   }
 
-  /** Fire-and-forget sync with rejection handling, so scheduled/event-driven syncs never leak unhandled rejections. */
+  /**
+   * Fire-and-forget sync with rejection handling, so scheduled/event-driven syncs never leak
+   * unhandled rejections. Skips while a backoff retry is already scheduled (Fix 2, invariant 2) —
+   * this is what stops a reconnect, or a debounce timer that fired late (see `scheduleBackoff`),
+   * from launching an attempt early and bypassing the backoff delay. The backoff timer's own
+   * callback nulls `backoffTimer` before calling this, so the scheduled retry itself always runs.
+   */
   private runSync(): void {
+    if (this.backoffTimer) return
     this.syncNow().catch((err) => console.error('[sync] sync failed', err))
   }
 
@@ -271,6 +278,11 @@ export class SyncController {
 
   private scheduleBackoff(): void {
     if (this.backoffTimer) clearTimeout(this.backoffTimer)
+    // A debounce timer armed before this failure must not survive to fire independently later —
+    // it would call runSync() and (absent the guard there too) launch an attempt before the
+    // backoff delay elapses (Fix 2, invariant 2).
+    if (this.debounceTimer) clearTimeout(this.debounceTimer)
+    this.debounceTimer = null
     const delay = nextRetryDelayMs(this.consecutiveFailures)
     this.backoffTimer = setTimeout(() => {
       this.backoffTimer = null
@@ -284,6 +296,7 @@ export class SyncController {
     this.debounceTimer = null
     if (this.backoffTimer) clearTimeout(this.backoffTimer)
     this.backoffTimer = null
+    this.consecutiveFailures = 0
     for (const off of this.unsubscribers) off()
     this.unsubscribers = []
     this.remote = null

@@ -90,4 +90,18 @@ describe('restaurant repository', () => {
     expect(syncedRec?.syncedUpdated).toBe(syncedRec?.updated)
     expect(pendingRec?.syncedUpdated).not.toBe(pendingRec?.updated)
   })
+
+  it('markRestaurantSynced skips the stamp when the record changed since the caller read it (review #2)', async () => {
+    // Simulates a push loop that read the record's `updated` before awaiting the network call,
+    // during which a concurrent edit changed the record — the stale `syncedUpdated` no longer
+    // matches, so the read-modify-write must not blindly overwrite the newer state.
+    const r = await createRestaurant({ name: 'Original', lat: 1, lng: 1 })
+
+    await markRestaurantSynced(r.id, 'stale-value-that-does-not-match-current-updated')
+
+    const after = await getRestaurant(r.id)
+    expect(after?.syncedUpdated).toBeUndefined() // stale stamp was not written
+    expect(after?.updated).toBe(r.updated) // record itself untouched
+    expect(after?.name).toBe('Original')
+  })
 })
