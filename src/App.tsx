@@ -111,7 +111,7 @@ export default function App() {
             view === 'map' ? 'block' : 'hidden'
           } md:block`}
         >
-          <MapView markers={markers} onSelect={setSelectedId} onCenterChange={setAnchor} />
+          <MapView markers={markers} onSelect={setSelectedId} onCenterChange={setAnchor} selectedId={selectedId} />
           {/* On mobile the add action lives in the list pane, so surface it on the map too. */}
           {view === 'map' && (
             <button
