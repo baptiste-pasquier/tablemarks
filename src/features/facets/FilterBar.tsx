@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react'
 import {
   VERDICTS,
   VERDICT_LABELS,
+  VERDICT_ICON,
   STATUS_LABELS,
   type RestaurantStatus,
   type Restaurant,
 } from '../../types/models'
-import { VERDICT_ICON } from '../StatusBadge'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
 

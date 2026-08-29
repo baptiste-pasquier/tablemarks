@@ -99,16 +99,24 @@ describe('FilterBar', () => {
     expect(within(chip).getByText('🍜')).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('shows each verdict chip with its icon and keeps the fixed best-to-worst order', () => {
+  it('shows each verdict chip with its own icon and keeps the fixed best-to-worst order', () => {
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
-    const verdictLabels = ['Go back', 'Worth a detour', 'Once was enough', 'Never again']
-    const buttons = verdictLabels.map((label) => screen.getByRole('button', { name: label }))
-    const order = buttons.map((b) => Array.from(document.querySelectorAll<HTMLElement>('button')).indexOf(b))
+    const verdictIcons: Record<string, string> = {
+      'Go back': '↩️',
+      'Worth a detour': '🧭',
+      'Once was enough': '🤷',
+      'Never again': '🚫',
+    }
+    const group = screen.getByText('Statut & verdict').parentElement as HTMLElement
+    const buttons = Object.keys(verdictIcons).map((label) => within(group).getByRole('button', { name: label }))
+    const order = buttons.map((b) => within(group).getAllByRole('button').indexOf(b))
     expect(order).toEqual([...order].sort((a, b) => a - b))
-    expect(within(screen.getByRole('button', { name: 'Go back' })).getByText('↩️')).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    )
+    for (const [label, icon] of Object.entries(verdictIcons)) {
+      expect(within(screen.getByRole('button', { name: label })).getByText(icon)).toHaveAttribute(
+        'aria-hidden',
+        'true',
+      )
+    }
   })
 
   it('collapses cuisines beyond 6 behind a "+N autres" control, expandable via "Réduire"', async () => {

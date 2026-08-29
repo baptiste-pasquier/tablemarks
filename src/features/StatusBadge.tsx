@@ -1,19 +1,11 @@
 import { badgeState } from './display'
-import { STATUS_LABELS, VERDICT_LABELS, type Restaurant, type Verdict } from '../types/models'
+import { STATUS_LABELS, VERDICT_LABELS, VERDICT_ICON, type Restaurant, type Verdict } from '../types/models'
 
 const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
   go_back: 'bg-verdict-go-back',
   worth_a_detour: 'bg-verdict-detour',
   once_was_enough: 'bg-verdict-once',
   never_again: 'bg-verdict-never',
-}
-
-/** Icon distinguishing each verdict from its color alone (R6). */
-export const VERDICT_ICON: Record<Verdict, string> = {
-  go_back: '↩️',
-  worth_a_detour: '🧭',
-  once_was_enough: '🤷',
-  never_again: '🚫',
 }
 
 function Badge({ text, className, icon }: { text: string; className: string; icon?: string }) {

@@ -52,10 +52,31 @@ describe('emojiForCuisine', () => {
     expect(emojiForCuisine('Ethiopian')).toBe(GENERIC_CUISINE_EMOJI)
   })
 
-  it('has an emoji for every curated cuisine', () => {
-    for (const c of CURATED_CUISINES) {
-      expect(emojiForCuisine(c.name)).not.toBe(GENERIC_CUISINE_EMOJI)
+  it('maps each curated cuisine to its own specific assigned emoji', () => {
+    const expected: Record<string, string> = {
+      Burger: '🍔',
+      French: '🥖',
+      Italian: '🍝',
+      Indian: '🍛',
+      Japanese: '🍣',
+      Chinese: '🥡',
+      Thai: '🍜',
+      Mexican: '🌮',
+      Pizza: '🍕',
+      Korean: '🍲',
+      Vietnamese: '🥢',
+      Café: '☕️',
     }
+    expect(Object.keys(expected).sort()).toEqual(CURATED_CUISINES.map((c) => c.name).sort())
+    for (const c of CURATED_CUISINES) {
+      expect(emojiForCuisine(c.name)).toBe(expected[c.name])
+    }
+  })
+
+  it('falls back to the generic emoji instead of leaking an Object.prototype member', () => {
+    expect(emojiForCuisine('constructor')).toBe(GENERIC_CUISINE_EMOJI)
+    expect(emojiForCuisine('__proto__')).toBe(GENERIC_CUISINE_EMOJI)
+    expect(emojiForCuisine('hasOwnProperty')).toBe(GENERIC_CUISINE_EMOJI)
   })
 })
 

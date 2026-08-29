@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { RestaurantList } from './RestaurantList'
-import type { Restaurant } from '../types/models'
+import { VERDICT_ICON, VERDICT_LABELS, VERDICTS, type Restaurant } from '../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'name'>): Restaurant {
   return {
@@ -39,14 +39,20 @@ describe('RestaurantList', () => {
     expect(screen.getByText('Resolving…')).toBeInTheDocument()
   })
 
-  it('renders the verdict icon as a separate aria-hidden node from the label text', () => {
-    render(<RestaurantList items={[r({ id: 'a', name: 'Visited place', visitCount: 1, latestVerdict: 'go_back' })]} />)
+  it('renders each verdict\'s own assigned icon as a separate aria-hidden node from the label text', () => {
+    render(
+      <RestaurantList
+        items={VERDICTS.map((v, i) => r({ id: `v${i}`, name: `Place ${i}`, visitCount: 1, latestVerdict: v }))}
+      />,
+    )
 
-    const label = screen.getByText('Go back')
-    const badge = label.parentElement
-    expect(badge).not.toBeNull()
-    const icon = within(badge as HTMLElement).getByText('↩️')
-    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    for (const v of VERDICTS) {
+      const label = screen.getByText(VERDICT_LABELS[v])
+      const badge = label.parentElement
+      expect(badge).not.toBeNull()
+      const icon = within(badge as HTMLElement).getByText(VERDICT_ICON[v])
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+    }
   })
 
   it('shows a cuisine-tinted card with a top-right cuisine badge, and the verdict chip plus visit count in the card body, not beside the name', () => {
@@ -57,7 +63,7 @@ describe('RestaurantList', () => {
     )
 
     const card = screen.getByRole('button', { name: /Baan Thaï/ })
-    expect(card).toHaveStyle({ background: 'color-mix(in srgb, #7c3aed 16%, #fffaf6)' })
+    expect(card).toHaveStyle({ background: 'color-mix(in srgb, #7c3aed 16%, #fdfaf6)' })
 
     const name = screen.getByText('Baan Thaï')
     const cuisineBadge = screen.getByText('Thai')
@@ -94,7 +100,7 @@ describe('RestaurantList', () => {
     expect(within(badge).getByText('🍽️')).toHaveAttribute('aria-hidden', 'true')
 
     const card = screen.getByRole('button', { name: /No cuisine place/ })
-    expect(card).toHaveStyle({ background: 'color-mix(in srgb, #9ca3af 16%, #fffaf6)' })
+    expect(card).toHaveStyle({ background: 'color-mix(in srgb, #9ca3af 16%, #fdfaf6)' })
   })
 
   it('renders white badge text against a low-luminance cuisine color and near-black against a high-luminance one', () => {
@@ -109,6 +115,11 @@ describe('RestaurantList', () => {
       />,
     )
     expect(screen.getByText('Thai')).toHaveStyle({ color: '#ffffff' })
-    expect(screen.getByText('Mexican')).toHaveStyle({ color: '#1a1512' })
+    expect(screen.getByText('Mexican')).toHaveStyle({ color: '#000000' })
+  })
+
+  it('shows "Uncategorized" (not a blank label) for a whitespace-only cuisine', () => {
+    render(<RestaurantList items={[r({ id: 'a', name: 'Whitespace cuisine place', cuisine: '   ' })]} />)
+    expect(screen.getByText('Uncategorized')).toBeInTheDocument()
   })
 })

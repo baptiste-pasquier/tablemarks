@@ -26,20 +26,20 @@ export const CURATED_CUISINES: ReadonlyArray<{ name: string; color: string }> = 
 const CURATED_BY_KEY = new Map(CURATED_CUISINES.map((c) => [c.name.toLowerCase(), c.color]))
 
 /** Curated cuisine -> representative emoji, keyed the same way as `CURATED_BY_KEY`. */
-const CUISINE_EMOJI: Record<string, string> = {
-  burger: '🍔',
-  french: '🥖',
-  italian: '🍝',
-  indian: '🍛',
-  japanese: '🍣',
-  chinese: '🥡',
-  thai: '🍜',
-  mexican: '🌮',
-  pizza: '🍕',
-  korean: '🍲',
-  vietnamese: '🥢',
-  café: '☕️',
-}
+const CUISINE_EMOJI = new Map([
+  ['burger', '🍔'],
+  ['french', '🥖'],
+  ['italian', '🍝'],
+  ['indian', '🍛'],
+  ['japanese', '🍣'],
+  ['chinese', '🥡'],
+  ['thai', '🍜'],
+  ['mexican', '🌮'],
+  ['pizza', '🍕'],
+  ['korean', '🍲'],
+  ['vietnamese', '🥢'],
+  ['café', '☕️'],
+])
 
 // Palette for custom cuisines — assigned deterministically by name hash. Collisions are
 // acceptable: the color is a scannability hint, not an identifier.
@@ -76,7 +76,7 @@ export function colorForCuisine(cuisine: string | null | undefined): string {
 export function emojiForCuisine(cuisine: string | null | undefined): string {
   const key = normalize(cuisine)
   if (!key) return UNCATEGORIZED_EMOJI
-  return CUISINE_EMOJI[key.toLowerCase()] ?? GENERIC_CUISINE_EMOJI
+  return CUISINE_EMOJI.get(key.toLowerCase()) ?? GENERIC_CUISINE_EMOJI
 }
 
 /** Picker options: curated cuisines unioned with any already in use, de-duped case-insensitively, sorted. */

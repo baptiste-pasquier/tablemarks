@@ -4,7 +4,7 @@ import { colorForCuisine, emojiForCuisine } from './facets/cuisines'
 import type { Restaurant } from '../types/models'
 
 /** Cream base the cuisine tint mixes into, matching the shipped "Carnet culinaire" page background. */
-const CARD_TINT_BASE = '#fffaf6'
+const CARD_TINT_BASE = '#fdfaf6'
 
 function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16)
@@ -22,7 +22,7 @@ function luminance(hex: string): number {
  * badge text color (KTD8).
  */
 function textColorFor(bgHex: string): string {
-  return luminance(bgHex) > 0.179 ? '#1a1512' : '#ffffff'
+  return luminance(bgHex) > 0.179 ? '#000000' : '#ffffff'
 }
 
 export function RestaurantList({
@@ -72,7 +72,7 @@ export function RestaurantList({
                   style={{ background: cuisineColor, color: badgeTextColor }}
                 >
                   <span aria-hidden="true">{emojiForCuisine(r.cuisine)}</span>
-                  {r.cuisine || 'Uncategorized'}
+                  {r.cuisine?.trim() || 'Uncategorized'}
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-2">
