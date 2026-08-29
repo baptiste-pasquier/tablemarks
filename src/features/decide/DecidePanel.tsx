@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useRestaurants } from '../useRestaurants'
-import { rollupLabel } from '../display'
+import { StatusBadge } from '../StatusBadge'
 import { decideCandidates, pickForMe, type Anchor, type Candidate } from './candidates'
 import { Modal } from '../ui/Modal'
 
@@ -105,10 +105,11 @@ export function DecidePanel({
                     onClick={() => onOpenRestaurant(restaurant.id)}
                     className="flex-1 text-left"
                   >
-                    <span className="font-medium">{restaurant.name}</span>
-                    <span className="block text-xs text-gray-500">
-                      {rollupLabel(restaurant)} · {formatDistance(distanceM)}
+                    <span className="flex items-center gap-2">
+                      <span className="truncate font-medium">{restaurant.name}</span>
+                      <StatusBadge restaurant={restaurant} />
                     </span>
+                    <span className="block text-xs text-gray-500">{formatDistance(distanceM)}</span>
                   </button>
                   {isHttpUrl(restaurant.mapsUrl) && (
                     <a

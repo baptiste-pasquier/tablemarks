@@ -24,7 +24,7 @@ describe('DecidePanel', () => {
     expect(await screen.findByText('New Spot')).toBeInTheDocument()
     expect(screen.getByText('Old Favorite')).toBeInTheDocument()
     expect(screen.queryByText('Meh Place')).not.toBeInTheDocument()
-    expect(screen.getByText(/Go back · 1 visit/)).toBeInTheDocument()
+    expect(screen.getByText('Go back')).toBeInTheDocument()
   })
 
   it('picks a candidate when "Pick for me" is tapped', async () => {

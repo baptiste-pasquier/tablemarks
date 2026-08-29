@@ -26,8 +26,10 @@ function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
-        active ? 'border-brand bg-brand-soft font-medium text-brand' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+      className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
+        active
+          ? 'border-brand bg-brand-soft font-semibold text-brand-strong shadow-sm'
+          : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
       }`}
     >
       {color && (

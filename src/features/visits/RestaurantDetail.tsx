@@ -6,6 +6,7 @@ import { updateRestaurant } from '../../data/restaurants'
 import { cuisineOptions, colorForCuisine } from '../facets/cuisines'
 import { statusLabel } from '../display'
 import { Modal } from '../ui/Modal'
+import { VerdictBadge } from '../StatusBadge'
 import { VERDICTS, VERDICT_LABELS, type Verdict } from '../../types/models'
 
 function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; disabled?: boolean }) {
@@ -126,9 +127,9 @@ export function RestaurantDetail({
           <ul className="mt-1 divide-y divide-gray-100">
             {visits.map((v) => (
               <li key={v.id} className="flex items-center justify-between py-2 text-sm">
-                <span>
-                  <span className="font-medium">{VERDICT_LABELS[v.verdict]}</span>
-                  <span className="ml-2 text-gray-400">{v.date}</span>
+                <span className="flex items-center gap-2">
+                  <VerdictBadge verdict={v.verdict} />
+                  <span className="text-gray-400">{v.date}</span>
                 </span>
                 <button
                   type="button"
