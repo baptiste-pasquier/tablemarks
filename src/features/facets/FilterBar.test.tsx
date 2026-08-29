@@ -124,8 +124,12 @@ describe('FilterBar', () => {
     expect(screen.queryByRole('button', { name: 'Thai' })).not.toBeInTheDocument()
 
     await userEvent.click(toggle)
-    expect(screen.getByRole('button', { name: 'Réduire' })).toHaveAttribute('aria-expanded', 'true')
+    const collapseButton = screen.getByRole('button', { name: 'Réduire' })
+    expect(collapseButton).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('button', { name: 'Thai' })).toBeInTheDocument()
+    // Same button across the toggle (KTD6) — it keeps focus rather than being unmounted/remounted.
+    expect(collapseButton).toBe(toggle)
+    expect(collapseButton).toHaveFocus()
   })
 
   it('does not render a "+N autres" control with 6 or fewer cuisines present', () => {
