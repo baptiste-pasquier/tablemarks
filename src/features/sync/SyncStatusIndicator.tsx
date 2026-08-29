@@ -35,10 +35,19 @@ function detail(status: SyncStatus): string {
   }
 }
 
-/** Text color for the label, per state — `'problem'` reads visually distinct from R8. */
+/** Pill styling for the label, per state — `'problem'` reads visually distinct from R8. */
 function labelClassName(state: SyncStatus['state']): string {
-  const base = 'font-medium'
-  return state === 'problem' ? `${base} text-red-600` : `${base} text-gray-500`
+  const base = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm transition'
+  switch (state) {
+    case 'synced':
+      return `${base} bg-gray-100 text-gray-600`
+    case 'pending':
+      return `${base} bg-brand-soft text-brand-strong`
+    case 'offline':
+      return `${base} bg-gray-200 text-gray-700`
+    case 'problem':
+      return `${base} bg-red-50 text-red-700 ring-1 ring-red-200`
+  }
 }
 
 /**
@@ -58,7 +67,9 @@ export function SyncStatusIndicator() {
       <button type="button" onClick={() => setExpanded((v) => !v)} className={labelClassName(status.state)}>
         {label(status)}
       </button>
-      {expanded && <p className="mt-1 max-w-xs text-xs text-gray-500">{detail(status)}</p>}
+      {expanded && (
+        <p className="mt-1 max-w-xs rounded-lg bg-gray-50 p-2 text-xs text-gray-500 shadow-sm">{detail(status)}</p>
+      )}
     </div>
   )
 }

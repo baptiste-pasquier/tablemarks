@@ -7,17 +7,23 @@ import { DEFAULT_MAP_CENTER } from '../../lib/geo'
 
 const iconCache = new Map<string, L.DivIcon>()
 
-/** A pin DivIcon in the given cuisine color, cached so same-cuisine markers share one icon. */
-function iconForColor(color: string): L.DivIcon {
-  let icon = iconCache.get(color)
+/** A teardrop pin in the cuisine color (cached per color+selected), with a brand halo when selected. */
+function iconForColor(color: string, selected: boolean): L.DivIcon {
+  const key = `${color}:${selected ? 1 : 0}`
+  let icon = iconCache.get(key)
   if (!icon) {
+    const size = selected ? 30 : 24
+    const shadow = selected
+      ? `box-shadow:0 0 0 5px ${color}33, 0 3px 6px rgba(0,0,0,.4);`
+      : `box-shadow:0 2px 4px rgba(0,0,0,.35);`
     icon = L.divIcon({
       className: '',
-      html: `<div style="width:14px;height:14px;border-radius:9999px;background:${color};border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
+      html: `<span style="position:relative;display:block;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;background:${color};border:2px solid #fff;transform:rotate(-45deg);${shadow}"><span style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:9999px;background:rgba(255,255,255,.92)"></span></span>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size],
+      popupAnchor: [0, -size],
     })
-    iconCache.set(color, icon)
+    iconCache.set(key, icon)
   }
   return icon
 }
@@ -66,16 +72,27 @@ export function MapView({
   markers,
   onSelect,
   onCenterChange,
+  selectedId,
+  active,
 }: {
   markers: MapMarker[]
   onSelect?: (id: string) => void
   onCenterChange?: (center: GeoPoint) => void
+  selectedId?: string | null
+  active?: boolean
 }) {
   const center: [number, number] = markers.length
     ? [markers[0].lat, markers[0].lng]
     : DEFAULT_CENTER
   const [map, setMap] = useState<L.Map | null>(null)
   const [locating, setLocating] = useState(false)
+
+  // The mobile List/Map toggle keeps this pane mounted but hidden (display:none) while
+  // inactive. A display:none -> block transition fires no resize event, so Leaflet never
+  // recomputes its tile grid until the pane becomes visible — nudge it once it does.
+  useEffect(() => {
+    if (map && active) map.invalidateSize()
+  }, [map, active])
 
   async function locate() {
     setLocating(true)
@@ -100,7 +117,7 @@ export function MapView({
           <Marker
             key={m.id}
             position={[m.lat, m.lng]}
-            icon={iconForColor(m.color)}
+            icon={iconForColor(m.color, m.id === selectedId)}
             opacity={m.dimmed ? 0.3 : 1}
             eventHandlers={onSelect ? { click: () => onSelect(m.id) } : undefined}
           >

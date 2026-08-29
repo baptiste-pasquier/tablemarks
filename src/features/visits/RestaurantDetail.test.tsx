@@ -23,7 +23,10 @@ describe('RestaurantDetail', () => {
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
 
     expect(await screen.findByText('(2)')).toBeInTheDocument()
-    expect(screen.getByText('Visited')).toBeInTheDocument()
+    // "Once was enough" appears twice: once in the header's fused status badge (the latest
+    // verdict), once in the per-visit badge for that same visit's row. (The collapsed "Add a
+    // past visit" section also has a disabled "Once was enough" button, always in the DOM.)
+    expect(screen.getAllByText('Once was enough')).toHaveLength(3)
     expect(screen.getByText('2026-06-01')).toBeInTheDocument()
   })
 
@@ -36,7 +39,10 @@ describe('RestaurantDetail', () => {
     await user.click(screen.getByRole('button', { name: /here now/i }))
     await user.click(enabled(screen.getAllByRole('button', { name: 'Go back' })))
 
-    await waitFor(() => expect(screen.getByText('Visited')).toBeInTheDocument())
+    // "Go back" now appears three times once logged: the header's fused status badge (showing
+    // the latest — and only — verdict), the per-visit badge for that visit's row, and the
+    // disabled "Go back" button in the collapsed "Add a past visit" section (always in the DOM).
+    await waitFor(() => expect(screen.getAllByText('Go back')).toHaveLength(3))
     expect(screen.getByText('(1)')).toBeInTheDocument()
   })
 

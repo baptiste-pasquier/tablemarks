@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { freshDB } from './test/idb'
 
@@ -33,5 +34,27 @@ describe('App shell', () => {
     expect(await screen.findByText(/no places yet/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add a place/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /where to eat/i })).toBeInTheDocument()
+  })
+
+  it('switches the mobile view toggle between list and map', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const listButton = screen.getByRole('button', { name: /^list$/i })
+    const mapButton = screen.getByRole('button', { name: /^map$/i })
+    expect(listButton).toHaveAttribute('aria-pressed', 'true')
+    expect(mapButton).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: 'Add a place' })).not.toBeInTheDocument()
+
+    await user.click(mapButton)
+
+    expect(listButton).toHaveAttribute('aria-pressed', 'false')
+    expect(mapButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Add a place' })).toBeInTheDocument()
+
+    await user.click(listButton)
+
+    expect(listButton).toHaveAttribute('aria-pressed', 'true')
+    expect(mapButton).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: 'Add a place' })).not.toBeInTheDocument()
   })
 })

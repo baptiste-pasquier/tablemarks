@@ -1,8 +1,38 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+
   --color-brand: #d4561f;
   --color-brand-soft: #fbe7da;
+  --color-brand-strong: #b8431a;
+  --color-teal: #1f6f68;
+  --color-teal-strong: #154d48;
+
+  --color-verdict-go-back: var(--color-teal);
+  --color-verdict-detour: #a4692e;
+  --color-verdict-once: #6e7d39;
+  --color-verdict-never: #8b3a3a;
+  --color-verdict-neutral: #837463;
+
+  /* Base height of the mobile List/Map toggle bar (KTD4); safe-area inset is added
+     on top of this wherever the bar itself or clearance for it is computed. */
+  --spacing-toggle-bar: 3.75rem;
+
+  /* Carnet culinaire ramp — warm, sepia-tinted parchment neutrals replacing
+     Tailwind's default cool grays, for the paper-editorial identity. */
+  --color-gray-50: #fbf6ee;
+  --color-gray-100: #f3e9da;
+  --color-gray-200: #e7d9c2;
+  --color-gray-300: #d6c4a5;
+  --color-gray-400: #b8a184;
+  --color-gray-500: #8a7a68;
+  --color-gray-600: #6b5d4f;
+  --color-gray-700: #4a3f35;
+  --color-gray-800: #362d26;
+  --color-gray-900: #2b2420;
+  --color-gray-950: #1a1512;
 }
 
 html,
@@ -14,4 +44,7 @@ body,
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  font-family: var(--font-sans);
+  color: var(--color-gray-900);
+  background: #fdfaf6;
 }

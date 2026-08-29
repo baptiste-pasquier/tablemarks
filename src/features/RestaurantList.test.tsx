@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { RestaurantList } from './RestaurantList'
 import type { Restaurant } from '../types/models'
@@ -23,7 +23,7 @@ describe('RestaurantList', () => {
     expect(screen.getByText(/no places yet/i)).toBeInTheDocument()
   })
 
-  it('renders status and rollup per place, including provisional rows', () => {
+  it('renders the fused status/verdict badge per place, including provisional rows', () => {
     render(
       <RestaurantList
         items={[
@@ -33,10 +33,25 @@ describe('RestaurantList', () => {
         ]}
       />,
     )
-    expect(screen.getByText('Go back · 2 visits')).toBeInTheDocument()
-    expect(screen.getByText('Visited')).toBeInTheDocument()
+    // The badge shows only the latest verdict, never a "· N visits" suffix.
+    expect(screen.getByText('Go back')).toBeInTheDocument()
+    expect(screen.getByText('To try')).toBeInTheDocument()
     expect(screen.getByText('Resolving…')).toBeInTheDocument()
-    // 'New place' is to-try
-    expect(screen.getAllByText('To try').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows the cuisine as a subtitle when set, omitted when not', () => {
+    render(
+      <RestaurantList
+        items={[
+          r({ id: 'a', name: 'Categorized', cuisine: 'Ramen' }),
+          r({ id: 'b', name: 'Uncategorized' }),
+        ]}
+      />,
+    )
+    expect(screen.getByText('Ramen')).toBeInTheDocument()
+
+    const uncategorizedRow = screen.getByText('Uncategorized').closest('li')
+    expect(uncategorizedRow).not.toBeNull()
+    expect(within(uncategorizedRow as HTMLElement).queryByText('Ramen')).not.toBeInTheDocument()
   })
 })
