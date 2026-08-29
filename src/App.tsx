@@ -55,7 +55,7 @@ export default function App() {
             <button
               type="button"
               onClick={signOut}
-              className="rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100"
+              className="rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200"
             >
               Sign out
             </button>
@@ -64,7 +64,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => void signIn()}
-            className="rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium transition hover:bg-gray-100"
+            className="rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium transition hover:bg-gray-100 active:bg-gray-200"
           >
             Sign in<span className="hidden sm:inline"> with Google</span>
           </button>
@@ -81,21 +81,21 @@ export default function App() {
             <button
               type="button"
               onClick={() => setAdding(true)}
-              className="w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+              className="w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
             >
               + Add a place
             </button>
             <button
               type="button"
               onClick={() => setDeciding(true)}
-              className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand transition hover:bg-brand-soft"
+              className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand transition hover:bg-brand-soft active:bg-brand-soft"
             >
               Where to eat?
             </button>
             <button
               type="button"
               onClick={() => setPortability(true)}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 active:bg-gray-200"
             >
               Export / Import
             </button>
@@ -118,7 +118,7 @@ export default function App() {
               type="button"
               onClick={() => setAdding(true)}
               aria-label="Add a place"
-              className="absolute bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong md:hidden"
+              className="absolute bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
               +
             </button>

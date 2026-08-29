@@ -110,7 +110,7 @@ export function RestaurantDetail({
           <button
             type="button"
             onClick={() => setLogging(true)}
-            className="rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+            className="rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
           >
             I’m here now
           </button>

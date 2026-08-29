@@ -41,7 +41,7 @@ export function ReloadPrompt() {
       role="region"
       aria-live="polite"
       aria-label="App update"
-      className="fixed left-1/2 z-[2000] flex -translate-x-1/2 items-center gap-3 rounded-md bg-gray-900 px-4 py-2 text-sm text-white shadow-lg bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] md:bottom-4"
+      className="fixed left-1/2 z-[2000] flex -translate-x-1/2 items-center gap-3 rounded-full bg-gray-900 px-4 py-2.5 text-sm text-white shadow-lg bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] md:bottom-4"
     >
       {needRefresh ? (
         <>
@@ -49,7 +49,7 @@ export function ReloadPrompt() {
           <button
             type="button"
             onClick={reload}
-            className="rounded bg-brand px-2.5 py-1 font-medium text-white hover:opacity-90"
+            className="rounded-full bg-brand px-3 py-1 font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong"
           >
             Reload
           </button>
@@ -57,7 +57,12 @@ export function ReloadPrompt() {
       ) : (
         <span>Ready to work offline.</span>
       )}
-      <button type="button" onClick={dismiss} aria-label="Dismiss" className="text-gray-400 hover:text-white">
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="Dismiss"
+        className="rounded-full p-1 text-gray-400 transition hover:text-white active:text-white"
+      >
         ✕
       </button>
     </div>

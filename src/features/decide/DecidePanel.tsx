@@ -89,7 +89,7 @@ export function DecidePanel({
           <button
             type="button"
             onClick={() => setPickedId(pickForMe(candidates)?.restaurant.id ?? null)}
-            className="mb-3 w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+            className="mb-3 w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
           >
             🎲 Pick for me
           </button>
