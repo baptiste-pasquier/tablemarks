@@ -14,6 +14,13 @@ export interface ReconcileResult<T> {
   toWriteLocal: T[]
   /** Local winners that must be pushed to the remote. */
   toPush: T[]
+  /**
+   * Pairs present on both sides with equal `updated` — already in sync, nothing to write or push.
+   * The winner is always `local` (a tie keeps local per `pickWinner`'s tie-break). The sync engine
+   * still needs these to stamp `syncedUpdated`, since a record synced before that marker existed
+   * (or one that reaches agreement some other way) would otherwise read as pending forever.
+   */
+  noop: T[]
 }
 
 /**
@@ -28,14 +35,18 @@ export function reconcile<T extends SyncFields>(local: T[], remote: T[]): Reconc
   const merged: T[] = []
   const toWriteLocal: T[] = []
   const toPush: T[] = []
+  const noop: T[] = []
 
   for (const { local: l, remote: rem } of pairs.values()) {
     const winner = pickWinner(l, rem)!
     merged.push(winner)
-    if (l?.updated === rem?.updated) continue // both present and equal → no-op
+    if (l?.updated === rem?.updated) {
+      noop.push(winner) // both present and equal → no-op, but still needs syncedUpdated stamped
+      continue
+    }
     if (winner === rem) toWriteLocal.push(winner)
     else toPush.push(winner)
   }
 
-  return { merged, toWriteLocal, toPush }
+  return { merged, toWriteLocal, toPush, noop }
 }

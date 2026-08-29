@@ -30,6 +30,12 @@ export interface SyncFields {
   updated: string
   /** Soft-delete tombstone — wins by recency like any change. */
   deleted: boolean
+  /**
+   * Local-only: the `updated` value as of the last successful push to PocketBase. Unset until the
+   * first push. The record is pending sync whenever this differs from `updated` (or is unset).
+   * Never sent to or read from the remote — must not appear in `src/sync/mappers.ts`.
+   */
+  syncedUpdated?: string
 }
 
 export interface Restaurant extends SyncFields {

@@ -53,6 +53,9 @@ A user-triggered write of the entire collection — every Restaurant and Visit, 
 ### Import
 Merging a previously exported file back into the store as another Last-Write-Wins reconcile source: records upsert by stable id, the newer wins, unseen records are added, and nothing is deleted — so re-importing an unchanged file is a no-op. A malformed or unrecognized file is rejected without touching the store.
 
+### Sync Status
+The single global backup-trust state shown when signed in: *all synced*, *N pending*, *offline*, or *problem* (a repeated non-offline push failure, naming the likely cause). Distinct from a Restaurant's own `pending` field (an unresolved provisional record) — Sync Status is record-agnostic and never shown per-record.
+
 ## Flagged ambiguities
 
 - "Rating" refers to the Verdict (a returnability judgment), not a numeric score — Tablemarks has no star rating.

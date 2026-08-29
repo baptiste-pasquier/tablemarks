@@ -11,6 +11,7 @@ import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
 import { PortabilityPanel } from './features/portability/PortabilityPanel'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
+import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
 import type { GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
 
@@ -34,6 +35,7 @@ export default function App() {
         <h1 className="text-lg font-bold text-brand">Tablemarks</h1>
         {signedIn ? (
           <div className="flex items-center gap-3 text-sm">
+            <SyncStatusIndicator />
             <span className="text-gray-500">{email}</span>
             <button
               type="button"
