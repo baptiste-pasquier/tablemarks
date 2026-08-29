@@ -1,6 +1,12 @@
 /** Neutral color for places with no cuisine. */
 export const UNCATEGORIZED_COLOR = '#9ca3af'
 
+/** Emoji for places with no cuisine — distinct from the generic free-text fallback. */
+export const UNCATEGORIZED_EMOJI = '🍽️'
+
+/** Generic emoji for a free-text cuisine with no curated match. */
+export const GENERIC_CUISINE_EMOJI = '🍴'
+
 /** Curated cuisines with fixed colors. The vocabulary is open — users can add their own. */
 export const CURATED_CUISINES: ReadonlyArray<{ name: string; color: string }> = [
   { name: 'Burger', color: '#b45309' },
@@ -18,6 +24,22 @@ export const CURATED_CUISINES: ReadonlyArray<{ name: string; color: string }> = 
 ]
 
 const CURATED_BY_KEY = new Map(CURATED_CUISINES.map((c) => [c.name.toLowerCase(), c.color]))
+
+/** Curated cuisine -> representative emoji, keyed the same way as `CURATED_BY_KEY`. */
+const CUISINE_EMOJI: Record<string, string> = {
+  burger: '🍔',
+  french: '🥖',
+  italian: '🍝',
+  indian: '🍛',
+  japanese: '🍣',
+  chinese: '🥡',
+  thai: '🍜',
+  mexican: '🌮',
+  pizza: '🍕',
+  korean: '🍲',
+  vietnamese: '🥢',
+  café: '☕️',
+}
 
 // Palette for custom cuisines — assigned deterministically by name hash. Collisions are
 // acceptable: the color is a scannability hint, not an identifier.
@@ -48,6 +70,13 @@ export function colorForCuisine(cuisine: string | null | undefined): string {
   const key = normalize(cuisine)
   if (!key) return UNCATEGORIZED_COLOR
   return CURATED_BY_KEY.get(key.toLowerCase()) ?? CUSTOM_PALETTE[hashString(key.toLowerCase()) % CUSTOM_PALETTE.length]
+}
+
+/** The one cuisine-to-emoji source, mirroring `colorForCuisine`'s normalize-then-lookup shape. */
+export function emojiForCuisine(cuisine: string | null | undefined): string {
+  const key = normalize(cuisine)
+  if (!key) return UNCATEGORIZED_EMOJI
+  return CUISINE_EMOJI[key.toLowerCase()] ?? GENERIC_CUISINE_EMOJI
 }
 
 /** Picker options: curated cuisines unioned with any already in use, de-duped case-insensitively, sorted. */

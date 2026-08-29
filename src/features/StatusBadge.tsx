@@ -8,19 +8,30 @@ const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
   never_again: 'bg-verdict-never',
 }
 
-function Badge({ text, className }: { text: string; className: string }) {
+/** Icon distinguishing each verdict from its color alone (R6). */
+export const VERDICT_ICON: Record<Verdict, string> = {
+  go_back: '↩️',
+  worth_a_detour: '🧭',
+  once_was_enough: '🤷',
+  never_again: '🚫',
+}
+
+function Badge({ text, className, icon }: { text: string; className: string; icon?: string }) {
   return (
     <span
-      className={`inline-block shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white ${className}`}
     >
-      {text}
+      {icon && <span aria-hidden="true">{icon}</span>}
+      <span>{text}</span>
     </span>
   )
 }
 
 /** One visit's own verdict badge, always in "verdict" mode — used per entry in the visit history. */
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {
-  return <Badge text={VERDICT_LABELS[verdict]} className={VERDICT_BADGE_CLASS[verdict]} />
+  return (
+    <Badge text={VERDICT_LABELS[verdict]} className={VERDICT_BADGE_CLASS[verdict]} icon={VERDICT_ICON[verdict]} />
+  )
 }
 
 /**

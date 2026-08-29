@@ -39,6 +39,16 @@ describe('RestaurantList', () => {
     expect(screen.getByText('Resolving…')).toBeInTheDocument()
   })
 
+  it('renders the verdict icon as a separate aria-hidden node from the label text', () => {
+    render(<RestaurantList items={[r({ id: 'a', name: 'Visited place', visitCount: 1, latestVerdict: 'go_back' })]} />)
+
+    const label = screen.getByText('Go back')
+    const badge = label.parentElement
+    expect(badge).not.toBeNull()
+    const icon = within(badge as HTMLElement).getByText('↩️')
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+  })
+
   it('shows the cuisine as a subtitle when set, omitted when not', () => {
     render(
       <RestaurantList
