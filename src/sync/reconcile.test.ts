@@ -51,6 +51,20 @@ describe('reconcile', () => {
     expect(toPush).toEqual([])
   })
 
+  it('a pair with equal local/remote updated lands in noop, not toWriteLocal/toPush, and still merges', () => {
+    const local = rec('a', '2026-01-01')
+    const { merged, noop, toWriteLocal, toPush } = reconcile([local], [rec('a', '2026-01-01')])
+    expect(noop).toEqual([local])
+    expect(toWriteLocal).toEqual([])
+    expect(toPush).toEqual([])
+    expect(merged).toEqual([local])
+  })
+
+  it('does not put a non-equal pair in noop', () => {
+    const { noop } = reconcile([rec('a', '2026-01-01')], [rec('a', '2026-02-01')])
+    expect(noop).toEqual([])
+  })
+
   it('a newer remote tombstone is written locally (delete propagates, not resurrects)', () => {
     const { merged, toWriteLocal } = reconcile([rec('a', '2026-01-01', false)], [rec('a', '2026-02-01', true)])
     expect(merged[0].deleted).toBe(true)
