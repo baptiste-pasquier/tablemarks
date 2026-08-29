@@ -63,6 +63,27 @@ describe('Modal', () => {
     expect(second).toHaveFocus()
   })
 
+  it('wraps focus from the last focusable element to the first on Tab', async () => {
+    const onClose = vi.fn()
+    render(<Harness onClose={onClose} />)
+
+    screen.getByRole('button', { name: 'Last' }).focus()
+    expect(screen.getByRole('button', { name: 'Last' })).toHaveFocus()
+
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'First' })).toHaveFocus()
+  })
+
+  it('wraps focus from the first focusable element to the last on Shift+Tab', async () => {
+    const onClose = vi.fn()
+    render(<Harness onClose={onClose} />)
+
+    expect(screen.getByRole('button', { name: 'First' })).toHaveFocus()
+
+    await userEvent.tab({ shift: true })
+    expect(screen.getByRole('button', { name: 'Last' })).toHaveFocus()
+  })
+
   it('returns focus to the triggering control when the modal unmounts', async () => {
     const opener = document.createElement('button')
     opener.textContent = 'Opener'

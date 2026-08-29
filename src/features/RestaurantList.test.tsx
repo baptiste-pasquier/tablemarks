@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { RestaurantList } from './RestaurantList'
 import type { Restaurant } from '../types/models'
@@ -49,5 +49,9 @@ describe('RestaurantList', () => {
       />,
     )
     expect(screen.getByText('Ramen')).toBeInTheDocument()
+
+    const uncategorizedRow = screen.getByText('Uncategorized').closest('li')
+    expect(uncategorizedRow).not.toBeNull()
+    expect(within(uncategorizedRow as HTMLElement).queryByText('Ramen')).not.toBeInTheDocument()
   })
 })

@@ -4,9 +4,8 @@ import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
 import { updateRestaurant } from '../../data/restaurants'
 import { cuisineOptions, colorForCuisine } from '../facets/cuisines'
-import { statusLabel } from '../display'
 import { Modal } from '../ui/Modal'
-import { VerdictBadge } from '../StatusBadge'
+import { StatusBadge, VerdictBadge } from '../StatusBadge'
 import { VERDICTS, VERDICT_LABELS, type Verdict } from '../../types/models'
 
 function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; disabled?: boolean }) {
@@ -70,10 +69,10 @@ export function RestaurantDetail({
           ✕
         </button>
       </div>
-      <p className="text-sm text-gray-500">
-        {statusLabel(restaurant)}
-        {restaurant.address ? ` · ${restaurant.address}` : ''}
-      </p>
+      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+        <StatusBadge restaurant={restaurant} />
+        {restaurant.address && <span>{restaurant.address}</span>}
+      </div>
 
       <div className="mt-3 flex items-center gap-2">
         <span

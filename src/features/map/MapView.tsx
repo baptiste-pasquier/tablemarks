@@ -73,17 +73,26 @@ export function MapView({
   onSelect,
   onCenterChange,
   selectedId,
+  active,
 }: {
   markers: MapMarker[]
   onSelect?: (id: string) => void
   onCenterChange?: (center: GeoPoint) => void
   selectedId?: string | null
+  active?: boolean
 }) {
   const center: [number, number] = markers.length
     ? [markers[0].lat, markers[0].lng]
     : DEFAULT_CENTER
   const [map, setMap] = useState<L.Map | null>(null)
   const [locating, setLocating] = useState(false)
+
+  // The mobile List/Map toggle keeps this pane mounted but hidden (display:none) while
+  // inactive. A display:none -> block transition fires no resize event, so Leaflet never
+  // recomputes its tile grid until the pane becomes visible — nudge it once it does.
+  useEffect(() => {
+    if (map && active) map.invalidateSize()
+  }, [map, active])
 
   async function locate() {
     setLocating(true)

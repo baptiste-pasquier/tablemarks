@@ -43,10 +43,18 @@ describe('App shell', () => {
     const mapButton = screen.getByRole('button', { name: /^map$/i })
     expect(listButton).toHaveAttribute('aria-pressed', 'true')
     expect(mapButton).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: 'Add a place' })).not.toBeInTheDocument()
 
     await user.click(mapButton)
 
     expect(listButton).toHaveAttribute('aria-pressed', 'false')
     expect(mapButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Add a place' })).toBeInTheDocument()
+
+    await user.click(listButton)
+
+    expect(listButton).toHaveAttribute('aria-pressed', 'true')
+    expect(mapButton).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: 'Add a place' })).not.toBeInTheDocument()
   })
 })

@@ -137,7 +137,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={() => void confirmImport()}
             disabled={busy}
-            className="mt-2 rounded-md bg-brand px-3 py-1.5 font-medium text-white disabled:opacity-50"
+            className="mt-2 rounded-xl bg-brand px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50"
           >
             {importBusy ? 'Importing…' : 'Confirm import'}
           </button>

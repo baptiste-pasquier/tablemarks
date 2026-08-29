@@ -1,7 +1,19 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
 const FOCUSABLE_SELECTOR =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+
+// Browsers only let Tab reach a closed <details>'s own <summary>, not its hidden children, so any
+// other FOCUSABLE_SELECTOR match nested inside a closed <details> isn't actually reachable via Tab.
+function isReachable(el: HTMLElement): boolean {
+  const closedDetails = el.closest('details:not([open])')
+  if (!closedDetails) return true
+  return el.tagName === 'SUMMARY' && el.parentElement === closedDetails
+}
+
+function getFocusables(panel: HTMLElement): HTMLElement[] {
+  return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(isReachable)
+}
 
 /**
  * Shared shell for every modal-style panel (R15/KTD2): a bottom sheet with rounded top corners
@@ -30,7 +42,9 @@ export function Modal({
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
-    panelRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
+    if (panelRef.current) {
+      getFocusables(panelRef.current)[0]?.focus()
+    }
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -38,14 +52,30 @@ export function Modal({
         return
       }
       if (e.key !== 'Tab' || !panelRef.current) return
-      const focusables = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      const focusables = getFocusables(panelRef.current)
       if (focusables.length === 0) return
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
+      const activeElement = document.activeElement as HTMLElement | null
+      const activeIndex = activeElement ? focusables.indexOf(activeElement) : -1
+
+      // The focused element was removed from the DOM (e.g. replaced by different controls after a
+      // click) or was never one of the tracked focusables: focus has escaped the trap. Pull it back
+      // in before falling through to the normal first/last wraparound checks below.
+      if (activeIndex === -1) {
+        e.preventDefault()
+        if (e.shiftKey) {
+          last.focus()
+        } else {
+          first.focus()
+        }
+        return
+      }
+
+      if (e.shiftKey && activeElement === first) {
         e.preventDefault()
         last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
+      } else if (!e.shiftKey && activeElement === last) {
         e.preventDefault()
         first.focus()
       }
