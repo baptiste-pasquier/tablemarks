@@ -6,6 +6,12 @@ import { RestaurantDetail } from './RestaurantDetail'
 import { createRestaurant, getRestaurant } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 
+// This suite doesn't drive a real i18next instance (see i18n/config.test.ts for that coverage)
+// — a passthrough keeps ModalHeader's `t('common.close')` call quiet instead of warning.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => (key === 'common.close' ? 'Close' : key) }),
+}))
+
 beforeEach(freshDB)
 
 function enabled(buttons: HTMLElement[]): HTMLElement {

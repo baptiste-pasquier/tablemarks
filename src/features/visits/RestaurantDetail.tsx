@@ -5,6 +5,7 @@ import { createVisit, removeVisit } from '../../data/visits'
 import { updateRestaurant } from '../../data/restaurants'
 import { cuisineOptions, colorForCuisine } from '../facets/cuisines'
 import { Modal } from '../ui/Modal'
+import { ModalHeader } from '../ui/ModalHeader'
 import { StatusBadge, VerdictBadge } from '../StatusBadge'
 import { VERDICTS, VERDICT_LABELS, type Verdict } from '../../types/models'
 
@@ -63,12 +64,7 @@ export function RestaurantDetail({
 
   return (
     <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
-      <div className="mb-1 flex items-start justify-between">
-        <h2 className="text-lg font-semibold">{restaurant.name}</h2>
-        <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
-          ✕
-        </button>
-      </div>
+      <ModalHeader title={restaurant.name} onClose={onClose} variant="detail" />
       <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
         <StatusBadge restaurant={restaurant} />
         {restaurant.address && <span>{restaurant.address}</span>}

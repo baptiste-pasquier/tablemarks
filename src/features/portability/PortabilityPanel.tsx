@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { exportCollection, parseImport, applyImport, type ImportCounts, type ImportRecords } from '../../data/portability'
-import { Modal } from '../ui/Modal'
+import { ModalHeader } from '../ui/ModalHeader'
 
 export function PortabilityPanel({ onClose }: { onClose: () => void }) {
   const fileInputId = useId()
@@ -85,13 +85,8 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Export &amp; import</h2>
-        <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
-          ✕
-        </button>
-      </div>
+    <>
+      <ModalHeader title="Export & import" onClose={onClose} />
 
       <p className="text-sm text-gray-600">
         Download a full backup of your collection, or merge in a previously exported file.
@@ -149,6 +144,6 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
           Imported: {summary.added} added, {summary.updated} updated, {summary.unchanged} unchanged.
         </p>
       )}
-    </Modal>
+    </>
   )
 }

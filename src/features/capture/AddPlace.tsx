@@ -5,6 +5,7 @@ import { updateRestaurant } from '../../data/restaurants'
 import { useRestaurants } from '../useRestaurants'
 import { cuisineOptions } from '../facets/cuisines'
 import { Modal } from '../ui/Modal'
+import { ModalHeader } from '../ui/ModalHeader'
 import type { Restaurant } from '../../types/models'
 
 export function AddPlace({
@@ -79,12 +80,7 @@ export function AddPlace({
 
   return (
     <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Add a place</h2>
-        <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
-          ✕
-        </button>
-      </div>
+      <ModalHeader title="Add a place" onClose={onClose} />
 
       <label className="block text-sm text-gray-600" htmlFor="add-input">
         Paste a Google Maps link, or type a place name

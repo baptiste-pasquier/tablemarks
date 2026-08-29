@@ -3,6 +3,7 @@ import { useRestaurants } from '../useRestaurants'
 import { StatusBadge } from '../StatusBadge'
 import { decideCandidates, pickForMe, type Anchor, type Candidate } from './candidates'
 import { Modal } from '../ui/Modal'
+import { ModalHeader } from '../ui/ModalHeader'
 
 const RADIUS_PRESETS_KM = [0.5, 1, 5] as const
 const DEFAULT_RADIUS_KM = 1
@@ -42,12 +43,7 @@ export function DecidePanel({
 
   return (
     <Modal onClose={onClose} zIndexClassName="z-[1100]" panelClassName="flex max-h-[88vh] flex-col">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Where to eat?</h2>
-        <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
-          ✕
-        </button>
-      </div>
+      <ModalHeader title="Where to eat?" onClose={onClose} />
 
       <div className="mb-3 flex items-center gap-2 text-sm">
         <span className="text-gray-500">Within</span>

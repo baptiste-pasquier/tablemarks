@@ -10,6 +10,7 @@ import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
 import { PortabilityPanel } from './features/portability/PortabilityPanel'
+import { Modal } from './features/ui/Modal'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
 import type { GeoPoint } from './lib/geolocate'
@@ -174,7 +175,11 @@ export default function App() {
         />
       )}
 
-      {portability && <PortabilityPanel onClose={() => setPortability(false)} />}
+      {portability && (
+        <Modal onClose={() => setPortability(false)} panelClassName="max-h-[90vh] overflow-y-auto">
+          <PortabilityPanel onClose={() => setPortability(false)} />
+        </Modal>
+      )}
 
       {selectedId && (
         <RestaurantDetail restaurantId={selectedId} onClose={() => setSelectedId(null)} />

@@ -5,6 +5,12 @@ import { freshDB } from '../../test/idb'
 import { PortabilityPanel } from './PortabilityPanel'
 import { createRestaurant, getRestaurant, allRestaurants } from '../../data/restaurants'
 
+// This suite doesn't drive a real i18next instance (see i18n/config.test.ts for that coverage)
+// — a passthrough keeps ModalHeader's `t('common.close')` call quiet instead of warning.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => (key === 'common.close' ? 'Close' : key) }),
+}))
+
 beforeEach(freshDB)
 afterEach(() => vi.restoreAllMocks())
 
@@ -80,5 +86,15 @@ describe('PortabilityPanel', () => {
     await user.click(await screen.findByRole('button', { name: /confirm import/i }))
 
     expect(await screen.findByText(/0 added/i)).toBeInTheDocument()
+  })
+
+  it('renders as a headless section — no backdrop or dialog chrome of its own — when not wrapped in a Modal (KTD3)', async () => {
+    const { container } = render(<PortabilityPanel onClose={vi.fn()} />)
+
+    expect(await screen.findByRole('heading', { name: /export/i })).toBeInTheDocument()
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    // Modal's backdrop is a `fixed inset-0 ... bg-black/50` div — none of that chrome exists here.
+    expect(container.innerHTML).not.toContain('bg-black/50')
+    expect(container.innerHTML).not.toContain('fixed inset-0')
   })
 })
