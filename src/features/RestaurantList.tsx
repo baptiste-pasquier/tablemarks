@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
 import { colorForCuisine, emojiForCuisine } from './facets/cuisines'
@@ -32,16 +33,16 @@ export function RestaurantList({
   items: Restaurant[]
   onSelect?: (id: string) => void
 }) {
+  const { t } = useTranslation()
+
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
         <span aria-hidden="true" className="text-4xl">
           🍽️
         </span>
-        <p className="font-display text-lg font-semibold text-gray-900">No places yet</p>
-        <p className="max-w-[16rem] text-sm text-gray-500">
-          Save a spot you love or one you want to try — paste a Google Maps link or search a name.
-        </p>
+        <p className="font-display text-lg font-semibold text-gray-900">{t('restaurantList.emptyTitle')}</p>
+        <p className="max-w-[16rem] text-sm text-gray-500">{t('restaurantList.emptyBody')}</p>
       </div>
     )
   }
@@ -72,14 +73,14 @@ export function RestaurantList({
                   style={{ background: cuisineColor, color: badgeTextColor }}
                 >
                   <span aria-hidden="true">{emojiForCuisine(r.cuisine)}</span>
-                  {r.cuisine?.trim() || 'Uncategorized'}
+                  {r.cuisine?.trim() || t('common.uncategorized')}
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <StatusBadge restaurant={r} />
                 {visited && (
                   <span className="text-xs text-gray-600">
-                    {r.visitCount === 1 ? '1 visit' : `${r.visitCount} visits`}
+                    {t('common.visitsCount', { count: r.visitCount })}
                   </span>
                 )}
               </div>

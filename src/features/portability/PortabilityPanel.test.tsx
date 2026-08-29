@@ -5,12 +5,6 @@ import { freshDB } from '../../test/idb'
 import { PortabilityPanel } from './PortabilityPanel'
 import { createRestaurant, getRestaurant, allRestaurants } from '../../data/restaurants'
 
-// This suite doesn't drive a real i18next instance (see i18n/config.test.ts for that coverage)
-// — a passthrough keeps ModalHeader's `t('common.close')` call quiet instead of warning.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => (key === 'common.close' ? 'Close' : key) }),
-}))
-
 beforeEach(freshDB)
 afterEach(() => vi.restoreAllMocks())
 

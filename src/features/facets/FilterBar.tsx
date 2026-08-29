@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   VERDICTS,
-  VERDICT_LABELS,
+  translateVerdict,
+  translateStatus,
   VERDICT_ICON,
-  STATUS_LABELS,
   type RestaurantStatus,
   type Restaurant,
 } from '../../types/models'
@@ -115,6 +116,7 @@ export function FilterBar({
   filter: FacetFilter
   onChange: (filter: FacetFilter) => void
 }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const ranked = useMemo(() => rankedCuisines(restaurants), [restaurants])
   const hasUncategorized = useMemo(() => restaurants.some((r) => !r.cuisine?.trim()), [restaurants])
@@ -126,17 +128,17 @@ export function FilterBar({
   return (
     <div className="space-y-2 border-b border-gray-100 p-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Filter</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{t('filters.title')}</span>
         {!isEmptyFilter(filter) && (
           <button type="button" onClick={() => onChange(emptyFilter())} className="text-xs text-brand hover:underline">
-            Clear all
+            {t('filters.clearAll')}
           </button>
         )}
       </div>
 
       {(ranked.length > 0 || hasUncategorized) && (
         <div>
-          <GroupLabel>Cuisine</GroupLabel>
+          <GroupLabel>{t('filters.cuisineGroup')}</GroupLabel>
           <div id={CUISINE_GROUP_ID} className="mt-1 flex flex-wrap gap-1.5">
             {shownCuisines.map((c) => (
               <Chip
@@ -150,7 +152,7 @@ export function FilterBar({
             ))}
             {hasUncategorized && (
               <Chip
-                label="Uncategorized"
+                label={t('common.uncategorized')}
                 color={colorForCuisine(undefined)}
                 icon={emojiForCuisine(undefined)}
                 active={filter.cuisines.has(UNCATEGORIZED)}
@@ -165,7 +167,7 @@ export function FilterBar({
                 onClick={() => setExpanded((e) => !e)}
                 className="inline-flex min-h-10 items-center rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 transition hover:border-gray-400 hover:bg-gray-50"
               >
-                {expanded ? 'Réduire' : `+${overflow.length} autres`}
+                {expanded ? t('filters.collapse') : t('filters.showMore', { count: overflow.length })}
               </button>
             )}
           </div>
@@ -173,12 +175,12 @@ export function FilterBar({
       )}
 
       <div className="space-y-1 border-t border-gray-100 pt-2">
-        <GroupLabel>Statut &amp; verdict</GroupLabel>
+        <GroupLabel>{t('filters.statusVerdictGroup')}</GroupLabel>
         <div className="flex flex-wrap gap-1.5">
           {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => (
             <Chip
               key={s}
-              label={STATUS_LABELS[s]}
+              label={translateStatus(s)}
               active={filter.statuses.has(s)}
               onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
             />
@@ -186,7 +188,7 @@ export function FilterBar({
           {VERDICTS.map((v) => (
             <Chip
               key={v}
-              label={VERDICT_LABELS[v]}
+              label={translateVerdict(v)}
               icon={VERDICT_ICON[v]}
               active={filter.verdicts.has(v)}
               onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}

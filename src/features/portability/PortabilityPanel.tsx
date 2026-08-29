@@ -1,8 +1,10 @@
 import { useId, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { exportCollection, parseImport, applyImport, type ImportCounts, type ImportRecords } from '../../data/portability'
 import { ModalHeader } from '../ui/ModalHeader'
 
 export function PortabilityPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
   const fileInputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   // Synchronous guard: React state updates don't flush before a second click is processed, so a
@@ -36,7 +38,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       // Defer revocation so the browser can start the download before the blob URL is invalidated.
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch {
-      setError('Could not export your collection.')
+      setError(t('portability.errorExport'))
     } finally {
       setExportBusy(false)
       runningRef.current = false
@@ -59,7 +61,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       }
       setPending(result.records)
     } catch {
-      setError('Could not read that file.')
+      setError(t('portability.errorRead'))
     } finally {
       setImportBusy(false)
       runningRef.current = false
@@ -77,7 +79,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       setSummary(counts)
       setPending(null)
     } catch {
-      setError('Could not import that file.')
+      setError(t('portability.errorImport'))
     } finally {
       setImportBusy(false)
       runningRef.current = false
@@ -86,11 +88,9 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <ModalHeader title="Export & import" onClose={onClose} />
+      <ModalHeader title={t('portability.title')} onClose={onClose} />
 
-      <p className="text-sm text-gray-600">
-        Download a full backup of your collection, or merge in a previously exported file.
-      </p>
+      <p className="text-sm text-gray-600">{t('portability.description')}</p>
 
       <button
         type="button"
@@ -98,12 +98,12 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
         disabled={busy}
         className="mt-3 w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong disabled:opacity-50"
       >
-        {exportBusy ? 'Working…' : 'Export collection'}
+        {exportBusy ? t('portability.exportBusy') : t('portability.exportAction')}
       </button>
 
       <div className="mt-4 border-t border-gray-100 pt-4">
         <label htmlFor={fileInputId} className="block text-sm text-gray-600">
-          Import a backup file
+          {t('portability.importLabel')}
         </label>
         <input
           id={fileInputId}
@@ -124,9 +124,10 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       {pending && (
         <div className="mt-3 rounded-md bg-brand-soft p-3 text-sm">
           <p>
-            Import <strong>{pending.restaurants.length}</strong> place{pending.restaurants.length === 1 ? '' : 's'} and{' '}
-            <strong>{pending.visits.length}</strong> visit{pending.visits.length === 1 ? '' : 's'}? Existing entries
-            merge by last edit; nothing is deleted.
+            {t('portability.confirm.question', {
+              places: t('portability.confirm.place', { count: pending.restaurants.length }),
+              visits: t('portability.confirm.visit', { count: pending.visits.length }),
+            })}
           </p>
           <button
             type="button"
@@ -134,14 +135,18 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
             disabled={busy}
             className="mt-2 rounded-xl bg-brand px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50"
           >
-            {importBusy ? 'Importing…' : 'Confirm import'}
+            {importBusy ? t('portability.importBusy') : t('portability.confirmImport')}
           </button>
         </div>
       )}
 
       {summary && (
         <p className="mt-3 text-sm text-green-700">
-          Imported: {summary.added} added, {summary.updated} updated, {summary.unchanged} unchanged.
+          {t('portability.summary', {
+            added: summary.added,
+            updated: summary.updated,
+            unchanged: summary.unchanged,
+          })}
         </p>
       )}
     </>

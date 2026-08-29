@@ -1,37 +1,37 @@
 import { useState } from 'react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../auth/useAuth'
 import { useSyncStatus } from '../../sync/useSyncStatus'
 import type { SyncStatus } from '../../sync/syncStatus'
 
 /** Short label for the header-level indicator (R1). */
-function label(status: SyncStatus): string {
+function label(t: TFunction, status: SyncStatus): string {
   switch (status.state) {
     case 'synced':
-      return 'All synced'
+      return t('sync.allSynced')
     case 'pending':
-      return `${status.pendingCount} pending`
+      return t('sync.pendingCount', { count: status.pendingCount })
     case 'offline':
-      return status.pendingCount > 0 ? `Offline — ${status.pendingCount} pending` : 'Offline'
+      return status.pendingCount > 0
+        ? t('sync.offlinePending', { count: status.pendingCount })
+        : t('sync.offline')
     case 'problem':
-      return status.cause === 'sign-in-needed' ? 'Sign in again to keep backing up' : "Can't reach the server"
+      return status.cause === 'sign-in-needed' ? t('sync.problemSignIn') : t('sync.problemUnreachable')
   }
 }
 
 /** Plain-text elaboration shown in the tap-to-expand detail view. Never wired to any action. */
-function detail(status: SyncStatus): string {
+function detail(t: TFunction, status: SyncStatus): string {
   switch (status.state) {
     case 'synced':
-      return "Everything you've saved is backed up."
-    case 'pending': {
-      const noun = status.pendingCount === 1 ? 'item hasn\'t' : 'items haven\'t'
-      return `${status.pendingCount} ${noun} backed up yet. They'll sync automatically.`
-    }
+      return t('sync.detailSynced')
+    case 'pending':
+      return t('sync.detailPending', { count: status.pendingCount })
     case 'offline':
-      return "You're offline. Changes are saved on this device and will sync when you're back online."
+      return t('sync.detailOffline')
     case 'problem':
-      return status.cause === 'sign-in-needed'
-        ? 'Your sign-in expired. Sign in again from the header to resume backing up.'
-        : "We can't reach the server right now. We'll keep trying in the background."
+      return status.cause === 'sign-in-needed' ? t('sync.detailProblemSignIn') : t('sync.detailProblemUnreachable')
   }
 }
 
@@ -56,6 +56,7 @@ function labelClassName(state: SyncStatus['state']): string {
  * toggles a plain-text detail view; it is never a retry trigger and calls no sync function.
  */
 export function SyncStatusIndicator() {
+  const { t } = useTranslation()
   const { signedIn } = useAuth()
   const status = useSyncStatus()
   const [expanded, setExpanded] = useState(false)
@@ -63,12 +64,14 @@ export function SyncStatusIndicator() {
   if (!signedIn) return null
 
   return (
-    <div role="region" aria-live="polite" aria-label="Sync status" className="text-sm">
+    <div role="region" aria-live="polite" aria-label={t('sync.ariaLabel')} className="text-sm">
       <button type="button" onClick={() => setExpanded((v) => !v)} className={labelClassName(status.state)}>
-        {label(status)}
+        {label(t, status)}
       </button>
       {expanded && (
-        <p className="mt-1 max-w-xs rounded-lg bg-gray-50 p-2 text-xs text-gray-500 shadow-sm">{detail(status)}</p>
+        <p className="mt-1 max-w-xs rounded-lg bg-gray-50 p-2 text-xs text-gray-500 shadow-sm">
+          {detail(t, status)}
+        </p>
       )}
     </div>
   )

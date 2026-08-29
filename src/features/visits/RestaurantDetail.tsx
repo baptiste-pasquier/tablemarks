@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
@@ -7,7 +8,7 @@ import { cuisineOptions, colorForCuisine } from '../facets/cuisines'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { StatusBadge, VerdictBadge } from '../StatusBadge'
-import { VERDICTS, VERDICT_LABELS, type Verdict } from '../../types/models'
+import { VERDICTS, translateVerdict, type Verdict } from '../../types/models'
 
 function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; disabled?: boolean }) {
   return (
@@ -20,7 +21,7 @@ function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; di
           onClick={() => onPick(v)}
           className="rounded-full border border-gray-300 px-3 py-1 text-sm hover:bg-brand-soft disabled:opacity-50"
         >
-          {VERDICT_LABELS[v]}
+          {translateVerdict(v)}
         </button>
       ))}
     </div>
@@ -34,6 +35,7 @@ export function RestaurantDetail({
   restaurantId: string
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
   const restaurants = useRestaurants()
   const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
@@ -84,8 +86,8 @@ export function RestaurantDetail({
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.currentTarget.blur()
           }}
-          aria-label="Cuisine"
-          placeholder="Add a cuisine…"
+          aria-label={t('visitDetail.cuisineLabel')}
+          placeholder={t('visitDetail.cuisinePlaceholder')}
           className="w-full rounded-md border border-gray-300 p-1.5 text-sm"
         />
         <datalist id={cuisineListId}>
@@ -98,7 +100,7 @@ export function RestaurantDetail({
       <div className="mt-4">
         {logging ? (
           <div>
-            <p className="mb-2 text-sm font-medium">How was it?</p>
+            <p className="mb-2 text-sm font-medium">{t('visitDetail.howWasIt')}</p>
             <VerdictButtons onPick={(v) => void logNow(v)} />
           </div>
         ) : (
@@ -107,17 +109,18 @@ export function RestaurantDetail({
             onClick={() => setLogging(true)}
             className="rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
           >
-            I’m here now
+            {t('visitDetail.hereNow')}
           </button>
         )}
       </div>
 
       <div className="mt-5">
         <h3 className="text-sm font-semibold text-gray-700">
-          Visits {visits.length > 0 && <span className="font-normal text-gray-400">({visits.length})</span>}
+          {t('visitDetail.visitsHeading')}{' '}
+          {visits.length > 0 && <span className="font-normal text-gray-400">({visits.length})</span>}
         </h3>
         {visits.length === 0 ? (
-          <p className="mt-1 text-sm text-gray-500">No visits yet — it’s on your to-try list.</p>
+          <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>
         ) : (
           <ul className="mt-1 divide-y divide-gray-100">
             {visits.map((v) => (
@@ -129,7 +132,7 @@ export function RestaurantDetail({
                 <button
                   type="button"
                   onClick={() => void removeVisit(v.id)}
-                  aria-label={`Delete visit on ${v.date}`}
+                  aria-label={t('visitDetail.deleteVisitAria', { date: v.date })}
                   className="text-gray-400 hover:text-red-600"
                 >
                   ✕
@@ -141,13 +144,13 @@ export function RestaurantDetail({
       </div>
 
       <details className="mt-4">
-        <summary className="cursor-pointer text-sm text-gray-600">Add a past visit</summary>
+        <summary className="cursor-pointer text-sm text-gray-600">{t('visitDetail.addPastVisit')}</summary>
         <div className="mt-2 space-y-2">
           <input
             type="date"
             value={pastDate}
             onChange={(e) => setPastDate(e.target.value)}
-            aria-label="Visit date"
+            aria-label={t('visitDetail.visitDateAria')}
             className="rounded-md border border-gray-300 p-1.5 text-sm"
           />
           <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />

@@ -26,6 +26,12 @@ function setBrowserLanguage(...languages: string[]): void {
   vi.stubGlobal('navigator', { language: languages[0], languages })
 }
 
+// Opt out of the global test passthrough (src/test/setup.ts) for both mocked modules: this suite
+// drives a real i18next instance end to end, including real `react-i18next` resolution and the
+// real config module (not the setup file's stand-in pointed at a fixed-language test instance).
+vi.unmock('react-i18next')
+vi.unmock('./config')
+
 describe('i18n config', () => {
   beforeEach(() => {
     window.localStorage.clear()

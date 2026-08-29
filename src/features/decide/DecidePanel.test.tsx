@@ -7,12 +7,6 @@ import { createRestaurant } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 import type { Anchor } from './candidates'
 
-// This suite doesn't drive a real i18next instance (see i18n/config.test.ts for that coverage)
-// — a passthrough keeps ModalHeader's `t('common.close')` call quiet instead of warning.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => (key === 'common.close' ? 'Close' : key) }),
-}))
-
 const ANCHOR: Anchor = { lat: 48.8566, lng: 2.3522 }
 
 beforeEach(freshDB)

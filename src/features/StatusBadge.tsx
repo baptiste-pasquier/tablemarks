@@ -1,5 +1,6 @@
+import i18n from '../i18n/config'
 import { badgeState } from './display'
-import { STATUS_LABELS, VERDICT_LABELS, VERDICT_ICON, type Restaurant, type Verdict } from '../types/models'
+import { translateStatus, translateVerdict, VERDICT_ICON, type Restaurant, type Verdict } from '../types/models'
 
 const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
   go_back: 'bg-verdict-go-back',
@@ -22,7 +23,7 @@ function Badge({ text, className, icon }: { text: string; className: string; ico
 /** One visit's own verdict badge, always in "verdict" mode — used per entry in the visit history. */
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {
   return (
-    <Badge text={VERDICT_LABELS[verdict]} className={VERDICT_BADGE_CLASS[verdict]} icon={VERDICT_ICON[verdict]} />
+    <Badge text={translateVerdict(verdict)} className={VERDICT_BADGE_CLASS[verdict]} icon={VERDICT_ICON[verdict]} />
   )
 }
 
@@ -37,8 +38,8 @@ export function StatusBadge({
   restaurant: Pick<Restaurant, 'pending' | 'visitCount' | 'latestVerdict'>
 }) {
   const state = badgeState(restaurant)
-  if (state.kind === 'pending') return <Badge text="Resolving…" className="bg-verdict-neutral" />
-  if (state.kind === 'to_try') return <Badge text={STATUS_LABELS.to_try} className="bg-verdict-neutral" />
+  if (state.kind === 'pending') return <Badge text={i18n.t('statuses.resolving')} className="bg-verdict-neutral" />
+  if (state.kind === 'to_try') return <Badge text={translateStatus('to_try')} className="bg-verdict-neutral" />
   if (state.verdict) return <VerdictBadge verdict={state.verdict} />
-  return <Badge text={STATUS_LABELS.visited} className="bg-verdict-neutral" />
+  return <Badge text={translateStatus('visited')} className="bg-verdict-neutral" />
 }

@@ -18,6 +18,10 @@ function setBrowserLanguage(...languages: string[]): void {
   vi.stubGlobal('navigator', { language: languages[0], languages })
 }
 
+// Opt out of the global test passthrough (src/test/setup.ts) — this suite drives the real config
+// module, not the setup file's stand-in pointed at a fixed-language test instance.
+vi.unmock('./config')
+
 describe('i18n config (localStorage unavailable)', () => {
   it('falls back to browser-language detection alone, without throwing, when localStorage is unavailable', async () => {
     setBrowserLanguage('fr-FR', 'fr')

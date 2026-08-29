@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRestaurants } from './features/useRestaurants'
 import { useAuth } from './auth/useAuth'
 import { RestaurantList } from './features/RestaurantList'
@@ -19,6 +20,7 @@ import { DEFAULT_MAP_CENTER } from './lib/geo'
 type MobileView = 'list' | 'map'
 
 export default function App() {
+  const { t, i18n } = useTranslation()
   const restaurants = useRestaurants()
   const { signedIn, email, signIn, signOut } = useAuth()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -32,7 +34,12 @@ export default function App() {
   // App re-renders on every map pan/zoom (anchor state); memoize so the list and markers
   // aren't recomputed against every restaurant on each move.
   const visible = useMemo(() => restaurants.filter((r) => matches(r, filter)), [restaurants, filter])
-  const markers = useMemo(() => toMarkers(restaurants, filter), [restaurants, filter])
+  // `i18n.language` is a dependency so verdict/status labels baked into marker popups (via
+  // rollupLabel) re-translate immediately on a language switch, without a page reload.
+  const markers = useMemo(
+    () => toMarkers(restaurants, filter),
+    [restaurants, filter, i18n.language],
+  )
 
   return (
     <div className="flex h-full flex-col bg-gray-50 text-gray-900">
@@ -45,8 +52,8 @@ export default function App() {
             🍴
           </span>
           <div className="leading-none">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-gray-900">Tablemarks</h1>
-            <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">Your map of places worth a table</p>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-gray-900">{t('app.title')}</h1>
+            <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">{t('shell.tagline')}</p>
           </div>
         </div>
         {signedIn ? (
@@ -58,7 +65,7 @@ export default function App() {
               onClick={signOut}
               className="rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200"
             >
-              Sign out
+              {t('shell.signOut')}
             </button>
           </div>
         ) : (
@@ -67,7 +74,8 @@ export default function App() {
             onClick={() => void signIn()}
             className="rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium transition hover:bg-gray-100 active:bg-gray-200"
           >
-            Sign in<span className="hidden sm:inline"> with Google</span>
+            {t('shell.signIn')}
+            <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
           </button>
         )}
       </header>
@@ -84,21 +92,21 @@ export default function App() {
               onClick={() => setAdding(true)}
               className="w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
             >
-              + Add a place
+              {t('shell.addPlace')}
             </button>
             <button
               type="button"
               onClick={() => setDeciding(true)}
               className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand transition hover:bg-brand-soft active:bg-brand-soft"
             >
-              Where to eat?
+              {t('shell.whereToEat')}
             </button>
             <button
               type="button"
               onClick={() => setPortability(true)}
               className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 active:bg-gray-200"
             >
-              Export / Import
+              {t('shell.exportImport')}
             </button>
           </div>
           <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} />
@@ -124,7 +132,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setAdding(true)}
-              aria-label="Add a place"
+              aria-label={t('shell.addPlaceAria')}
               className="absolute bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
               +
@@ -136,7 +144,7 @@ export default function App() {
       {/* Mobile-only view switch, fixed to the viewport bottom (R5) so it stays reachable
           regardless of scroll/pan position in either pane. */}
       <nav
-        aria-label="View"
+        aria-label={t('shell.viewNav')}
         className="fixed inset-x-0 bottom-0 z-30 flex gap-1 border-t border-gray-200 bg-white/95 p-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden"
       >
         {(['list', 'map'] as const).map((v) => (
@@ -149,7 +157,7 @@ export default function App() {
               view === v ? 'bg-brand text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            {v}
+            {t(`shell.view.${v}`)}
           </button>
         ))}
       </nav>

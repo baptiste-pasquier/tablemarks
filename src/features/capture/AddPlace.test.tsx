@@ -6,12 +6,6 @@ import { setGeocodeProvider } from '../../capture/geocode'
 import { AddPlace } from './AddPlace'
 import { allRestaurants, createRestaurant } from '../../data/restaurants'
 
-// This suite doesn't drive a real i18next instance (see i18n/config.test.ts for that coverage)
-// — a passthrough keeps ModalHeader's `t('common.close')` call quiet instead of warning.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => (key === 'common.close' ? 'Close' : key) }),
-}))
-
 const FULL_URL = 'https://www.google.com/maps/place/Chez+Marcel/@48.8566,2.3522,15z'
 
 beforeEach(async () => {
