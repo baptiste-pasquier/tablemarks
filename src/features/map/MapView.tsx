@@ -5,6 +5,13 @@ import L from 'leaflet'
 import type { MapMarker } from './markers'
 import { geolocate, type GeoPoint } from '../../lib/geolocate'
 import { DEFAULT_MAP_CENTER } from '../../lib/geo'
+import { computeLabelPlacement, type LabelCandidate, type ScreenPoint } from './labelPlacement'
+
+/**
+ * Minimum zoom level at which restaurant name labels become eligible to show (R1/R2). Tunable —
+ * start near 14 and retune once real device testing shows how much room labels actually need.
+ */
+export const LABEL_ZOOM_FLOOR = 14
 
 const iconCache = new Map<string, L.DivIcon>()
 
@@ -69,6 +76,55 @@ function CenterReporter({ onChange }: { onChange?: (center: GeoPoint) => void })
   return null
 }
 
+/**
+ * Recomputes which markers' name labels should be visible (R1-R4) and reports the accepted id
+ * set to the consumer. Modeled on `CenterReporter`, but deliberately does NOT hold `markers`/
+ * `active` in a ref (KTD2 sanctioned simplification): recompute must react to a facet-filter
+ * toggle, a restaurant add/delete/edit/import, or the mobile List pane switching back to Map
+ * (KTD10) — none of these fire a Leaflet event, so `markers`/`active` are listed directly in the
+ * effect's own dependency array instead. `onChange` is not ref-optimized either: `MapView`
+ * passes a `useState` setter, which is referentially stable across renders, so calling it
+ * directly is safe and simpler.
+ *
+ * Exported (rather than kept private) so tests can render it directly and observe what it
+ * reports via `onChange`, without needing to reach into `MapView`'s own state.
+ */
+export function LabelVisibility({
+  markers,
+  active,
+  onChange,
+}: {
+  markers: MapMarker[]
+  active?: boolean
+  onChange?: (visible: Set<string>) => void
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    const recompute = () => {
+      const zoomFloorMet = map.getZoom() >= LABEL_ZOOM_FLOOR
+      const size = map.getSize()
+      // Geometric pane center in container-pixel space, not adjusted for overlay UI (KTD7).
+      const viewCenter: ScreenPoint = { x: size.x / 2, y: size.y / 2 }
+      const candidates: LabelCandidate[] = markers.map((m) => {
+        const point = map.latLngToContainerPoint([m.lat, m.lng])
+        return { id: m.id, x: point.x, y: point.y, name: m.name, dimmed: m.dimmed }
+      })
+      onChange?.(computeLabelPlacement(candidates, viewCenter, zoomFloorMet))
+    }
+    recompute() // initial computation, so labels aren't absent when already past the zoom floor
+    map.on('zoomend', recompute)
+    map.on('moveend', recompute)
+    return () => {
+      map.off('zoomend', recompute)
+      map.off('moveend', recompute)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onChange (a useState setter) is stable
+  }, [map, markers, active])
+
+  return null
+}
+
 export function MapView({
   markers,
   onSelect,
@@ -88,6 +144,10 @@ export function MapView({
     : DEFAULT_CENTER
   const [map, setMap] = useState<L.Map | null>(null)
   const [locating, setLocating] = useState(false)
+  const [visibleLabelIds, setVisibleLabelIds] = useState<Set<string>>(new Set())
+  // Not yet consumed by the marker-rendering loop below — that's a later unit's job. This
+  // reference only keeps `noUnusedLocals` quiet until that unit wires it in.
+  void visibleLabelIds
 
   // The mobile List/Map toggle keeps this pane mounted but hidden (display:none) while
   // inactive. A display:none -> block transition fires no resize event, so Leaflet never
@@ -115,6 +175,7 @@ export function MapView({
         />
         <Recenter markers={markers} />
         <CenterReporter onChange={onCenterChange} />
+        <LabelVisibility markers={markers} active={active} onChange={setVisibleLabelIds} />
         {markers.map((m) => (
           <Marker
             key={m.id}

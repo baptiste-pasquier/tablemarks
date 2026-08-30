@@ -18,6 +18,11 @@ vi.mock('react-leaflet', () => {
     setView: () => {},
     getZoom: () => 12,
     getCenter: () => ({ lat: 0, lng: 0 }),
+    // Fixed container size and a simple, deterministic lat/lng -> pixel projection — this test
+    // suite doesn't fire zoomend/moveend, it just needs LabelVisibility's mount-time recompute
+    // (which calls these) not to throw.
+    getSize: () => ({ x: 400, y: 400 }),
+    latLngToContainerPoint: ([lat, lng]: [number, number]) => ({ x: lng * 10, y: lat * 10 }),
     on: () => {},
     off: () => {},
   }
