@@ -25,6 +25,9 @@ The entire rating of a Visit, expressed as returnability rather than a number: *
 ### Status
 Whether a Restaurant is *to-try* or *visited* — derived from its visit count (zero visits is to-try, one or more is visited). Never stored as a field.
 
+### Standing
+The single derived classification that fuses a Restaurant's Status with its latest Verdict. It is *to-try* when there are no Visits; otherwise, it is the latest Visit's Verdict. It is never stored and does not replace either Status or Verdict as a domain concept.
+
 ### Rollup
 The denormalized summary cached on a Restaurant — the most recent Visit's Verdict and the visit count — recomputed locally from its Visits. It is a per-device derived cache, not a synced source of truth, and recomputing it does not mark the Restaurant as changed.
 
