@@ -11,7 +11,7 @@ import { ModalHeader } from '../ui/ModalHeader'
 import { StatusBadge, VerdictBadge } from '../StatusBadge'
 import { VERDICTS, translateVerdict, type Verdict } from '../../types/models'
 import type { GeoPoint } from '../../lib/geolocate'
-import { formatDistance, haversineMeters } from '../../lib/geo'
+import { distanceLabelFor } from '../../lib/geo'
 import {
   isHttpUrl,
   resolveDestination,
@@ -74,12 +74,7 @@ export function RestaurantDetail({
     if (desiredNoteKey !== noteKey) setNoteKey(desiredNoteKey)
   }
 
-  const distanceLabel =
-    currentPosition && restaurant.lat !== null && restaurant.lng !== null
-      ? formatDistance(
-          haversineMeters(currentPosition.lat, currentPosition.lng, restaurant.lat, restaurant.lng),
-        )
-      : null
+  const distanceLabel = distanceLabelFor(currentPosition, restaurant)
 
   const destination = resolveDestination(restaurant)
   const googleMapsHref = isHttpUrl(restaurant.mapsUrl)
@@ -89,20 +84,13 @@ export function RestaurantDetail({
       : undefined
   const goToHref = destination ? googleMapsDirectionsUrl(destination) : undefined
 
-  function saveCuisine(value: string) {
+  // Best-effort: the row may have been deleted/synced away between render and blur, in which
+  // case updateRestaurant rejects (it already routes through mutateRestaurant's single-transaction
+  // read-modify-write — see data/restaurants.ts). The store listener reflects the real state either way.
+  function saveField(field: 'cuisine' | 'note', value: string) {
     const next = value.trim() || undefined
-    if (next === (restaurant!.cuisine || undefined)) return
-    // Best-effort: the row may have been deleted/synced away between render and blur, in
-    // which case updateRestaurant rejects. The store listener reflects the real state either way.
-    void updateRestaurant(restaurantId, { cuisine: next }).catch(() => {})
-  }
-
-  function saveNote(value: string) {
-    const next = value.trim() || undefined
-    if (next === (restaurant!.note || undefined)) return
-    // Best-effort, same race-tolerant shape as saveCuisine — updateRestaurant already routes
-    // through mutateRestaurant's single-transaction read-modify-write (see data/restaurants.ts).
-    void updateRestaurant(restaurantId, { note: next }).catch(() => {})
+    if (next === (restaurant![field] || undefined)) return
+    void updateRestaurant(restaurantId, { [field]: next }).catch(() => {})
   }
 
   async function logNow(verdict: Verdict) {
@@ -154,7 +142,7 @@ export function RestaurantDetail({
             key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
             list={cuisineListId}
             defaultValue={restaurant.cuisine ?? ''}
-            onBlur={(e) => saveCuisine(e.target.value)}
+            onBlur={(e) => saveField('cuisine', e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.currentTarget.blur()
             }}
@@ -207,7 +195,7 @@ export function RestaurantDetail({
           }}
           onBlur={(e) => {
             noteFocusedRef.current = false
-            saveNote(e.target.value)
+            saveField('note', e.target.value)
           }}
           rows={3}
           aria-label={t('visitDetail.notesLabel')}

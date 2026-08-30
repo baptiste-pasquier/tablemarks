@@ -4,7 +4,7 @@ import { badgeState } from './display'
 import { colorForCuisine, emojiForCuisine } from './facets/cuisines'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
-import { formatDistance, haversineMeters } from '../lib/geo'
+import { distanceLabelFor } from '../lib/geo'
 
 /** Cream base the cuisine tint mixes into, matching the shipped "Carnet culinaire" page background. */
 const CARD_TINT_BASE = '#fdfaf6'
@@ -57,10 +57,7 @@ export function RestaurantList({
         const cuisineColor = colorForCuisine(r.cuisine)
         const badgeTextColor = textColorFor(cuisineColor)
         const visited = badgeState(r).kind === 'visited'
-        const distanceLabel =
-          currentPosition && r.lat !== null && r.lng !== null
-            ? formatDistance(haversineMeters(currentPosition.lat, currentPosition.lng, r.lat, r.lng))
-            : null
+        const distanceLabel = distanceLabelFor(currentPosition, r)
         return (
           <li key={r.id}>
             <button
