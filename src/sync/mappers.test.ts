@@ -65,4 +65,29 @@ describe('mappers', () => {
     const back = visitFromRemote(remote)
     expect(back).toEqual(visit)
   })
+
+  it('normalizes a PocketBase space-separated syncedAt to the canonical T-separated shape', () => {
+    const remote = { ...restaurantToRemote(restaurant, 'user1'), syncedAt: '2026-02-01 10:00:00.000Z' }
+    const back = restaurantFromRemote(remote)
+    expect(back.updated).toBe('2026-02-01T10:00:00.000Z')
+  })
+
+  it('normalizes a PocketBase space-separated added to the canonical T-separated shape', () => {
+    const remote = { ...restaurantToRemote(restaurant, 'user1'), added: '2026-01-15 09:00:00.000Z' }
+    const back = restaurantFromRemote(remote)
+    expect(back.added).toBe('2026-01-15T09:00:00.000Z')
+  })
+
+  it('passes an already-canonical added/syncedAt through unchanged', () => {
+    const remote = restaurantToRemote({ ...restaurant, added: '2026-01-15T09:00:00.000Z' }, 'user1')
+    const back = restaurantFromRemote(remote)
+    expect(back.added).toBe('2026-01-15T09:00:00.000Z')
+    expect(back.updated).toBe(restaurant.updated)
+  })
+
+  it('normalizes a PocketBase space-separated visit syncedAt to the canonical T-separated shape', () => {
+    const remote = { ...visitToRemote(visit, 'user1'), syncedAt: '2026-02-01 10:00:00.000Z' }
+    const back = visitFromRemote(remote)
+    expect(back.updated).toBe('2026-02-01T10:00:00.000Z')
+  })
 })
