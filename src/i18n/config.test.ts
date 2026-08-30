@@ -66,6 +66,23 @@ describe('i18n config', () => {
     expect(i18n.resolvedLanguage).toBe('fr')
   })
 
+  it('does not let one simulated device\'s stored preference affect a second device\'s own empty storage (AE3)', async () => {
+    // Device 1: a manual choice was made and persisted.
+    setBrowserLanguage('en-US', 'en')
+    const device1 = await loadI18n()
+    await device1.changeLanguage('fr')
+    expect(window.localStorage.getItem('i18nextLng')).toBe('fr')
+
+    // Device 2: its own empty storage (simulated by clearing between "devices"), browser-detected
+    // English, no prior manual choice of its own. If device 2 wrongly inherited device 1's stored
+    // 'fr', this would resolve 'fr' instead of its own browser-detected 'en'.
+    window.localStorage.clear()
+    setBrowserLanguage('en-US', 'en')
+    const device2 = await loadI18n()
+
+    expect(device2.resolvedLanguage).toBe('en')
+  })
+
   it('updates document.documentElement.lang and local storage together when the language changes', async () => {
     setBrowserLanguage('en-US', 'en')
     const i18n = await loadI18n()
