@@ -5,7 +5,7 @@ import { useRestaurants } from './features/useRestaurants'
 import { useAuth } from './auth/useAuth'
 import { RestaurantList } from './features/RestaurantList'
 import { MapView } from './features/map/MapView'
-import { toMarkers } from './features/map/markers'
+import { toMarkers, pickMostRecentRestaurantCenter } from './features/map/markers'
 import { FilterBar } from './features/facets/FilterBar'
 import { emptyFilter, matches } from './features/facets/filter'
 import { AddPlace } from './features/capture/AddPlace'
@@ -43,6 +43,10 @@ export default function App() {
   // StatusBadge, translateVisitsCount, and emojiForCuisine translate at render time inside
   // MapView and react to a language switch on their own, so no `i18n.language` dependency here.
   const markers = useMemo(() => toMarkers(restaurants, filter), [restaurants, filter])
+  // Fallback map center (R2/R5): the most-recently added-or-visited restaurant among the full,
+  // unfiltered restaurant list — deliberately keyed on `restaurants` alone, not `filter`/`visible`,
+  // so an active facet filter never changes where the map falls back to.
+  const fallbackCenter = useMemo(() => pickMostRecentRestaurantCenter(restaurants), [restaurants])
 
   // Generation token (KTD3): the on-load fetch (F1) and the "Localiser" tap (F2) can overlap,
   // and whichever resolves first should win regardless of which one started first. Each fetch
@@ -157,6 +161,7 @@ export default function App() {
             beginLocate={beginLocate}
             onLocate={commitLocate}
             currentPosition={currentPosition}
+            fallbackCenter={fallbackCenter}
             selectedId={selectedId}
             active={view === 'map'}
           />

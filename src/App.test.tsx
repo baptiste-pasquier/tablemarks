@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { freshDB } from './test/idb'
 import { createMockLeafletMap } from './test/mockLeafletMap'
 import { useAuth } from './auth/useAuth'
+import { createRestaurant } from './data/restaurants'
 import type { GeoPoint } from './lib/geolocate'
 
 vi.mock('./auth/useAuth', () => ({
@@ -36,6 +37,23 @@ vi.mock('./features/RestaurantList', async (importOriginal) => {
   }
 })
 
+// U2 wires `fallbackCenter` into MapView without it changing any observable behavior yet (that's
+// a later unit's job), so a passthrough wrapper that captures the received props — mirroring the
+// RestaurantList wrapper above — is how the prop-plumbing is asserted.
+const mockLastMapViewProps: { current: { fallbackCenter?: GeoPoint | null } | null } = {
+  current: null,
+}
+vi.mock('./features/map/MapView', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./features/map/MapView')>()
+  return {
+    ...actual,
+    MapView: (props: Parameters<typeof actual.MapView>[0]) => {
+      mockLastMapViewProps.current = props
+      return actual.MapView(props)
+    },
+  }
+})
+
 // Leaflet needs real DOM dimensions jsdom doesn't provide; stub the map for the shell test.
 vi.mock('react-leaflet', () => {
   // Stable map instance — real react-leaflet's useMap() returns the same object across renders;
@@ -50,6 +68,7 @@ vi.mock('react-leaflet', () => {
     TileLayer: () => null,
     Marker: () => null,
     Popup: () => null,
+    Tooltip: () => null,
     useMap: () => map,
   }
 })
@@ -61,6 +80,7 @@ beforeEach(async () => {
   mockUseAuth.mockReturnValue({ signedIn: false, email: null, signIn: vi.fn(), signOut: vi.fn() })
   mockGeolocate.mockReset().mockResolvedValue(null)
   mockLastRestaurantListProps.current = null
+  mockLastMapViewProps.current = null
 })
 
 describe('App shell', () => {
@@ -210,5 +230,70 @@ describe('currentPosition state and fetch wiring (U2)', () => {
     resolveMount(mountPoint)
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(tapPoint)
+  })
+})
+
+describe('fallbackCenter wiring (U2, R2/R5)', () => {
+  it('passes the most-recently-added restaurant coordinates to MapView as fallbackCenter', async () => {
+    await createRestaurant({
+      id: 'recent',
+      name: 'Recent Place',
+      lat: 10,
+      lng: 20,
+    })
+
+    render(<App />)
+    await screen.findByText('Recent Place')
+
+    await waitFor(() =>
+      expect(mockLastMapViewProps.current?.fallbackCenter).toEqual({ lat: 10, lng: 20 }),
+    )
+  })
+
+  it('keeps fallbackCenter reflecting the full restaurant list, unaffected by an active facet filter (R5)', async () => {
+    const user = userEvent.setup()
+    // Fake only Date (matching src/lib/dates.test.ts's convention) so the two `added` timestamps
+    // (assigned via `now()`) are deterministically ordered rather than racing on the real clock's
+    // millisecond resolution.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-08-30T10:00:00.000Z'))
+    await createRestaurant({
+      id: 'french',
+      name: 'French Place',
+      lat: 1,
+      lng: 1,
+      cuisine: 'French',
+    })
+    // Created after 'french', so it holds the more recent `added` and is the expected fallback —
+    // deliberately of a *different* cuisine, so filtering to French excludes it from `visible`
+    // while it must still remain the fallback target (R5).
+    vi.setSystemTime(new Date('2026-08-30T11:00:00.000Z'))
+    await createRestaurant({
+      id: 'thai',
+      name: 'Thai Place',
+      lat: 2,
+      lng: 2,
+      cuisine: 'Thai',
+    })
+    vi.useRealTimers()
+
+    render(<App />)
+    await screen.findByText('Thai Place')
+    await waitFor(() => expect(mockLastMapViewProps.current?.fallbackCenter).toEqual({ lat: 2, lng: 2 }))
+
+    // Narrow the visible list to French only, via the cuisine facet chip.
+    await user.click(screen.getByRole('button', { name: 'French' }))
+
+    expect(screen.queryByText('Thai Place')).not.toBeInTheDocument()
+    expect(screen.getByText('French Place')).toBeInTheDocument()
+    // fallbackCenter still reflects the full, unfiltered restaurant list.
+    expect(mockLastMapViewProps.current?.fallbackCenter).toEqual({ lat: 2, lng: 2 })
+  })
+
+  it('passes fallbackCenter: null to MapView when there are no restaurants', async () => {
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(mockLastMapViewProps.current?.fallbackCenter).toBeNull()
   })
 })
