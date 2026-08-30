@@ -4,6 +4,7 @@ import { badgeState } from './display'
 import { colorForCuisine, emojiForCuisine } from './facets/cuisines'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
+import { formatDistance, haversineMeters } from '../lib/geo'
 
 /** Cream base the cuisine tint mixes into, matching the shipped "Carnet culinaire" page background. */
 const CARD_TINT_BASE = '#fdfaf6'
@@ -30,8 +31,7 @@ function textColorFor(bgHex: string): string {
 export function RestaurantList({
   items,
   onSelect,
-  // Accepted but not yet rendered — U4 consumes this to show per-restaurant distances.
-  currentPosition: _currentPosition,
+  currentPosition,
 }: {
   items: Restaurant[]
   onSelect?: (id: string) => void
@@ -57,6 +57,10 @@ export function RestaurantList({
         const cuisineColor = colorForCuisine(r.cuisine)
         const badgeTextColor = textColorFor(cuisineColor)
         const visited = badgeState(r).kind === 'visited'
+        const distanceLabel =
+          currentPosition && r.lat !== null && r.lng !== null
+            ? formatDistance(haversineMeters(currentPosition.lat, currentPosition.lng, r.lat, r.lng))
+            : null
         return (
           <li key={r.id}>
             <button
@@ -80,9 +84,12 @@ export function RestaurantList({
                   {r.cuisine?.trim() || t('common.uncategorized')}
                 </span>
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                <StatusBadge restaurant={r} />
-                {visited && <span className="text-xs text-gray-600">{translateVisitsCount(r.visitCount)}</span>}
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <StatusBadge restaurant={r} />
+                  {visited && <span className="text-xs text-gray-600">{translateVisitsCount(r.visitCount)}</span>}
+                </div>
+                {distanceLabel && <span className="text-xs text-gray-600">{distanceLabel}</span>}
               </div>
             </button>
           </li>
