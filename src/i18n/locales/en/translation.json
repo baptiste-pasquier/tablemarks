@@ -81,6 +81,19 @@
     "errorExport": "Could not export your collection.",
     "errorRead": "Could not read that file.",
     "errorImport": "Could not import that file.",
+    "error": {
+      "invalidJson": "File is not valid JSON.",
+      "notAnObject": "File is not a JSON object.",
+      "wrongFormat": "Not a Tablemarks export file.",
+      "invalidSchemaVersion": "Missing or invalid schema version.",
+      "schemaTooNew": "This file was made by a newer version (schema {{schemaVersion}}). Update the app to import it.",
+      "noRecords": "File has no records.",
+      "invalidRecordsShape": "Records must contain restaurant and visit arrays.",
+      "malformedRestaurant": "A restaurant record is malformed.",
+      "duplicateRestaurantIds": "The file contains duplicate restaurant ids.",
+      "malformedVisit": "A visit record is malformed.",
+      "duplicateVisitIds": "The file contains duplicate visit ids."
+    },
     "confirm": {
       "place_one": "{{count}} place",
       "place_other": "{{count}} places",

@@ -1,39 +1,38 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import i18n from '../../i18n/config'
 import { useAuth } from '../../auth/useAuth'
 import { useSyncStatus } from '../../sync/useSyncStatus'
 import type { SyncStatus } from '../../sync/syncStatus'
 
 /** Short label for the header-level indicator (R1). */
-function label(status: SyncStatus): string {
+function label(status: SyncStatus, t: ReturnType<typeof useTranslation>['t']): string {
   switch (status.state) {
     case 'synced':
-      return i18n.t('sync.allSynced')
+      return t('sync.allSynced')
     case 'pending':
-      return i18n.t('sync.pendingCount', { count: status.pendingCount })
+      return t('sync.pendingCount', { count: status.pendingCount })
     case 'offline':
       return status.pendingCount > 0
-        ? i18n.t('sync.offlinePending', { count: status.pendingCount })
-        : i18n.t('sync.offline')
+        ? t('sync.offlinePending', { count: status.pendingCount })
+        : t('sync.offline')
     case 'problem':
-      return status.cause === 'sign-in-needed' ? i18n.t('sync.problemSignIn') : i18n.t('sync.problemUnreachable')
+      return status.cause === 'sign-in-needed' ? t('sync.problemSignIn') : t('sync.problemUnreachable')
   }
 }
 
 /** Plain-text elaboration shown in the tap-to-expand detail view. Never wired to any action. */
-function detail(status: SyncStatus): string {
+function detail(status: SyncStatus, t: ReturnType<typeof useTranslation>['t']): string {
   switch (status.state) {
     case 'synced':
-      return i18n.t('sync.detailSynced')
+      return t('sync.detailSynced')
     case 'pending':
-      return i18n.t('sync.detailPending', { count: status.pendingCount })
+      return t('sync.detailPending', { count: status.pendingCount })
     case 'offline':
-      return i18n.t('sync.detailOffline')
+      return t('sync.detailOffline')
     case 'problem':
       return status.cause === 'sign-in-needed'
-        ? i18n.t('sync.detailProblemSignIn')
-        : i18n.t('sync.detailProblemUnreachable')
+        ? t('sync.detailProblemSignIn')
+        : t('sync.detailProblemUnreachable')
   }
 }
 
@@ -68,11 +67,11 @@ export function SyncStatusIndicator() {
   return (
     <div role="region" aria-live="polite" aria-label={t('sync.ariaLabel')} className="text-sm">
       <button type="button" onClick={() => setExpanded((v) => !v)} className={labelClassName(status.state)}>
-        {label(status)}
+        {label(status, t)}
       </button>
       {expanded && (
         <p className="mt-1 max-w-xs rounded-lg bg-gray-50 p-2 text-xs text-gray-500 shadow-sm">
-          {detail(status)}
+          {detail(status, t)}
         </p>
       )}
     </div>

@@ -81,6 +81,19 @@
     "errorExport": "Impossible d'exporter votre collection.",
     "errorRead": "Impossible de lire ce fichier.",
     "errorImport": "Impossible d'importer ce fichier.",
+    "error": {
+      "invalidJson": "Le fichier n'est pas un JSON valide.",
+      "notAnObject": "Le fichier n'est pas un objet JSON.",
+      "wrongFormat": "Ce n'est pas un fichier d'export Tablemarks.",
+      "invalidSchemaVersion": "Version de schéma manquante ou invalide.",
+      "schemaTooNew": "Ce fichier a été créé par une version plus récente (schéma {{schemaVersion}}). Mettez à jour l'application pour l'importer.",
+      "noRecords": "Le fichier ne contient aucune donnée.",
+      "invalidRecordsShape": "Les données doivent contenir des tableaux de restaurants et de visites.",
+      "malformedRestaurant": "Un restaurant est mal formé.",
+      "duplicateRestaurantIds": "Le fichier contient des identifiants de restaurants en double.",
+      "malformedVisit": "Une visite est mal formée.",
+      "duplicateVisitIds": "Le fichier contient des identifiants de visites en double."
+    },
     "confirm": {
       "place_one": "{{count}} lieu",
       "place_other": "{{count}} lieux",

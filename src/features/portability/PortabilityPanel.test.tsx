@@ -53,6 +53,12 @@ describe('PortabilityPanel', () => {
     const user = userEvent.setup()
 
     await user.upload(screen.getByLabelText(/import a backup file/i), jsonFile(validEnvelope))
+
+    // validEnvelope carries 1 restaurant and 0 visits — assert the nested-interpolation
+    // confirmation copy (place/visit pluralization composed into the question) renders correctly
+    // before confirming, so a broken plural key or a leaked raw `{{places}}` token is caught (#4).
+    expect(await screen.findByText('Import 1 place and 0 visits? Existing entries merge by last edit; nothing is deleted.')).toBeInTheDocument()
+
     await user.click(await screen.findByRole('button', { name: /confirm import/i }))
 
     await waitFor(async () => expect((await getRestaurant('r1'))?.name).toBe('Imported'))

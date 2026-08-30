@@ -16,7 +16,7 @@ export function parseImport(text: string): ValidationResult {
   try {
     parsed = JSON.parse(text)
   } catch {
-    return { ok: false, error: 'File is not valid JSON.' }
+    return { ok: false, error: { code: 'invalid_json' } }
   }
   return validateEnvelope(parsed)
 }

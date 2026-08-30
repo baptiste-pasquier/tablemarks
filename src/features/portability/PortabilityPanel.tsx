@@ -1,7 +1,49 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { exportCollection, parseImport, applyImport, type ImportCounts, type ImportRecords } from '../../data/portability'
+import type { TFunction } from 'i18next'
+import {
+  exportCollection,
+  parseImport,
+  applyImport,
+  type ImportCounts,
+  type ImportError,
+  type ImportErrorCode,
+  type ImportRecords,
+} from '../../data/portability'
 import { ModalHeader } from '../ui/ModalHeader'
+
+/** Local (non-parser) failures, kept as translation keys — never as already-resolved text — so
+ * the error paragraph re-resolves in whatever language is active at render time. */
+type LocalErrorKey = 'portability.errorExport' | 'portability.errorRead' | 'portability.errorImport'
+
+/** Component-state error shape: a stable code, never pre-translated text (see code review #2). */
+type PanelError = { kind: 'local'; key: LocalErrorKey } | { kind: 'import'; error: ImportError }
+
+/** Maps each `parseImport` error code to its translation key under `portability.error.*`.
+ * `as const satisfies` keeps the values as literal key types (not widened to `string`), so `t()`
+ * below stays checked against the real resource shape via src/types/i18next.d.ts. */
+const IMPORT_ERROR_KEYS = {
+  invalid_json: 'portability.error.invalidJson',
+  not_an_object: 'portability.error.notAnObject',
+  wrong_format: 'portability.error.wrongFormat',
+  invalid_schema_version: 'portability.error.invalidSchemaVersion',
+  schema_too_new: 'portability.error.schemaTooNew',
+  no_records: 'portability.error.noRecords',
+  invalid_records_shape: 'portability.error.invalidRecordsShape',
+  malformed_restaurant: 'portability.error.malformedRestaurant',
+  duplicate_restaurant_ids: 'portability.error.duplicateRestaurantIds',
+  malformed_visit: 'portability.error.malformedVisit',
+  duplicate_visit_ids: 'portability.error.duplicateVisitIds',
+} as const satisfies Record<ImportErrorCode, string>
+
+/** Resolves a `PanelError` to display text, calling `t()` at render time so the copy always
+ * reflects the currently active language rather than the language in effect when it was set. */
+function resolvePanelError(t: TFunction, error: PanelError): string {
+  if (error.kind === 'local') return t(error.key)
+  const key = IMPORT_ERROR_KEYS[error.error.code]
+  if (error.error.code === 'schema_too_new') return t(key, { schemaVersion: error.error.schemaVersion })
+  return t(key)
+}
 
 export function PortabilityPanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation()
@@ -13,7 +55,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
   const runningRef = useRef(false)
   const [exportBusy, setExportBusy] = useState(false)
   const [importBusy, setImportBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<PanelError | null>(null)
   const [pending, setPending] = useState<ImportRecords | null>(null)
   const [summary, setSummary] = useState<ImportCounts | null>(null)
 
@@ -38,7 +80,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       // Defer revocation so the browser can start the download before the blob URL is invalidated.
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch {
-      setError(t('portability.errorExport'))
+      setError({ kind: 'local', key: 'portability.errorExport' })
     } finally {
       setExportBusy(false)
       runningRef.current = false
@@ -56,12 +98,12 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       const text = await file.text()
       const result = parseImport(text)
       if (!result.ok) {
-        setError(result.error)
+        setError({ kind: 'import', error: result.error })
         return
       }
       setPending(result.records)
     } catch {
-      setError(t('portability.errorRead'))
+      setError({ kind: 'local', key: 'portability.errorRead' })
     } finally {
       setImportBusy(false)
       runningRef.current = false
@@ -79,7 +121,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       setSummary(counts)
       setPending(null)
     } catch {
-      setError(t('portability.errorImport'))
+      setError({ kind: 'local', key: 'portability.errorImport' })
     } finally {
       setImportBusy(false)
       runningRef.current = false
@@ -119,7 +161,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
         />
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-3 text-sm text-red-600">{resolvePanelError(t, error)}</p>}
 
       {pending && (
         <div className="mt-3 rounded-md bg-brand-soft p-3 text-sm">

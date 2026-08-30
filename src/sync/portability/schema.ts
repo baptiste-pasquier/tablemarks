@@ -25,9 +25,32 @@ export interface ImportRecords {
   visits: Visit[]
 }
 
+/**
+ * Stable, language-independent identifiers for every way `validateEnvelope`/`parseImport` can
+ * reject a file. Kept as codes (not translated strings) so the UI can resolve them to copy via
+ * `t()` at render time, in whatever language is active then — see `PortabilityPanel`.
+ */
+export type ImportErrorCode =
+  | 'invalid_json'
+  | 'not_an_object'
+  | 'wrong_format'
+  | 'invalid_schema_version'
+  | 'schema_too_new'
+  | 'no_records'
+  | 'invalid_records_shape'
+  | 'malformed_restaurant'
+  | 'duplicate_restaurant_ids'
+  | 'malformed_visit'
+  | 'duplicate_visit_ids'
+
+/** A structured import error. `schema_too_new` carries the offending version for interpolation. */
+export type ImportError =
+  | { code: Exclude<ImportErrorCode, 'schema_too_new'> }
+  | { code: 'schema_too_new'; schemaVersion: number }
+
 export type ValidationResult =
   | { ok: true; records: ImportRecords }
-  | { ok: false; error: string }
+  | { ok: false; error: ImportError }
 
 const DEFAULT_VERDICT: Verdict = 'once_was_enough'
 
@@ -116,20 +139,20 @@ function migrateToCurrent(records: { restaurants: unknown[]; visits: unknown[] }
  * malformed records — returning a structured error so the caller can leave the store untouched.
  */
 export function validateEnvelope(parsed: unknown): ValidationResult {
-  if (typeof parsed !== 'object' || parsed === null) return { ok: false, error: 'File is not a JSON object.' }
+  if (typeof parsed !== 'object' || parsed === null) return { ok: false, error: { code: 'not_an_object' } }
   const env = parsed as Record<string, unknown>
-  if (env.format !== EXPORT_FORMAT) return { ok: false, error: 'Not a Tablemarks export file.' }
+  if (env.format !== EXPORT_FORMAT) return { ok: false, error: { code: 'wrong_format' } }
   if (typeof env.schemaVersion !== 'number' || !Number.isInteger(env.schemaVersion) || env.schemaVersion < 1) {
-    return { ok: false, error: 'Missing or invalid schema version.' }
+    return { ok: false, error: { code: 'invalid_schema_version' } }
   }
   if (env.schemaVersion > EXPORT_SCHEMA_VERSION) {
-    return { ok: false, error: `This file was made by a newer version (schema ${env.schemaVersion}). Update the app to import it.` }
+    return { ok: false, error: { code: 'schema_too_new', schemaVersion: env.schemaVersion } }
   }
   const records = env.records
-  if (typeof records !== 'object' || records === null) return { ok: false, error: 'File has no records.' }
+  if (typeof records !== 'object' || records === null) return { ok: false, error: { code: 'no_records' } }
   const rawR = (records as Record<string, unknown>).restaurants
   const rawV = (records as Record<string, unknown>).visits
-  if (!Array.isArray(rawR) || !Array.isArray(rawV)) return { ok: false, error: 'Records must contain restaurant and visit arrays.' }
+  if (!Array.isArray(rawR) || !Array.isArray(rawV)) return { ok: false, error: { code: 'invalid_records_shape' } }
 
   const migrated = migrateToCurrent({ restaurants: rawR, visits: rawV }, env.schemaVersion)
 
@@ -139,8 +162,8 @@ export function validateEnvelope(parsed: unknown): ValidationResult {
   const restaurantIds = new Set<string>()
   for (const raw of migrated.restaurants) {
     const r = asRestaurant(raw)
-    if (!r) return { ok: false, error: 'A restaurant record is malformed.' }
-    if (restaurantIds.has(r.id)) return { ok: false, error: 'The file contains duplicate restaurant ids.' }
+    if (!r) return { ok: false, error: { code: 'malformed_restaurant' } }
+    if (restaurantIds.has(r.id)) return { ok: false, error: { code: 'duplicate_restaurant_ids' } }
     restaurantIds.add(r.id)
     restaurants.push(r)
   }
@@ -148,8 +171,8 @@ export function validateEnvelope(parsed: unknown): ValidationResult {
   const visitIds = new Set<string>()
   for (const raw of migrated.visits) {
     const v = asVisit(raw)
-    if (!v) return { ok: false, error: 'A visit record is malformed.' }
-    if (visitIds.has(v.id)) return { ok: false, error: 'The file contains duplicate visit ids.' }
+    if (!v) return { ok: false, error: { code: 'malformed_visit' } }
+    if (visitIds.has(v.id)) return { ok: false, error: { code: 'duplicate_visit_ids' } }
     visitIds.add(v.id)
     visits.push(v)
   }

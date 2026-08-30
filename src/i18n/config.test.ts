@@ -101,11 +101,11 @@ describe('i18n config', () => {
 
     function Probe() {
       const { t } = useTranslation()
-      return createElement('div', null, t('app.title'))
+      return createElement('div', null, t('filters.statusVerdictGroup'))
     }
     render(createElement(Probe))
 
-    expect(screen.getByText('Tablemarks')).toBeInTheDocument()
+    expect(screen.getByText('Statut & verdict')).toBeInTheDocument()
   })
 
   it('renders a translating component without throwing in English', async () => {
@@ -115,10 +115,32 @@ describe('i18n config', () => {
 
     function Probe() {
       const { t } = useTranslation()
-      return createElement('div', null, t('app.title'))
+      return createElement('div', null, t('filters.statusVerdictGroup'))
     }
     render(createElement(Probe))
 
-    expect(screen.getByText('Tablemarks')).toBeInTheDocument()
+    expect(screen.getByText('Status & verdict')).toBeInTheDocument()
+  })
+
+  it('re-renders an already-mounted component automatically when the language changes, without a manual rerender', async () => {
+    setBrowserLanguage('en-US', 'en')
+    const i18n = await loadI18n()
+    const useTranslation = await loadUseTranslation()
+
+    function Probe() {
+      const { t } = useTranslation()
+      return createElement('div', null, t('filters.statusVerdictGroup'))
+    }
+    render(createElement(Probe))
+
+    expect(screen.getByText('Status & verdict')).toBeInTheDocument()
+
+    // Deliberately no RTL `rerender()` here: the real `useTranslation()` hook subscribes to
+    // i18next's `languageChanged` event internally and forces its own re-render, so an
+    // already-mounted component must update on its own once the language switch resolves.
+    await i18n.changeLanguage('fr')
+
+    expect(await screen.findByText('Statut & verdict')).toBeInTheDocument()
+    expect(screen.queryByText('Status & verdict')).not.toBeInTheDocument()
   })
 })
