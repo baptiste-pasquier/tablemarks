@@ -1,20 +1,8 @@
 import { haversineMeters } from '../../lib/geo'
+import { localDayToInstantRange } from '../../lib/dates'
 import type { GeoPoint } from '../../lib/geolocate'
-import type { Restaurant } from '../../types/models'
-import type { SortCriterion, DistanceDirection, DateDirection } from '../../lib/sortPreference'
-
-export type { SortCriterion, DistanceDirection, DateDirection }
-
-/**
- * Direction for the active criterion. Reuses `sortPreference`'s vocabulary (KTD1) so the
- * persisted shape, this comparator, and the sort bar's rendering never re-derive their own.
- */
-export type SortDirection = DistanceDirection | DateDirection
-
-/** True once a restaurant's coordinates have resolved — false for provisional records (R6). */
-function hasResolvedCoordinates(r: Restaurant): r is Restaurant & { lat: number; lng: number } {
-  return r.lat !== null && r.lng !== null
-}
+import { hasResolvedCoordinates, type Restaurant } from '../../types/models'
+import type { SortCriterion, SortDirection } from '../../lib/sortPreference'
 
 /**
  * Epoch ms this restaurant orders by under the date rule (R7): `added` when never visited,
@@ -22,27 +10,49 @@ function hasResolvedCoordinates(r: Restaurant): r is Restaurant & { lat: number;
  * absent, or an unparsable string (R8).
  */
 function dateKey(r: Pick<Restaurant, 'added' | 'latestVisitDate' | 'visitCount'>): number {
-  const raw = r.visitCount === 0 ? r.added : r.latestVisitDate
-  if (!raw) return Number.NEGATIVE_INFINITY
-  const ms = Date.parse(raw)
+  if (r.visitCount === 0) {
+    if (!r.added) return Number.NEGATIVE_INFINITY
+    const ms = Date.parse(r.added)
+    return Number.isNaN(ms) ? Number.NEGATIVE_INFINITY : ms
+  }
+  if (!r.latestVisitDate) return Number.NEGATIVE_INFINITY
+  // `latestVisitDate` is a local calendar day (YYYY-MM-DD), not a full instant — resolved via
+  // `localDayToInstantRange` rather than a raw `Date.parse`, which treats a date-only string as
+  // UTC midnight and would misrank restaurants for users west of UTC (same fix already applied in
+  // `pickMostRecentRestaurantCenter`, markers.ts).
+  const ms = Date.parse(localDayToInstantRange(r.latestVisitDate).start)
   return Number.isNaN(ms) ? Number.NEGATIVE_INFINITY : ms
 }
 
 /**
  * New array sorted by a precomputed numeric key, ascending or descending. Ties keep their
- * original relative order (KTD6) via an explicit index tie-break, rather than relying on engine
- * sort stability. Never mutates `items`.
+ * original relative order (KTD6) via `Array.prototype.sort`'s spec-guaranteed stability
+ * (ES2019+). Never mutates `items`.
  */
 function stableSortByKey<T>(items: readonly T[], key: (item: T) => number, ascending: boolean): T[] {
   return items
-    .map((item, index) => ({ item, key: key(item), index }))
-    .sort((a, b) => (ascending ? a.key - b.key : b.key - a.key) || a.index - b.index)
+    .map((item) => ({ item, key: key(item) }))
+    .sort((a, b) => (ascending ? a.key - b.key : b.key - a.key))
     .map((entry) => entry.item)
 }
 
 /** Sort by the date rule (R7/R8): `ascending` true = oldest-first, false = most-recent-first. */
 function sortByDateKey(items: readonly Restaurant[], ascending: boolean): Restaurant[] {
   return stableSortByKey(items, dateKey, ascending)
+}
+
+/** Splits `items` into those with and without resolved coordinates, in one pass (R6). */
+function partitionByCoordinates(items: readonly Restaurant[]): {
+  withCoords: (Restaurant & { lat: number; lng: number })[]
+  withoutCoords: Restaurant[]
+} {
+  const withCoords: (Restaurant & { lat: number; lng: number })[] = []
+  const withoutCoords: Restaurant[] = []
+  for (const r of items) {
+    if (hasResolvedCoordinates(r)) withCoords.push(r)
+    else withoutCoords.push(r)
+  }
+  return { withCoords, withoutCoords }
 }
 
 /**
@@ -63,8 +73,7 @@ export function sortRestaurants(
   position: GeoPoint | null | undefined,
 ): Restaurant[] {
   if (criterion === 'distance' && position) {
-    const withCoords = items.filter(hasResolvedCoordinates)
-    const withoutCoords = items.filter((r) => !hasResolvedCoordinates(r))
+    const { withCoords, withoutCoords } = partitionByCoordinates(items)
     const sortedByDistance = stableSortByKey(
       withCoords,
       (r) => haversineMeters(position.lat, position.lng, r.lat, r.lng),

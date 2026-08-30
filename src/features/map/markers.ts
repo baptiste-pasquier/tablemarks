@@ -2,7 +2,7 @@ import { colorForCuisine } from '../facets/cuisines'
 import { matches, type FacetFilter } from '../facets/filter'
 import { localDayToInstantRange } from '../../lib/dates'
 import type { GeoPoint } from '../../lib/geolocate'
-import type { Restaurant, Verdict } from '../../types/models'
+import { hasResolvedCoordinates, type Restaurant, type Verdict } from '../../types/models'
 
 export interface MapMarker {
   id: string
@@ -18,12 +18,6 @@ export interface MapMarker {
   color: string
   /** True when an active filter excludes this place — still placed, just de-emphasized (R9). */
   dimmed: boolean
-}
-
-/** Shared by `toMarkers` and `pickMostRecentRestaurantCenter` — a provisional (pending) record has
- * no coordinates yet. */
-function hasResolvedCoordinates(r: Restaurant): r is Restaurant & { lat: number; lng: number } {
-  return !r.pending && r.lat !== null && r.lng !== null
 }
 
 /**

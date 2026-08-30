@@ -76,26 +76,30 @@ export default function App() {
   const effectiveSortCriterion: SortCriterion = distanceSelectable ? sortPreference.criterion : 'date'
   const effectiveSortDirection =
     effectiveSortCriterion === 'distance' ? sortPreference.directions.distance : sortPreference.directions.date
+  // Only the Distance path reads `position` (KTD7's date-rule branch ignores it entirely), so
+  // don't re-run the sort every time it changes while Date is active.
+  const positionForSort = effectiveSortCriterion === 'distance' ? currentPosition : null
   const sorted = useMemo(
-    () => sortRestaurants(visible, effectiveSortCriterion, effectiveSortDirection, currentPosition),
-    [visible, effectiveSortCriterion, effectiveSortDirection, currentPosition],
+    () => sortRestaurants(visible, effectiveSortCriterion, effectiveSortDirection, positionForSort),
+    [visible, effectiveSortCriterion, effectiveSortDirection, positionForSort],
   )
 
+  // `next` is computed from the current `sortPreference` closure value and `writeSortPreference`
+  // runs once here, rather than inside a `setSortPreference` updater — React StrictMode
+  // double-invokes updater functions in development, which would otherwise double-write to
+  // localStorage on every change.
   function handleSortCriterionChange(criterion: SortCriterion) {
     if (criterion === 'distance' && !distanceSelectable) return
-    setSortPreference((prev) => {
-      const next = { ...prev, criterion }
-      writeSortPreference(next)
-      return next
-    })
+    if (criterion === sortPreference.criterion) return
+    const next = { ...sortPreference, criterion }
+    writeSortPreference(next)
+    setSortPreference(next)
   }
 
   function handleSortDirectionToggle() {
-    setSortPreference((prev) => {
-      const next = { ...prev, directions: toggledDirections(effectiveSortCriterion, prev.directions) }
-      writeSortPreference(next)
-      return next
-    })
+    const next = { ...sortPreference, directions: toggledDirections(effectiveSortCriterion, sortPreference.directions) }
+    writeSortPreference(next)
+    setSortPreference(next)
   }
   // Markers carry raw data (status, verdict, visit count, cuisine), not pre-translated text —
   // StatusBadge, translateVisitsCount, and emojiForCuisine translate at render time inside

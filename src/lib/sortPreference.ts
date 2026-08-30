@@ -17,6 +17,9 @@ export type SortCriterion = 'distance' | 'date'
 export type DistanceDirection = 'nearest' | 'farthest'
 export type DateDirection = 'newest' | 'oldest'
 
+/** Direction for whichever criterion is active — the single shared alias other modules import. */
+export type SortDirection = DistanceDirection | DateDirection
+
 export interface SortPreference {
   criterion: SortCriterion
   directions: {

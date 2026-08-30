@@ -102,3 +102,13 @@ export function translateVisitsCount(count: number): string {
 export function statusOf(r: Pick<Restaurant, 'visitCount'>): RestaurantStatus {
   return r.visitCount > 0 ? 'visited' : 'to_try'
 }
+
+/**
+ * True once a restaurant's coordinates have resolved — false for a provisional (pending) record.
+ * Shared by `map/markers.ts` and `facets/sort.ts` so "resolved coordinates" means the same thing
+ * everywhere, even for a record whose `pending`/coordinate fields could otherwise diverge (e.g. a
+ * synced or imported record — nothing enforces the two staying in lockstep beyond convention).
+ */
+export function hasResolvedCoordinates(r: Restaurant): r is Restaurant & { lat: number; lng: number } {
+  return !r.pending && r.lat !== null && r.lng !== null
+}

@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import type { SortCriterion, DistanceDirection, DateDirection } from '../../lib/sortPreference'
+import type { SortCriterion, SortDirection } from '../../lib/sortPreference'
 
-type SortDirection = DistanceDirection | DateDirection
 type TFn = ReturnType<typeof useTranslation>['t']
 
 /** Direction chip label for the active criterion (R10). */
