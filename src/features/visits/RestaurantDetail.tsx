@@ -119,80 +119,85 @@ export function RestaurantDetail({
   return (
     <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
       <ModalHeader title={restaurant.name} onClose={onClose} variant="detail" />
-      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-        <StatusBadge restaurant={restaurant} />
-        {restaurant.address && <span>{restaurant.address}</span>}
+
+      {/* Info block (R4): identity + location detail grouped into one visually distinct container. */}
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+          <StatusBadge restaurant={restaurant} />
+          {restaurant.address && <span>{restaurant.address}</span>}
+        </div>
+
+        {(distanceLabel || restaurant.added) && (
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+            {distanceLabel && (
+              <span className="flex items-center gap-1">
+                <Navigation size={14} aria-hidden="true" />
+                {distanceLabel}
+              </span>
+            )}
+            {restaurant.added && (
+              <span className="flex items-center gap-1">
+                <Calendar size={14} aria-hidden="true" />
+                {t('visitDetail.addedOn', { date: restaurant.added.slice(0, 10) })}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-3 flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="inline-block h-3 w-3 shrink-0 rounded-full"
+            style={{ background: colorForCuisine(restaurant.cuisine) }}
+          />
+          <input
+            key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
+            list={cuisineListId}
+            defaultValue={restaurant.cuisine ?? ''}
+            onBlur={(e) => saveCuisine(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur()
+            }}
+            aria-label={t('visitDetail.cuisineLabel')}
+            placeholder={t('visitDetail.cuisinePlaceholder')}
+            className="w-full rounded-md border border-gray-300 bg-white p-1.5 text-sm"
+          />
+          <datalist id={cuisineListId}>
+            {options.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </div>
+
+        {(googleMapsHref || goToHref) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {googleMapsHref && (
+              <a
+                href={googleMapsHref}
+                target="_blank"
+                rel="noreferrer"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+              >
+                <MapPin size={14} aria-hidden="true" />
+                {t('visitDetail.googleMaps')}
+              </a>
+            )}
+            {goToHref && (
+              <a
+                href={goToHref}
+                target="_blank"
+                rel="noreferrer"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+              >
+                <Navigation size={14} aria-hidden="true" />
+                {t('visitDetail.goTo')}
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
-      {(distanceLabel || restaurant.added) && (
-        <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
-          {distanceLabel && (
-            <span className="flex items-center gap-1">
-              <Navigation size={14} aria-hidden="true" />
-              {distanceLabel}
-            </span>
-          )}
-          {restaurant.added && (
-            <span className="flex items-center gap-1">
-              <Calendar size={14} aria-hidden="true" />
-              {t('visitDetail.addedOn', { date: restaurant.added.slice(0, 10) })}
-            </span>
-          )}
-        </div>
-      )}
-
-      {(googleMapsHref || goToHref) && (
-        <div className="mt-1 flex items-center gap-3 text-xs">
-          {googleMapsHref && (
-            <a
-              href={googleMapsHref}
-              target="_blank"
-              rel="noreferrer"
-              className="flex shrink-0 items-center gap-1 font-medium text-brand underline"
-            >
-              <MapPin size={14} aria-hidden="true" />
-              {t('visitDetail.googleMaps')}
-            </a>
-          )}
-          {goToHref && (
-            <a
-              href={goToHref}
-              target="_blank"
-              rel="noreferrer"
-              className="flex shrink-0 items-center gap-1 font-medium text-brand underline"
-            >
-              <Navigation size={14} aria-hidden="true" />
-              {t('visitDetail.goTo')}
-            </a>
-          )}
-        </div>
-      )}
-
-      <div className="mt-3 flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className="inline-block h-3 w-3 shrink-0 rounded-full"
-          style={{ background: colorForCuisine(restaurant.cuisine) }}
-        />
-        <input
-          key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
-          list={cuisineListId}
-          defaultValue={restaurant.cuisine ?? ''}
-          onBlur={(e) => saveCuisine(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur()
-          }}
-          aria-label={t('visitDetail.cuisineLabel')}
-          placeholder={t('visitDetail.cuisinePlaceholder')}
-          className="w-full rounded-md border border-gray-300 p-1.5 text-sm"
-        />
-        <datalist id={cuisineListId}>
-          {options.map((o) => (
-            <option key={o} value={o} />
-          ))}
-        </datalist>
-      </div>
-
+      {/* Notes (R5): always visible, directly below the info block. */}
       <div className="mt-3">
         <textarea
           key={noteKey}
@@ -211,6 +216,7 @@ export function RestaurantDetail({
         />
       </div>
 
+      {/* Check-in (R6): unchanged behavior, positioned below notes. */}
       <div className="mt-4">
         {logging ? (
           <div>
@@ -228,17 +234,23 @@ export function RestaurantDetail({
         )}
       </div>
 
+      {/* Visit history (R7/R8): always-expanded timeline, most-recent-first (already guaranteed by
+          visitsForRestaurant's sort — see useRestaurantDetail), with "add a past visit" rendered as
+          the timeline's last row. Its <details>/<summary> reveal mechanism (KTD9) is unchanged. */}
       <div className="mt-5">
         <h3 className="text-sm font-semibold text-gray-700">
           {t('visitDetail.visitsHeading')}{' '}
           {visits.length > 0 && <span className="font-normal text-gray-400">({visits.length})</span>}
         </h3>
-        {visits.length === 0 ? (
-          <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>
-        ) : (
-          <ul className="mt-1 divide-y divide-gray-100">
-            {visits.map((v) => (
-              <li key={v.id} className="flex items-center justify-between py-2 text-sm">
+        {visits.length === 0 && <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>}
+        <ul className="mt-2 border-l border-gray-200 pl-4">
+          {visits.map((v) => (
+            <li key={v.id} className="relative py-2 first:pt-0 last:pb-0">
+              <span
+                aria-hidden="true"
+                className="absolute top-3.5 -left-[19px] h-2.5 w-2.5 rounded-full bg-brand"
+              />
+              <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
                   <VerdictBadge verdict={v.verdict} />
                   <span className="text-gray-400">{v.date}</span>
@@ -251,25 +263,32 @@ export function RestaurantDetail({
                 >
                   ✕
                 </button>
-              </li>
-            ))}
-          </ul>
-        )}
+              </div>
+            </li>
+          ))}
+          <li className="relative py-2 first:pt-0 last:pb-0">
+            <span
+              aria-hidden="true"
+              className="absolute top-3.5 -left-[19px] h-2.5 w-2.5 rounded-full bg-gray-300"
+            />
+            <details>
+              <summary className="cursor-pointer text-sm text-gray-600">
+                {t('visitDetail.addPastVisit')}
+              </summary>
+              <div className="mt-2 space-y-2">
+                <input
+                  type="date"
+                  value={pastDate}
+                  onChange={(e) => setPastDate(e.target.value)}
+                  aria-label={t('visitDetail.visitDateAria')}
+                  className="rounded-md border border-gray-300 p-1.5 text-sm"
+                />
+                <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
+              </div>
+            </details>
+          </li>
+        </ul>
       </div>
-
-      <details className="mt-4">
-        <summary className="cursor-pointer text-sm text-gray-600">{t('visitDetail.addPastVisit')}</summary>
-        <div className="mt-2 space-y-2">
-          <input
-            type="date"
-            value={pastDate}
-            onChange={(e) => setPastDate(e.target.value)}
-            aria-label={t('visitDetail.visitDateAria')}
-            className="rounded-md border border-gray-300 p-1.5 text-sm"
-          />
-          <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
-        </div>
-      </details>
     </Modal>
   )
 }

@@ -136,6 +136,18 @@ describe('RestaurantDetail', () => {
     expect(screen.getByLabelText('Notes')).toBe(textarea)
   })
 
+  it('renders the visit history most-recent-first regardless of creation order', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    // Created out of chronological order: the older visit is logged second.
+    await createVisit({ restaurantId: r.id, date: '2024-01-01', verdict: 'go_back' })
+    await createVisit({ restaurantId: r.id, date: '2026-06-01', verdict: 'once_was_enough' })
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const dates = (await screen.findAllByText(/^\d{4}-\d{2}-\d{2}$/)).map((el) => el.textContent)
+    expect(dates).toEqual(['2026-06-01', '2024-01-01'])
+  })
+
   it('returns a place to to-try when its last visit is deleted', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2025-01-01', verdict: 'go_back' })
