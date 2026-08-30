@@ -252,12 +252,13 @@ describe('fullSync', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
     const edited = await updateRestaurant(local.id, { name: 'Edited during sync' })
     releaseRemote()
-    await syncPromise
+    const outcome = await syncPromise
 
     const after = await getRestaurant('r1')
     expect(after?.name).toBe('Edited during sync') // pull did NOT clobber the newer local edit
     expect(after?.updated).toBe(edited.updated)
     expect(after?.syncedUpdated).not.toBe('2999-01-01T00:00:00Z') // not falsely marked synced to the pull
+    expect(outcome.restaurantsWritten).toBe(0) // the skipped (raced) pull must not be counted as written
   })
 
   it('U2: the pulled-restaurant write emits emitStoreChange(), not emitLocalChange()', async () => {

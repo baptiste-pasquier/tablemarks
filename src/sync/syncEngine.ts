@@ -53,9 +53,11 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
   // outside, so re-derive it from this device's visits. Keying only on written visits would leave a
   // pulled row with a stale foreign rollup (the same bug fixed on the import path).
   const affected = new Set<string>()
+  // Counts pulled rows actually persisted below — distinct from r.toWriteLocal.length, which is
+  // only what reconcile proposed to write (see the conditional-write comment below).
+  let restaurantsWrittenCount = 0
   for (const rec of r.toWriteLocal) {
     const snapshotUpdated = localSnapshotById.get(rec.id)?.updated
-    let applied = false
     // Single-transaction conditional write (mutateRestaurant): only apply the pulled row if the
     // record's `updated` still matches the snapshot `reconcile` read it against — otherwise a
     // local edit landed between the reconcile snapshot and this write, and applying the pull here
@@ -63,16 +65,15 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
     // local edit's own emitLocalChange() will trigger the next sync cycle to re-reconcile.
     // Stamp synced in the same write as the pull — markRestaurantSynced afterward would be a
     // redundant read-modify-write and a second store-change emit for a record already in hand.
-    await mutateRestaurant(
+    const result = await mutateRestaurant(
       rec.id,
-      (current) => {
-        if (current?.updated !== snapshotUpdated) return undefined
-        applied = true
-        return { ...rec, syncedUpdated: rec.updated }
-      },
+      (current) => (current?.updated !== snapshotUpdated ? undefined : { ...rec, syncedUpdated: rec.updated }),
       'store',
     )
-    if (applied) affected.add(rec.id)
+    if (result) {
+      affected.add(rec.id)
+      restaurantsWrittenCount++
+    }
   }
   for (const rec of r.toPush) {
     await remote.pushRestaurant(rec)
@@ -102,7 +103,7 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
   if (affected.size > 0) emitStoreChange()
 
   return {
-    restaurantsWritten: r.toWriteLocal.length,
+    restaurantsWritten: restaurantsWrittenCount,
     restaurantsPushed: r.toPush.length,
     visitsWritten: v.toWriteLocal.length,
     visitsPushed: v.toPush.length,

@@ -53,25 +53,38 @@ export function RestaurantDetail({
   const cuisineListId = useId()
   const [logging, setLogging] = useState(false)
   const [pastDate, setPastDate] = useState('')
-  // Guards the notes textarea against being remounted (and thus reset to the store value) while
-  // the user is mid-edit — see saveNote/noteKey below. A ref, not state: flipping it on focus/blur
-  // must not itself force a re-render (see KTD8 amendment in the plan).
+  // Guards the notes/cuisine fields against being remounted (and thus reset to the store value)
+  // while the user is mid-edit — see saveField/noteKey/cuisineKey below. Refs, not state: flipping
+  // them on focus/blur must not itself force a re-render (see KTD8 amendment in the plan).
   const noteFocusedRef = useRef(false)
-  // The textarea's `key`, recomputed from the store value — but only while unfocused. Deliberately
+  const cuisineFocusedRef = useRef(false)
+  // The value each field displayed when its current edit session began (set in onFocus, from the
+  // DOM so it's exact regardless of any store update racing focus). saveField compares against this
+  // baseline instead of the live `restaurant` field, so a focus+blur with no real edit never
+  // reverts a concurrent external update (e.g. a sync pull) that landed while the field was focused.
+  const noteBaselineRef = useRef('')
+  const cuisineBaselineRef = useRef('')
+  // Each field's `key`, recomputed from the store value — but only while unfocused. Deliberately
   // NOT derived inline as `focused ? ... : ...`: doing so still races an external update landing on
   // the very first render after focus starts (before any render had a chance to "freeze" the old
   // key), which would still force a one-time remount using the just-arrived external value. Instead
   // we only ever update this state while not focused, so a key change (and remount) can only happen
   // once the field is blurred.
   const [noteKey, setNoteKey] = useState('')
+  const [cuisineKey, setCuisineKey] = useState('')
 
   if (!restaurant) return null
 
-  // Recompute the notes-textarea key from the current store value, but only while the field is
-  // unfocused (see noteKey's declaration above for why this can't be a plain inline ternary).
+  // Recompute each field's key from the current store value, but only while that field is
+  // unfocused (see noteKey/cuisineKey's declaration above for why this can't be a plain inline
+  // ternary).
   if (!noteFocusedRef.current) {
     const desiredNoteKey = `${restaurant.id}:${restaurant.note ?? ''}`
     if (desiredNoteKey !== noteKey) setNoteKey(desiredNoteKey)
+  }
+  if (!cuisineFocusedRef.current) {
+    const desiredCuisineKey = `${restaurant.id}:${restaurant.cuisine ?? ''}`
+    if (desiredCuisineKey !== cuisineKey) setCuisineKey(desiredCuisineKey)
   }
 
   const distanceLabel = distanceLabelFor(currentPosition, restaurant)
@@ -87,9 +100,15 @@ export function RestaurantDetail({
   // Best-effort: the row may have been deleted/synced away between render and blur, in which
   // case updateRestaurant rejects (it already routes through mutateRestaurant's single-transaction
   // read-modify-write — see data/restaurants.ts). The store listener reflects the real state either way.
-  function saveField(field: 'cuisine' | 'note', value: string) {
+  //
+  // Compares against `baseline` (the value displayed when the edit session began, captured in
+  // onFocus) rather than the live `restaurant[field]`: a store update can land while the field is
+  // focused, and comparing against the current restaurant value would then treat an unedited
+  // focus+blur as a real edit, silently reverting the external update back to the pre-focus value.
+  function saveField(field: 'cuisine' | 'note', value: string, baseline: string) {
     const next = value.trim() || undefined
-    if (next === (restaurant![field] || undefined)) return
+    const prev = baseline.trim() || undefined
+    if (next === prev) return
     void updateRestaurant(restaurantId, { [field]: next }).catch(() => {})
   }
 
@@ -139,10 +158,17 @@ export function RestaurantDetail({
             style={{ background: colorForCuisine(restaurant.cuisine) }}
           />
           <input
-            key={`${restaurant.id}:${restaurant.cuisine ?? ''}`}
+            key={cuisineKey}
             list={cuisineListId}
             defaultValue={restaurant.cuisine ?? ''}
-            onBlur={(e) => saveField('cuisine', e.target.value)}
+            onFocus={(e) => {
+              cuisineFocusedRef.current = true
+              cuisineBaselineRef.current = e.currentTarget.value
+            }}
+            onBlur={(e) => {
+              cuisineFocusedRef.current = false
+              saveField('cuisine', e.target.value, cuisineBaselineRef.current)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.currentTarget.blur()
             }}
@@ -190,12 +216,13 @@ export function RestaurantDetail({
         <textarea
           key={noteKey}
           defaultValue={restaurant.note ?? ''}
-          onFocus={() => {
+          onFocus={(e) => {
             noteFocusedRef.current = true
+            noteBaselineRef.current = e.currentTarget.value
           }}
           onBlur={(e) => {
             noteFocusedRef.current = false
-            saveField('note', e.target.value)
+            saveField('note', e.target.value, noteBaselineRef.current)
           }}
           rows={3}
           aria-label={t('visitDetail.notesLabel')}
