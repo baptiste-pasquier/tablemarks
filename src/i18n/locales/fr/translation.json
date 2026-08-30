@@ -60,7 +60,9 @@
     "noVisitsYet": "Aucune visite pour l'instant — c'est dans votre liste à essayer.",
     "deleteVisitAria": "Supprimer la visite du {{date}}",
     "addPastVisit": "Ajouter une visite passée",
-    "visitDateAria": "Date de la visite"
+    "visitDateAria": "Date de la visite",
+    "googleMaps": "Google Maps",
+    "goTo": "Itinéraire"
   },
   "filters": {
     "title": "Filtrer",
@@ -128,7 +130,8 @@
   "map": {
     "locateAria": "Centrer sur ma position",
     "locating": "Localisation…",
-    "locate": "📍 Localiser"
+    "locate": "📍 Localiser",
+    "currentPositionAria": "Votre position actuelle"
   },
   "restaurantList": {
     "emptyTitle": "Aucun lieu pour l'instant",

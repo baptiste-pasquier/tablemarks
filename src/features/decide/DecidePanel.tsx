@@ -5,21 +5,14 @@ import { StatusBadge } from '../StatusBadge'
 import { decideCandidates, pickForMe, type Anchor, type Candidate } from './candidates'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
+import { isHttpUrl } from '../../lib/mapsLinks'
+import { formatDistance } from '../../lib/geo'
 
 const RADIUS_PRESETS_KM = [0.5, 1, 5] as const
 const DEFAULT_RADIUS_KM = 1
 
-function formatDistance(m: number): string {
-  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`
-}
-
 function formatRadiusKm(km: number): string {
   return km < 1 ? `${km * 1000} m` : `${km} km`
-}
-
-/** Only http(s) links are safe to render as an href — guards against a pasted `javascript:` URL. */
-function isHttpUrl(u: string | undefined): u is string {
-  return !!u && /^https?:\/\//i.test(u)
 }
 
 export function DecidePanel({
@@ -58,9 +51,8 @@ export function DecidePanel({
               setPickedId(null)
             }}
             aria-pressed={km === radiusKm}
-            className={`rounded-full border px-2.5 py-0.5 ${
-              km === radiusKm ? 'border-brand bg-brand-soft text-brand' : 'border-gray-300'
-            }`}
+            className={`rounded-full border px-2.5 py-0.5 ${km === radiusKm ? 'border-brand bg-brand-soft text-brand' : 'border-gray-300'
+              }`}
           >
             {formatRadiusKm(km)}
           </button>

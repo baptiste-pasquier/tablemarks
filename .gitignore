@@ -21,3 +21,6 @@ pocketbase/pocketbase
 
 # Claude worktrees
 .claude/worktrees
+
+# Compound Engineering scratch space
+.context/compound-engineering/
