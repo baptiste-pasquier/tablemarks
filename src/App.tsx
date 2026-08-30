@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 import { useRestaurants } from './features/useRestaurants'
@@ -15,7 +15,7 @@ import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
-import type { GeoPoint } from './lib/geolocate'
+import { geolocate, type GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
 
 type MobileView = 'list' | 'map'
@@ -29,6 +29,10 @@ export default function App() {
   const [deciding, setDeciding] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [anchor, setAnchor] = useState<GeoPoint | null>(DEFAULT_MAP_CENTER)
+  // Sibling to `anchor`, deliberately not merged with it (KTD1): `anchor` is pan-driven and
+  // belongs to the Decide flow, while `currentPosition` is fed only by the on-load geolocation
+  // fetch (F1) and the "Localiser" tap (F2, wired via MapView's onLocate).
+  const [currentPosition, setCurrentPosition] = useState<GeoPoint | null>(null)
   const [filter, setFilter] = useState(emptyFilter())
   // Reset on every reload/relaunch (KTD5) — no persistence beyond component state.
   const [view, setView] = useState<MobileView>('list')
@@ -41,6 +45,14 @@ export default function App() {
     () => toMarkers(restaurants, filter),
     [restaurants, filter, i18n.language],
   )
+
+  // On-load fetch (F1, R1). A failed/unavailable fix resolves null and is ignored (KTD3's
+  // null-guard) rather than overwriting `currentPosition`, which starts null anyway (R6).
+  useEffect(() => {
+    void geolocate().then((point) => {
+      if (point) setCurrentPosition(point)
+    })
+  }, [])
 
   return (
     <div className="flex h-full flex-col bg-gray-50 text-gray-900">
@@ -115,7 +127,7 @@ export default function App() {
           </div>
           <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} />
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <RestaurantList items={visible} onSelect={setSelectedId} />
+            <RestaurantList items={visible} onSelect={setSelectedId} currentPosition={currentPosition} />
           </div>
         </aside>
 
@@ -128,6 +140,8 @@ export default function App() {
             markers={markers}
             onSelect={setSelectedId}
             onCenterChange={setAnchor}
+            onLocate={setCurrentPosition}
+            currentPosition={currentPosition}
             selectedId={selectedId}
             active={view === 'map'}
           />

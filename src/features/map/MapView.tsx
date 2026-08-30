@@ -73,12 +73,17 @@ export function MapView({
   markers,
   onSelect,
   onCenterChange,
+  onLocate,
+  // Accepted but not yet rendered — U3 consumes this to draw the current-position marker.
+  currentPosition: _currentPosition,
   selectedId,
   active,
 }: {
   markers: MapMarker[]
   onSelect?: (id: string) => void
   onCenterChange?: (center: GeoPoint) => void
+  onLocate?: (p: GeoPoint) => void
+  currentPosition?: GeoPoint | null
   selectedId?: string | null
   active?: boolean
 }) {
@@ -99,7 +104,12 @@ export function MapView({
   async function locate() {
     setLocating(true)
     const point = await geolocate()
-    if (point && map) map.setView([point.lat, point.lng], map.getZoom())
+    // Null-guard (KTD3): a failed/timed-out retry must not erase a working currentPosition, so
+    // only report a point when one actually comes back.
+    if (point) {
+      if (map) map.setView([point.lat, point.lng], map.getZoom())
+      onLocate?.(point)
+    }
     setLocating(false)
   }
 

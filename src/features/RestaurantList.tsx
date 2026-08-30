@@ -3,6 +3,7 @@ import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
 import { colorForCuisine, emojiForCuisine } from './facets/cuisines'
 import { translateVisitsCount, type Restaurant } from '../types/models'
+import type { GeoPoint } from '../lib/geolocate'
 
 /** Cream base the cuisine tint mixes into, matching the shipped "Carnet culinaire" page background. */
 const CARD_TINT_BASE = '#fdfaf6'
@@ -29,9 +30,12 @@ function textColorFor(bgHex: string): string {
 export function RestaurantList({
   items,
   onSelect,
+  // Accepted but not yet rendered — U4 consumes this to show per-restaurant distances.
+  currentPosition: _currentPosition,
 }: {
   items: Restaurant[]
   onSelect?: (id: string) => void
+  currentPosition?: GeoPoint | null
 }) {
   const { t } = useTranslation()
 
