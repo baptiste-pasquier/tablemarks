@@ -25,6 +25,12 @@ describe('restaurant repository', () => {
     expect(await getRestaurant(r.id)).toEqual(r)
   })
 
+  it('stamps added with a valid ISO timestamp on create (R3)', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 48.85, lng: 2.35 })
+    expect(r.added).not.toBe('')
+    expect(Number.isNaN(Date.parse(r.added ?? ''))).toBe(false)
+  })
+
   it('bumps updated on edit', async () => {
     const r = await createRestaurant({ name: 'Old', lat: 1, lng: 1 })
     const after = await updateRestaurant(r.id, { name: 'New', cuisine: 'French' })
@@ -89,6 +95,34 @@ describe('restaurant repository', () => {
 
     expect(syncedRec?.syncedUpdated).toBe(syncedRec?.updated)
     expect(pendingRec?.syncedUpdated).not.toBe(pendingRec?.updated)
+  })
+
+  it('two back-to-back edits with no shared transaction both land (U2 race regression)', async () => {
+    // Mirrors a note/cuisine blur-save firing immediately before a second concurrent writer
+    // (e.g. a visit-triggered rollup recompute) touches the same record — both start their
+    // get-then-put cycle before either has put, since neither await happens between them.
+    const r = await createRestaurant({ name: 'Bistro', lat: 1, lng: 1 })
+    const p1 = updateRestaurant(r.id, { cuisine: 'French' })
+    const p2 = updateRestaurant(r.id, { note: 'Great terrace' })
+    await Promise.all([p1, p2])
+
+    const after = await getRestaurant(r.id)
+    expect(after?.cuisine).toBe('French')
+    expect(after?.note).toBe('Great terrace')
+  })
+
+  it('a note/cuisine edit is not dropped by a near-simultaneous check-in (U2 race regression)', async () => {
+    // Mirrors a note/cuisine blur-save firing immediately before "I'm here now" triggers a
+    // rollup recompute — both target the same restaurant record with no shared transaction
+    // between the two writers, so neither await happens before the other write starts.
+    const r = await createRestaurant({ name: 'Bistro', lat: 1, lng: 1 })
+    const editPromise = updateRestaurant(r.id, { cuisine: 'French' })
+    const visitPromise = createVisit({ restaurantId: r.id, verdict: 'go_back' })
+    await Promise.all([editPromise, visitPromise])
+
+    const after = await getRestaurant(r.id)
+    expect(after?.cuisine).toBe('French')
+    expect(after?.visitCount).toBe(1)
   })
 
   it('markRestaurantSynced skips the stamp when the record changed since the caller read it (review #2)', async () => {

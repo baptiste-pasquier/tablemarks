@@ -54,6 +54,8 @@
   "visitDetail": {
     "cuisineLabel": "Cuisine",
     "cuisinePlaceholder": "Ajouter une cuisine…",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Ajouter une note…",
     "howWasIt": "Comment c'était ?",
     "hereNow": "J'y suis maintenant",
     "visitsHeading": "Visites",
@@ -62,7 +64,8 @@
     "addPastVisit": "Ajouter une visite passée",
     "visitDateAria": "Date de la visite",
     "googleMaps": "Google Maps",
-    "goTo": "Itinéraire"
+    "goTo": "Itinéraire",
+    "addedOn": "Ajouté le {{date}}"
   },
   "filters": {
     "title": "Filtrer",

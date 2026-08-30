@@ -116,4 +116,65 @@ describe('parseImport', () => {
     if (!res.ok) return
     expect(res.records.restaurants[0].updated).toBe('2026-05-01T00:00:00Z')
   })
+
+  it('preserves a present added value on a restaurant (R3)', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [
+          {
+            id: 'r1',
+            name: 'Chez Marcel',
+            lat: 48,
+            lng: 2,
+            cuisine: 'French',
+            pending: false,
+            latestVerdict: 'go_back',
+            latestVisitDate: '2026-05-01',
+            visitCount: 1,
+            updated: '2026-05-01T00:00:00Z',
+            added: '2026-01-01T00:00:00Z',
+            deleted: false,
+          },
+        ],
+        visits: [],
+      },
+    }))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.records.restaurants[0].added).toBe('2026-01-01T00:00:00Z')
+  })
+
+  it('preserves an absent added value on a restaurant as undefined (no backfill)', () => {
+    const res = parseImport(envelope())
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.records.restaurants[0].added).toBeUndefined()
+  })
+
+  it('preserves an empty-string added value on a restaurant', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [
+          {
+            id: 'r1',
+            name: 'Chez Marcel',
+            lat: 48,
+            lng: 2,
+            cuisine: 'French',
+            pending: false,
+            latestVerdict: 'go_back',
+            latestVisitDate: '2026-05-01',
+            visitCount: 1,
+            updated: '2026-05-01T00:00:00Z',
+            added: '',
+            deleted: false,
+          },
+        ],
+        visits: [],
+      },
+    }))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.records.restaurants[0].added).toBe('')
+  })
 })

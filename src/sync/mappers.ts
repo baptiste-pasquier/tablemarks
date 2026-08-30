@@ -20,6 +20,7 @@ export interface RemoteRestaurant {
   mapsUrl?: string
   cuisine?: string
   note?: string
+  added?: string
   pending: boolean
   latestVerdict: string | null
   latestVisitDate: string | null
@@ -50,6 +51,7 @@ export function restaurantToRemote(r: Restaurant, owner: string): RemoteRestaura
     mapsUrl: r.mapsUrl,
     cuisine: r.cuisine,
     note: r.note,
+    added: r.added,
     pending: r.pending,
     latestVerdict: r.latestVerdict,
     latestVisitDate: r.latestVisitDate,
@@ -69,6 +71,7 @@ export function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
     mapsUrl: r.mapsUrl,
     cuisine: r.cuisine,
     note: r.note,
+    added: r.added,
     pending: r.pending,
     latestVerdict: asVerdict(r.latestVerdict),
     latestVisitDate: r.latestVisitDate,

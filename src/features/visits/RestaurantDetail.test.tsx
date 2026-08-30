@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
 import { RestaurantDetail } from './RestaurantDetail'
-import { createRestaurant, getRestaurant } from '../../data/restaurants'
+import { createRestaurant, getRestaurant, mutateRestaurant } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 
 beforeEach(freshDB)
@@ -66,6 +66,86 @@ describe('RestaurantDetail', () => {
     await user.tab()
 
     await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBeUndefined())
+  })
+
+  it('pre-fills the notes textarea with an existing note', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1, note: 'Great terrace' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    expect(await screen.findByLabelText('Notes')).toHaveValue('Great terrace')
+  })
+
+  it('edits and persists the note on blur', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText('Notes'), 'Ask for the corner table')
+    await user.tab() // blur commits the edit
+
+    await waitFor(async () =>
+      expect((await getRestaurant(r.id))?.note).toBe('Ask for the corner table'),
+    )
+  })
+
+  it('renders an empty notes textarea when there is no existing note, with no leftover placeholder text after typing', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    const textarea = await screen.findByLabelText('Notes')
+    expect(textarea).toHaveValue('')
+
+    await user.type(textarea, 'Loud on weekends')
+    expect(textarea).toHaveValue('Loud on weekends')
+  })
+
+  it('inserts a newline on Enter in the notes textarea instead of saving', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    const textarea = await screen.findByLabelText('Notes')
+    await user.type(textarea, 'Line one{enter}Line two')
+
+    expect(textarea).toHaveValue('Line one\nLine two')
+    // No blur happened, so nothing should have been persisted yet.
+    expect((await getRestaurant(r.id))?.note).toBeUndefined()
+  })
+
+  it('keeps in-progress unsaved note text when an external store write lands while the field is focused', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, note: 'original note' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    const textarea = await screen.findByLabelText('Notes')
+    await user.click(textarea) // focus, without blurring
+    await user.type(textarea, ' plus my edit')
+
+    // Simulate a rollup/check-in-triggered write landing on the same restaurant while the user is
+    // still typing an unsaved note — e.g. a visit-triggered rollup recompute racing the edit.
+    await mutateRestaurant(
+      r.id,
+      (existing) => (existing ? { ...existing, note: 'external note from rollup' } : existing),
+      'store',
+    )
+
+    // The textarea must still show what the user typed, not the external value, and must not have
+    // been remounted out from under them.
+    await waitFor(() => expect(textarea).toHaveValue('original note plus my edit'))
+    expect(screen.getByLabelText('Notes')).toBe(textarea)
+  })
+
+  it('renders the visit history most-recent-first regardless of creation order', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    // Created out of chronological order: the older visit is logged second.
+    await createVisit({ restaurantId: r.id, date: '2024-01-01', verdict: 'go_back' })
+    await createVisit({ restaurantId: r.id, date: '2026-06-01', verdict: 'once_was_enough' })
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const dates = (await screen.findAllByText(/^\d{4}-\d{2}-\d{2}$/)).map((el) => el.textContent)
+    expect(dates).toEqual(['2026-06-01', '2024-01-01'])
   })
 
   it('returns a place to to-try when its last visit is deleted', async () => {
@@ -151,6 +231,79 @@ describe('RestaurantDetail', () => {
     await screen.findByText('X')
     expect(screen.queryByRole('link', { name: /google maps/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /go to/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the distance from the current position when both it and the restaurant coordinates are known', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 48.8566, lng: 2.3522 })
+    render(
+      <RestaurantDetail
+        restaurantId={r.id}
+        onClose={vi.fn()}
+        currentPosition={{ lat: 48.8606, lng: 2.3376 }}
+      />,
+    )
+
+    // Same formatting the main list uses for identical inputs (formatDistance/haversineMeters).
+    expect(await screen.findByText('1.2 km')).toBeInTheDocument()
+  })
+
+  it('renders no distance when there is no current position', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 48.8566, lng: 2.3522 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    expect(screen.queryByText(/\d+(\.\d+)? (m|km)$/)).not.toBeInTheDocument()
+  })
+
+  it('renders no distance for a pending restaurant with unresolved coordinates, even with a current position', async () => {
+    const r = await createRestaurant({ name: 'X', pending: true })
+    render(
+      <RestaurantDetail
+        restaurantId={r.id}
+        onClose={vi.fn()}
+        currentPosition={{ lat: 48.8606, lng: 2.3376 }}
+      />,
+    )
+
+    await screen.findByText('X')
+    expect(screen.queryByText(/\d+(\.\d+)? (m|km)$/)).not.toBeInTheDocument()
+  })
+
+  it('shows the added date, sliced to YYYY-MM-DD, for a normally-created restaurant', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    const datePart = r.added!.slice(0, 10)
+    expect(screen.getByText(new RegExp(datePart))).toBeInTheDocument()
+  })
+
+  it('renders no added-date line for a pre-existing restaurant with no recorded added field', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    // Simulate a restaurant that existed before the `added` field did — strip it entirely rather
+    // than leaving it undefined-in-name-only, mirroring a genuinely pre-existing local record.
+    await mutateRestaurant(r.id, (existing) => {
+      if (!existing) return existing
+      const { added: _added, ...rest } = existing
+      return rest as typeof existing
+    })
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    expect(screen.queryByText(new RegExp(r.added!.slice(0, 10)))).not.toBeInTheDocument()
+  })
+
+  it('renders no added-date line for a restaurant backfilled with an empty-string added value', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    const originalDatePart = r.added!.slice(0, 10)
+    await mutateRestaurant(r.id, (existing) => (existing ? { ...existing, added: '' } : existing))
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    expect(screen.queryByText(new RegExp(originalDatePart))).not.toBeInTheDocument()
   })
 
   it('treats an invalid mapsUrl as absent, falling back to the synthesized search link', async () => {
