@@ -4,6 +4,10 @@ const PB_URL = (import.meta.env.VITE_PB_URL as string | undefined) ?? 'http://12
 
 /** Shared PocketBase client. Auth state persists in localStorage via the SDK's default store. */
 export const pb = new PocketBase(PB_URL)
+// Google sign-in opens a popup synchronously, then awaits a GET before redirecting it. With
+// auto-cancellation on, a second tap during that window aborts the first GET and closes the
+// popup it already opened — reproduced as an iPhone Safari tab opening then closing on tap.
+pb.autoCancellation(false)
 
 export interface ResolvedLink {
   lat: number
