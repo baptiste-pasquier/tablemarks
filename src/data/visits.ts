@@ -1,5 +1,6 @@
 import { getDB } from './db'
 import { newId, now } from './ids'
+import { today } from '../lib/dates'
 import { recomputeRollup } from './rollup'
 import { emitLocalChange, emitStoreChange } from './events'
 import type { Verdict, Visit } from '../types/models'
@@ -14,15 +15,6 @@ export interface VisitInput {
 }
 
 export type VisitPatch = Partial<Pick<Visit, 'date' | 'verdict' | 'note'>>
-
-function today(): string {
-  // Local calendar day, not the UTC slice of now() — a late-night visit must not roll to the
-  // next/previous day. (updated stays UTC ISO; only the visit's calendar date is local.)
-  const d = new Date()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${month}-${day}`
-}
 
 export async function createVisit(input: VisitInput): Promise<Visit> {
   const record: Visit = {
