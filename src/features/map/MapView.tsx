@@ -15,18 +15,38 @@ export const LABEL_ZOOM_FLOOR = 14
 
 const iconCache = new Map<string, L.DivIcon>()
 
-/** A teardrop pin in the cuisine color (cached per color+selected), with a brand halo when selected. */
-function iconForColor(color: string, selected: boolean): L.DivIcon {
-  const key = `${color}:${selected ? 1 : 0}`
+/** Escapes text for safe interpolation into a raw HTML string (restaurant names are user data). */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * A teardrop pin in the cuisine color (cached per color+selected+label), with a brand halo when
+ * selected and, when `labelText` is given, a name label rendered beside the pin (R1/R3). The
+ * label is baked directly into the icon's HTML (rather than a separate react-leaflet Tooltip) so
+ * it moves and z-index-stacks with the marker for free, and so `aria-hidden` can be hand-written
+ * into the markup — the label is decorative only, the accessible name lives in the marker's
+ * Popup (KTD7).
+ */
+function iconForColor(color: string, selected: boolean, labelText?: string): L.DivIcon {
+  const key = `${color}:${selected ? 1 : 0}:${labelText ?? ''}`
   let icon = iconCache.get(key)
   if (!icon) {
     const size = selected ? 30 : 24
     const shadow = selected
       ? `box-shadow:0 0 0 5px ${color}33, 0 3px 6px rgba(0,0,0,.4);`
       : `box-shadow:0 2px 4px rgba(0,0,0,.35);`
+    const label = labelText
+      ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;color:#1f2937;white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
+      : ''
     icon = L.divIcon({
       className: '',
-      html: `<span style="position:relative;display:block;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;background:${color};border:2px solid #fff;transform:rotate(-45deg);${shadow}"><span style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:9999px;background:rgba(255,255,255,.92)"></span></span>`,
+      html: `<span style="position:relative;display:block;width:${size}px;height:${size}px;"><span style="position:absolute;inset:0;display:block;border-radius:50% 50% 50% 0;background:${color};border:2px solid #fff;transform:rotate(-45deg);${shadow}"><span style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:9999px;background:rgba(255,255,255,.92)"></span></span>${label}</span>`,
       iconSize: [size, size],
       iconAnchor: [size / 2, size],
       popupAnchor: [0, -size],
@@ -145,9 +165,6 @@ export function MapView({
   const [map, setMap] = useState<L.Map | null>(null)
   const [locating, setLocating] = useState(false)
   const [visibleLabelIds, setVisibleLabelIds] = useState<Set<string>>(new Set())
-  // Not yet consumed by the marker-rendering loop below — that's a later unit's job. This
-  // reference only keeps `noUnusedLocals` quiet until that unit wires it in.
-  void visibleLabelIds
 
   // The mobile List/Map toggle keeps this pane mounted but hidden (display:none) while
   // inactive. A display:none -> block transition fires no resize event, so Leaflet never
@@ -180,7 +197,15 @@ export function MapView({
           <Marker
             key={m.id}
             position={[m.lat, m.lng]}
-            icon={iconForColor(m.color, m.id === selectedId)}
+            icon={iconForColor(
+              m.color,
+              m.id === selectedId,
+              // Popups don't special-case labels (KTD7): visibility follows visibleLabelIds only,
+              // never selectedId/popup-open state. !m.dimmed is defense-in-depth — the upstream
+              // placement algorithm already excludes dimmed candidates — so this layer's own
+              // guarantee doesn't silently rely on that upstream behavior.
+              visibleLabelIds.has(m.id) && !m.dimmed ? m.name : undefined,
+            )}
             opacity={m.dimmed ? 0.3 : 1}
             eventHandlers={onSelect ? { click: () => onSelect(m.id) } : undefined}
           >

@@ -2,7 +2,17 @@ import { render } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type L from 'leaflet'
 import { MapView, LabelVisibility, LABEL_ZOOM_FLOOR } from './MapView'
+import { computeLabelPlacement } from './labelPlacement'
 import type { MapMarker } from './markers'
+
+// Defaults to the real algorithm (so every existing test keeps exercising real placement logic),
+// but individual tests below can queue a `mockReturnValueOnce` to force a specific visible-label
+// set — needed for the "dimmed marker would otherwise qualify" defense-in-depth case, which the
+// real algorithm can never produce (it excludes dimmed candidates before MapView ever sees them).
+vi.mock('./labelPlacement', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./labelPlacement')>()
+  return { ...actual, computeLabelPlacement: vi.fn(actual.computeLabelPlacement) }
+})
 
 // Mutable per-test knobs for the mocked map, plus a handler registry so tests can simulate
 // Leaflet firing `zoomend`/`moveend` by invoking the recorded handlers directly.
@@ -40,7 +50,13 @@ vi.mock('react-leaflet', () => {
     TileLayer: () => null,
     Marker: ({ icon, position }: { icon: L.DivIcon; position: [number, number] }) => {
       const iconSize = icon.options.iconSize as L.PointTuple | undefined
-      return <div data-testid={`marker-${position[0]}-${position[1]}`} data-size={iconSize?.[0]} />
+      return (
+        <div
+          data-testid={`marker-${position[0]}-${position[1]}`}
+          data-size={iconSize?.[0]}
+          data-html={icon.options.html as string}
+        />
+      )
     },
     Popup: () => null,
     useMap: () => map,
@@ -51,6 +67,7 @@ beforeEach(() => {
   mockZoom = 12
   mockProject = (lat, lng) => ({ x: lng * 10, y: lat * 10 })
   handlers.clear()
+  vi.mocked(computeLabelPlacement).mockClear()
 })
 
 const MARKERS: MapMarker[] = [
@@ -73,6 +90,56 @@ describe('MapView', () => {
     rerender(<MapView markers={MARKERS} selectedId="b" onSelect={vi.fn()} />)
     expect(getByTestId('marker-1-1').dataset.size).toBe('24')
     expect(getByTestId('marker-2-2').dataset.size).toBe('30')
+  })
+})
+
+describe('MapView name labels (U3)', () => {
+  it('renders a marker in the visible-label set with its name as on-map text, aria-hidden, and no label for a marker outside the set', () => {
+    mockZoom = LABEL_ZOOM_FLOOR
+    vi.mocked(computeLabelPlacement).mockReturnValueOnce(new Set(['a']))
+    const { getByTestId } = render(<MapView markers={MARKERS} />)
+
+    const htmlA = getByTestId('marker-1-1').dataset.html ?? ''
+    expect(htmlA).toContain('aria-hidden="true"')
+    expect(htmlA).toContain('>A<')
+
+    const htmlB = getByTestId('marker-2-2').dataset.html ?? ''
+    expect(htmlB).not.toContain('aria-hidden')
+    expect(htmlB).not.toContain('>B<')
+  })
+
+  it('shows the same label regardless of whether the marker is selected (no popup/label special-casing, KTD7)', () => {
+    mockZoom = LABEL_ZOOM_FLOOR
+    vi.mocked(computeLabelPlacement).mockReturnValueOnce(new Set(['a']))
+    const { getByTestId, rerender } = render(<MapView markers={MARKERS} />)
+    const htmlUnselected = getByTestId('marker-1-1').dataset.html ?? ''
+    expect(htmlUnselected).toContain('aria-hidden="true"')
+    expect(htmlUnselected).toContain('>A<')
+
+    rerender(<MapView markers={MARKERS} selectedId="a" onSelect={vi.fn()} />)
+    const htmlSelected = getByTestId('marker-1-1').dataset.html ?? ''
+    expect(htmlSelected).toContain('aria-hidden="true"')
+    expect(htmlSelected).toContain('>A<')
+  })
+
+  it('never renders a label for a dimmed marker, even when it would otherwise be in the visible-label set', () => {
+    mockZoom = LABEL_ZOOM_FLOOR
+    const dimmedMarkers: MapMarker[] = [
+      { ...MARKERS[0], dimmed: true },
+      MARKERS[1],
+    ]
+    // Force both ids into the "visible" set, simulating the upstream algorithm having (contrary
+    // to its own guarantee) included the dimmed marker — MapView's own guard must still hide it.
+    vi.mocked(computeLabelPlacement).mockReturnValueOnce(new Set(['a', 'b']))
+    const { getByTestId } = render(<MapView markers={dimmedMarkers} />)
+
+    const htmlA = getByTestId('marker-1-1').dataset.html ?? ''
+    expect(htmlA).not.toContain('aria-hidden')
+    expect(htmlA).not.toContain('>A<')
+
+    const htmlB = getByTestId('marker-2-2').dataset.html ?? ''
+    expect(htmlB).toContain('aria-hidden="true"')
+    expect(htmlB).toContain('>B<')
   })
 })
 
