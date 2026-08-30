@@ -16,3 +16,8 @@ export function haversineMeters(aLat: number, aLng: number, bLat: number, bLng: 
     Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2)
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h))
 }
+
+/** Human-readable distance: meters below 1 km, one-decimal km above. */
+export function formatDistance(m: number): string {
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`
+}
