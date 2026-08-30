@@ -119,8 +119,18 @@ const DEFAULT_CENTER: [number, number] = [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CE
 /**
  * MapContainer's center/zoom apply only on initial render. When the map first renders empty
  * (no markers yet) and markers load afterward, recenter once on the first marker.
+ *
+ * `fallbackCenter` (R2/R5) is accepted here as plumbing only — a future unit wires it into this
+ * component's actual two-tier (live position vs. most-recent-restaurant) centering decision; it
+ * is not yet read.
  */
-function Recenter({ markers }: { markers: MapMarker[] }) {
+function Recenter({
+  markers,
+  fallbackCenter: _fallbackCenter,
+}: {
+  markers: MapMarker[]
+  fallbackCenter?: GeoPoint | null
+}) {
   const map = useMap()
   const centered = useRef(false)
   useEffect(() => {
@@ -250,6 +260,7 @@ export function MapView({
   beginLocate,
   onLocate,
   currentPosition,
+  fallbackCenter,
   selectedId,
   active,
 }: {
@@ -259,6 +270,8 @@ export function MapView({
   beginLocate?: () => number
   onLocate?: (p: GeoPoint, generation: number) => void
   currentPosition?: GeoPoint | null
+  /** Fallback map center (R2/R5) — plumbed through to `Recenter`, not yet consumed there. */
+  fallbackCenter?: GeoPoint | null
   selectedId?: string | null
   active?: boolean
 }) {
@@ -295,7 +308,7 @@ export function MapView({
           // responses — opaque responses are padded to ~7 MB each and would blow the cache bound.
           crossOrigin="anonymous"
         />
-        <Recenter markers={markers} />
+        <Recenter markers={markers} fallbackCenter={fallbackCenter} />
         <CenterReporter onChange={onCenterChange} />
         <LabelVisibility
           markers={markers}
