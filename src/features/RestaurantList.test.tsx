@@ -122,4 +122,55 @@ describe('RestaurantList', () => {
     render(<RestaurantList items={[r({ id: 'a', name: 'Whitespace cuisine place', cuisine: '   ' })]} />)
     expect(screen.getByText('Uncategorized')).toBeInTheDocument()
   })
+
+  it('shows no distance on any row when currentPosition is null', () => {
+    render(
+      <RestaurantList
+        items={[r({ id: 'a', name: 'Place A', lat: 48.8566, lng: 2.3522 })]}
+        currentPosition={null}
+      />,
+    )
+    expect(screen.queryByText(/\d+ m$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\d+(\.\d+)? km$/)).not.toBeInTheDocument()
+  })
+
+  it("shows the formatted distance from currentPosition on a restaurant's row when it has resolved coordinates", () => {
+    render(
+      <RestaurantList
+        items={[r({ id: 'a', name: 'Place A', lat: 48.8566, lng: 2.3522 })]}
+        currentPosition={{ lat: 48.8566, lng: 2.3622 }}
+      />,
+    )
+    // ~732m east along the same latitude.
+    expect(screen.getByText('732 m')).toBeInTheDocument()
+  })
+
+  it('shows no distance for a provisional restaurant with null coordinates, even when currentPosition is set', () => {
+    render(
+      <RestaurantList
+        items={[r({ id: 'a', name: 'Pending place', pending: true, lat: null, lng: null })]}
+        currentPosition={{ lat: 48.8566, lng: 2.3522 }}
+      />,
+    )
+    expect(screen.queryByText(/\d+ m$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\d+(\.\d+)? km$/)).not.toBeInTheDocument()
+  })
+
+  it('keeps the same row order whether or not currentPosition is set', () => {
+    const items = [
+      r({ id: 'a', name: 'Alpha', lat: 48.8566, lng: 2.3522 }),
+      r({ id: 'b', name: 'Bravo', lat: 48.86, lng: 2.36 }),
+      r({ id: 'c', name: 'Charlie', pending: true, lat: null, lng: null }),
+    ]
+
+    const { rerender } = render(<RestaurantList items={items} currentPosition={null} />)
+    const namesWithout = screen.getAllByRole('button').map((btn) => btn.textContent)
+
+    rerender(<RestaurantList items={items} currentPosition={{ lat: 48.8566, lng: 2.3522 }} />)
+    const namesWith = screen.getAllByRole('button').map((btn) =>
+      btn.textContent?.replace(/\d+(\.\d+)? (m|km)$/, ''),
+    )
+
+    expect(namesWithout.map((t) => t?.replace(/\d+(\.\d+)? (m|km)$/, ''))).toEqual(namesWith)
+  })
 })

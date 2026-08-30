@@ -130,7 +130,8 @@
   "map": {
     "locateAria": "Center on my location",
     "locating": "Locating…",
-    "locate": "📍 Locate"
+    "locate": "📍 Locate",
+    "currentPositionAria": "Your current location"
   },
   "restaurantList": {
     "emptyTitle": "No places yet",
