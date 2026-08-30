@@ -449,6 +449,64 @@ describe('MapView', () => {
     })
   })
 
+  describe('Recenter (U3 R1-R4)', () => {
+    it('centers on currentPosition as soon as it is available on first render (AE1)', () => {
+      const point: GeoPoint = { lat: 1, lng: 2 }
+      render(<MapView markers={[]} currentPosition={point} />)
+      expect(mockMapSetView).toHaveBeenCalledWith([point.lat, point.lng], 12)
+    })
+
+    it('centers on fallbackCenter when no live position is available (AE2, AE3 first half)', () => {
+      const fallback: GeoPoint = { lat: 3, lng: 4 }
+      render(<MapView markers={[]} currentPosition={null} fallbackCenter={fallback} />)
+      expect(mockMapSetView).toHaveBeenCalledWith([fallback.lat, fallback.lng], 12)
+    })
+
+    it('re-centers onto a live position that resolves after the fallback already centered (AE3 second half)', () => {
+      const fallback: GeoPoint = { lat: 3, lng: 4 }
+      const { rerender } = render(
+        <MapView markers={[]} currentPosition={null} fallbackCenter={fallback} />,
+      )
+      expect(mockMapSetView).toHaveBeenCalledWith([fallback.lat, fallback.lng], 12)
+
+      const point: GeoPoint = { lat: 5, lng: 6 }
+      rerender(<MapView markers={[]} currentPosition={point} fallbackCenter={fallback} />)
+      expect(mockMapSetView).toHaveBeenCalledWith([point.lat, point.lng], 12)
+    })
+
+    it('does not let a fallback arriving after a live position override it (R1)', () => {
+      const point: GeoPoint = { lat: 5, lng: 6 }
+      const { rerender } = render(
+        <MapView markers={[]} currentPosition={point} fallbackCenter={null} />,
+      )
+      expect(mockMapSetView).toHaveBeenCalledWith([point.lat, point.lng], 12)
+
+      const fallback: GeoPoint = { lat: 3, lng: 4 }
+      rerender(<MapView markers={[]} currentPosition={point} fallbackCenter={fallback} />)
+      expect(mockMapSetView).not.toHaveBeenCalledWith([fallback.lat, fallback.lng], 12)
+    })
+
+    it('centers on the first marker when there is no fallbackCenter, exactly as today (AE4)', () => {
+      const { rerender } = render(<MapView markers={[]} fallbackCenter={null} />)
+      expect(mockMapSetView).not.toHaveBeenCalled()
+
+      rerender(<MapView markers={MARKERS} fallbackCenter={null} />)
+      expect(mockMapSetView).toHaveBeenCalledWith([MARKERS[0].lat, MARKERS[0].lng], 12)
+    })
+
+    it('does not re-trigger centering once a tier has already fired, on a later unrelated markers/fallbackCenter change', () => {
+      const fallback: GeoPoint = { lat: 3, lng: 4 }
+      const { rerender } = render(<MapView markers={[]} fallbackCenter={fallback} />)
+      expect(mockMapSetView).toHaveBeenCalledTimes(1)
+
+      rerender(<MapView markers={MARKERS} fallbackCenter={fallback} />)
+      expect(mockMapSetView).toHaveBeenCalledTimes(1)
+
+      rerender(<MapView markers={MARKERS} fallbackCenter={{ lat: 9, lng: 9 }} />)
+      expect(mockMapSetView).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('"you are here" marker (U3 R1)', () => {
     it('renders no current-position marker when currentPosition is not set', () => {
       render(<MapView markers={MARKERS} currentPosition={null} />)

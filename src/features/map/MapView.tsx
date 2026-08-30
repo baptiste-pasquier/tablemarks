@@ -117,28 +117,54 @@ function currentPositionIcon(label: string): L.DivIcon {
 const DEFAULT_CENTER: [number, number] = [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]
 
 /**
- * MapContainer's center/zoom apply only on initial render. When the map first renders empty
- * (no markers yet) and markers load afterward, recenter once on the first marker.
+ * MapContainer's center/zoom apply only on initial render. This component performs the one-time
+ * initial centering decision (R1-R4), via two independent once-only tiers rather than a single
+ * shared guard:
  *
- * `fallbackCenter` (R2/R5) is accepted here as plumbing only — a future unit wires it into this
- * component's actual two-tier (live position vs. most-recent-restaurant) centering decision; it
- * is not yet read.
+ * - Effect A (position tier): as soon as a live `currentPosition` fix is available, center on it.
+ *   Fires once per app load, guarded by `positionCentered` alone — no dependency on whether the
+ *   fallback tier already centered — so a fix that resolves *after* the fallback already showed
+ *   still overrides it (R3).
+ * - Effect B (fallback tier): centers on `fallbackCenter` (the most-recently-added-or-visited
+ *   restaurant, R2) as soon as it's known, or on the first marker when there is no fallback
+ *   (today's existing behavior, R4). Skipped entirely once either tier has already centered —
+ *   checking `positionCentered` first is what lets a position resolved *before* markers/
+ *   fallbackCenter are known permanently suppress the fallback tier (R1). When neither
+ *   `fallbackCenter` nor any marker is available yet, it does nothing and leaves
+ *   `fallbackCentered` false, so it can still fire once a source becomes available on a later
+ *   render.
  */
 function Recenter({
   markers,
-  fallbackCenter: _fallbackCenter,
+  fallbackCenter,
+  currentPosition,
 }: {
   markers: MapMarker[]
   fallbackCenter?: GeoPoint | null
+  currentPosition?: GeoPoint | null
 }) {
   const map = useMap()
-  const centered = useRef(false)
+  const positionCentered = useRef(false)
+  const fallbackCentered = useRef(false)
+
   useEffect(() => {
-    if (!centered.current && markers.length > 0) {
-      map.setView([markers[0].lat, markers[0].lng], map.getZoom())
-      centered.current = true
+    if (currentPosition && !positionCentered.current) {
+      map.setView([currentPosition.lat, currentPosition.lng], map.getZoom())
+      positionCentered.current = true
     }
-  }, [markers, map])
+  }, [currentPosition, map])
+
+  useEffect(() => {
+    if (positionCentered.current || fallbackCentered.current) return
+    if (fallbackCenter) {
+      map.setView([fallbackCenter.lat, fallbackCenter.lng], map.getZoom())
+      fallbackCentered.current = true
+    } else if (markers.length > 0) {
+      map.setView([markers[0].lat, markers[0].lng], map.getZoom())
+      fallbackCentered.current = true
+    }
+  }, [fallbackCenter, markers, map])
+
   return null
 }
 
@@ -270,7 +296,7 @@ export function MapView({
   beginLocate?: () => number
   onLocate?: (p: GeoPoint, generation: number) => void
   currentPosition?: GeoPoint | null
-  /** Fallback map center (R2/R5) — plumbed through to `Recenter`, not yet consumed there. */
+  /** Fallback map center (R2/R5) — the most-recently-added-or-visited restaurant, consumed by `Recenter`'s fallback tier. */
   fallbackCenter?: GeoPoint | null
   selectedId?: string | null
   active?: boolean
@@ -308,7 +334,7 @@ export function MapView({
           // responses — opaque responses are padded to ~7 MB each and would blow the cache bound.
           crossOrigin="anonymous"
         />
-        <Recenter markers={markers} fallbackCenter={fallbackCenter} />
+        <Recenter markers={markers} fallbackCenter={fallbackCenter} currentPosition={currentPosition} />
         <CenterReporter onChange={onCenterChange} />
         <LabelVisibility
           markers={markers}
