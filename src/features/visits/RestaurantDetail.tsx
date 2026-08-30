@@ -5,7 +5,7 @@ import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
 import { updateRestaurant } from '../../data/restaurants'
-import { cuisineOptions, colorForCuisine } from '../facets/cuisines'
+import { cuisineOptions, colorForCuisine, emojiForCuisine } from '../facets/cuisines'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { StatusBadge, VerdictBadge } from '../StatusBadge'
@@ -131,7 +131,12 @@ export function RestaurantDetail({
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
         <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
           <StatusBadge restaurant={restaurant} />
-          {restaurant.address && <span>{restaurant.address}</span>}
+          {restaurant.address && (
+            <span className="flex items-center gap-1">
+              <MapPin size={14} aria-hidden="true" />
+              {restaurant.address}
+            </span>
+          )}
         </div>
 
         {(distanceLabel || restaurant.added) && (
@@ -152,6 +157,9 @@ export function RestaurantDetail({
         )}
 
         <div className="mt-3 flex items-center gap-2">
+          <span aria-hidden="true" className="shrink-0">
+            {emojiForCuisine(restaurant.cuisine)}
+          </span>
           <span
             aria-hidden="true"
             className="inline-block h-3 w-3 shrink-0 rounded-full"
@@ -242,7 +250,7 @@ export function RestaurantDetail({
           <button
             type="button"
             onClick={() => setLogging(true)}
-            className="rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
+            className="w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
           >
             {t('visitDetail.hereNow')}
           </button>
@@ -258,51 +266,55 @@ export function RestaurantDetail({
           {visits.length > 0 && <span className="font-normal text-gray-400">({visits.length})</span>}
         </h3>
         {visits.length === 0 && <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>}
-        <ul className="mt-2 border-l border-gray-200 pl-4">
-          {visits.map((v) => (
-            <li key={v.id} className="relative py-2 first:pt-0 last:pb-0">
-              <span
-                aria-hidden="true"
-                className="absolute top-3.5 -left-[19px] h-2.5 w-2.5 rounded-full bg-brand"
-              />
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <VerdictBadge verdict={v.verdict} />
-                  <span className="text-gray-400">{v.date}</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void removeVisit(v.id)}
-                  aria-label={t('visitDetail.deleteVisitAria', { date: v.date })}
-                  className="text-gray-400 hover:text-red-600"
-                >
-                  ✕
-                </button>
-              </div>
-            </li>
-          ))}
-          <li className="relative py-2 first:pt-0 last:pb-0">
-            <span
-              aria-hidden="true"
-              className="absolute top-3.5 -left-[19px] h-2.5 w-2.5 rounded-full bg-gray-300"
-            />
-            <details>
-              <summary className="cursor-pointer text-sm text-gray-600">
-                {t('visitDetail.addPastVisit')}
-              </summary>
-              <div className="mt-2 space-y-2">
-                <input
-                  type="date"
-                  value={pastDate}
-                  onChange={(e) => setPastDate(e.target.value)}
-                  aria-label={t('visitDetail.visitDateAria')}
-                  className="rounded-md border border-gray-300 p-1.5 text-sm"
+        {visits.length > 0 && (
+          <ul className="mt-2">
+            {visits.map((v, i) => (
+              <li key={v.id} className="relative flex gap-3 pb-3 last:pb-0">
+                {i < visits.length - 1 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-0 bottom-0 left-[3px] w-0.5 bg-gray-200"
+                  />
+                )}
+                <span
+                  aria-hidden="true"
+                  className="relative z-10 mt-0.5 h-2 w-2 shrink-0 rounded-full bg-brand"
                 />
-                <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
-              </div>
-            </details>
-          </li>
-        </ul>
+                <div className="flex-1 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <VerdictBadge verdict={v.verdict} />
+                      <span className="text-gray-400">{v.date}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void removeVisit(v.id)}
+                      aria-label={t('visitDetail.deleteVisitAria', { date: v.date })}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <details className="mt-2 rounded-lg border border-dashed border-gray-300 p-2 text-center">
+          <summary className="list-none cursor-pointer text-sm font-semibold text-gray-400">
+            {t('visitDetail.addPastVisit')}
+          </summary>
+          <div className="mt-2 space-y-2 text-left">
+            <input
+              type="date"
+              value={pastDate}
+              onChange={(e) => setPastDate(e.target.value)}
+              aria-label={t('visitDetail.visitDateAria')}
+              className="rounded-md border border-gray-300 p-1.5 text-sm"
+            />
+            <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
+          </div>
+        </details>
       </div>
     </Modal>
   )
