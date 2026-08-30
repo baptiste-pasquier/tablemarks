@@ -474,6 +474,16 @@ describe('MapView', () => {
       expect(mockMapSetView).toHaveBeenCalledWith([point.lat, point.lng], 12)
     })
 
+    it('centers on currentPosition, not fallbackCenter, when both are already truthy on the very first render (R1)', () => {
+      const point: GeoPoint = { lat: 5, lng: 6 }
+      const fallback: GeoPoint = { lat: 3, lng: 4 }
+      render(<MapView markers={[]} currentPosition={point} fallbackCenter={fallback} />)
+
+      expect(mockMapSetView).toHaveBeenCalledTimes(1)
+      expect(mockMapSetView).toHaveBeenCalledWith([point.lat, point.lng], 12)
+      expect(mockMapSetView).not.toHaveBeenCalledWith([fallback.lat, fallback.lng], 12)
+    })
+
     it('does not let a fallback arriving after a live position override it (R1)', () => {
       const point: GeoPoint = { lat: 5, lng: 6 }
       const { rerender } = render(

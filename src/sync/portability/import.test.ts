@@ -114,7 +114,7 @@ describe('parseImport', () => {
     const res = parseImport(envelope())
     expect(res.ok).toBe(true)
     if (!res.ok) return
-    expect(res.records.restaurants[0].updated).toBe('2026-05-01T00:00:00Z')
+    expect(res.records.restaurants[0].updated).toBe('2026-05-01T00:00:00.000Z')
   })
 
   it('preserves a present added value on a restaurant (R3)', () => {
@@ -141,7 +141,35 @@ describe('parseImport', () => {
     }))
     expect(res.ok).toBe(true)
     if (!res.ok) return
-    expect(res.records.restaurants[0].added).toBe('2026-01-01T00:00:00Z')
+    expect(res.records.restaurants[0].added).toBe('2026-01-01T00:00:00.000Z')
+  })
+
+  it('normalizes a non-canonical but valid ISO offset timestamp to the canonical UTC form (R6)', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [
+          {
+            id: 'r1',
+            name: 'Chez Marcel',
+            lat: 48,
+            lng: 2,
+            cuisine: 'French',
+            pending: false,
+            latestVerdict: 'go_back',
+            latestVisitDate: '2026-05-01',
+            visitCount: 1,
+            updated: '2026-08-30T23:00:00+05:00',
+            added: '2026-08-30T23:00:00+05:00',
+            deleted: false,
+          },
+        ],
+        visits: [],
+      },
+    }))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.records.restaurants[0].added).toBe('2026-08-30T18:00:00.000Z')
+    expect(res.records.restaurants[0].updated).toBe('2026-08-30T18:00:00.000Z')
   })
 
   it('preserves an absent added value on a restaurant as undefined (no backfill)', () => {

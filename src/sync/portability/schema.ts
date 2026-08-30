@@ -1,4 +1,4 @@
-import { isLocalDay } from '../../lib/dates'
+import { isLocalDay, normalizeInstant } from '../../lib/dates'
 import { VERDICTS, type Restaurant, type Verdict, type Visit } from '../../types/models'
 
 /** Current export file-format version. Distinct from the IndexedDB database version. */
@@ -111,14 +111,14 @@ function asRestaurant(x: unknown): Restaurant | null {
     mapsUrl: r.mapsUrl as string | undefined,
     cuisine: r.cuisine as string | undefined,
     note: r.note as string | undefined,
-    added: r.added as string | undefined,
+    added: r.added ? normalizeInstant(r.added as string) : (r.added as string | undefined),
     pending: r.pending,
     // `== null` catches both null and an absent (undefined) field — a visit-less place must
     // stay uncategorized, not get a fabricated default verdict.
     latestVerdict: r.latestVerdict == null ? null : coerceVerdict(r.latestVerdict),
     latestVisitDate: r.latestVisitDate,
     visitCount: r.visitCount,
-    updated: r.updated,
+    updated: normalizeInstant(r.updated),
     deleted: r.deleted,
   }
 }
