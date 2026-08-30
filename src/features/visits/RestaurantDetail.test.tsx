@@ -79,4 +79,91 @@ describe('RestaurantDetail', () => {
     await waitFor(() => expect(screen.getByText('To try')).toBeInTheDocument())
     expect(screen.getByText(/no visits yet/i)).toBeInTheDocument()
   })
+
+  it('links "Google Maps" to a valid mapsUrl as-is', async () => {
+    const r = await createRestaurant({
+      name: 'X',
+      lat: 1,
+      lng: 1,
+      mapsUrl: 'https://maps.google.com/?q=1,1',
+    })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
+    expect(link.href).toBe('https://maps.google.com/?q=1,1')
+  })
+
+  it('shows "Google Maps" but hides "Go to" when only mapsUrl is known, with no address or coordinates', async () => {
+    const r = await createRestaurant({ name: 'X', mapsUrl: 'https://maps.google.com/?q=1,1' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
+    expect(link.href).toBe('https://maps.google.com/?q=1,1')
+    expect(screen.queryByRole('link', { name: /go to/i })).not.toBeInTheDocument()
+  })
+
+  it('falls back "Google Maps" to a search URL built from the address when mapsUrl is absent', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, address: '1 Rue de Paris' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
+    expect(link.href).toBe(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('1 Rue de Paris')}`,
+    )
+  })
+
+  it('shows both coordinate-based links when there is no mapsUrl or address', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 48.85, lng: 2.35 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const destination = '48.85,2.35'
+    const mapsLink = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
+    const goToLink = screen.getByRole('link', { name: /go to/i }) as HTMLAnchorElement
+
+    expect(mapsLink.href).toBe(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`,
+    )
+    expect(goToLink.href).toBe(
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`,
+    )
+  })
+
+  it('links "Go to" to a directions URL for the address regardless of mapsUrl', async () => {
+    const r = await createRestaurant({
+      name: 'X',
+      lat: 1,
+      lng: 1,
+      address: '1 Rue de Paris',
+      mapsUrl: 'https://maps.google.com/?q=1,1',
+    })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const link = (await screen.findByRole('link', { name: /go to/i })) as HTMLAnchorElement
+    expect(link.href).toBe(
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent('1 Rue de Paris')}`,
+    )
+  })
+
+  it('renders neither location link when there is no mapsUrl, address, or coordinates', async () => {
+    const r = await createRestaurant({ name: 'X' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    expect(screen.queryByRole('link', { name: /google maps/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /go to/i })).not.toBeInTheDocument()
+  })
+
+  it('treats an invalid mapsUrl as absent, falling back to the synthesized search link', async () => {
+    const r = await createRestaurant({
+      name: 'X',
+      address: '1 Rue de Paris',
+      mapsUrl: 'javascript:alert(1)',
+    })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
+    expect(link.href).toBe(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('1 Rue de Paris')}`,
+    )
+  })
 })

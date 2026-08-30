@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
@@ -9,6 +10,12 @@ import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { StatusBadge, VerdictBadge } from '../StatusBadge'
 import { VERDICTS, translateVerdict, type Verdict } from '../../types/models'
+import {
+  isHttpUrl,
+  resolveDestination,
+  googleMapsSearchUrl,
+  googleMapsDirectionsUrl,
+} from '../../lib/mapsLinks'
 
 function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; disabled?: boolean }) {
   return (
@@ -45,6 +52,14 @@ export function RestaurantDetail({
 
   if (!restaurant) return null
 
+  const destination = resolveDestination(restaurant)
+  const googleMapsHref = isHttpUrl(restaurant.mapsUrl)
+    ? restaurant.mapsUrl
+    : destination
+      ? googleMapsSearchUrl(destination)
+      : undefined
+  const goToHref = destination ? googleMapsDirectionsUrl(destination) : undefined
+
   function saveCuisine(value: string) {
     const next = value.trim() || undefined
     if (next === (restaurant!.cuisine || undefined)) return
@@ -71,6 +86,33 @@ export function RestaurantDetail({
         <StatusBadge restaurant={restaurant} />
         {restaurant.address && <span>{restaurant.address}</span>}
       </div>
+
+      {(googleMapsHref || goToHref) && (
+        <div className="mt-1 flex items-center gap-3 text-xs">
+          {googleMapsHref && (
+            <a
+              href={googleMapsHref}
+              target="_blank"
+              rel="noreferrer"
+              className="flex shrink-0 items-center gap-1 font-medium text-brand underline"
+            >
+              <MapPin size={14} aria-hidden="true" />
+              {t('visitDetail.googleMaps')}
+            </a>
+          )}
+          {goToHref && (
+            <a
+              href={goToHref}
+              target="_blank"
+              rel="noreferrer"
+              className="flex shrink-0 items-center gap-1 font-medium text-brand underline"
+            >
+              <Navigation size={14} aria-hidden="true" />
+              {t('visitDetail.goTo')}
+            </a>
+          )}
+        </div>
+      )}
 
       <div className="mt-3 flex items-center gap-2">
         <span

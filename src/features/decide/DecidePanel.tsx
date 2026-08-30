@@ -5,6 +5,7 @@ import { StatusBadge } from '../StatusBadge'
 import { decideCandidates, pickForMe, type Anchor, type Candidate } from './candidates'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
+import { isHttpUrl } from '../../lib/mapsLinks'
 
 const RADIUS_PRESETS_KM = [0.5, 1, 5] as const
 const DEFAULT_RADIUS_KM = 1
@@ -15,11 +16,6 @@ function formatDistance(m: number): string {
 
 function formatRadiusKm(km: number): string {
   return km < 1 ? `${km * 1000} m` : `${km} km`
-}
-
-/** Only http(s) links are safe to render as an href — guards against a pasted `javascript:` URL. */
-function isHttpUrl(u: string | undefined): u is string {
-  return !!u && /^https?:\/\//i.test(u)
 }
 
 export function DecidePanel({
