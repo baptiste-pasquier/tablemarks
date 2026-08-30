@@ -19,6 +19,7 @@ vi.mock('./labelPlacement', async (importOriginal) => {
 let mockZoom = 12
 let mockProject = (lat: number, lng: number) => ({ x: lng * 10, y: lat * 10 })
 const handlers = new Map<string, Set<() => void>>()
+const mockInvalidateSize = vi.fn()
 
 function fire(event: string) {
   handlers.get(event)?.forEach((h) => h())
@@ -37,6 +38,7 @@ vi.mock('react-leaflet', () => {
     // projection tests can swap out (`mockProject`) to simulate a pan changing marker positions.
     getSize: () => ({ x: 400, y: 400 }),
     latLngToContainerPoint: ([lat, lng]: [number, number]) => mockProject(lat, lng),
+    invalidateSize: () => mockInvalidateSize(),
     on: (event: string, handler: () => void) => {
       if (!handlers.has(event)) handlers.set(event, new Set())
       handlers.get(event)!.add(handler)
@@ -68,6 +70,7 @@ beforeEach(() => {
   mockProject = (lat, lng) => ({ x: lng * 10, y: lat * 10 })
   handlers.clear()
   vi.mocked(computeLabelPlacement).mockClear()
+  mockInvalidateSize.mockClear()
 })
 
 const MARKERS: MapMarker[] = [
@@ -176,15 +179,18 @@ describe('LabelVisibility', () => {
     mockZoom = LABEL_ZOOM_FLOOR
     const onChange = vi.fn()
     render(<LabelVisibility markers={MARKERS} onChange={onChange} />)
+    expect(computeLabelPlacement).toHaveBeenCalledTimes(1)
     expect(onChange).toHaveBeenCalledTimes(1)
 
     // Simulate a pan: markers now project to different screen coordinates. The default canvas
     // measurer returns 0-width label boxes in jsdom (no 2d context here), so boxes never overlap
-    // regardless of position — this asserts *that* a recompute happened with fresh projections,
-    // not a collision outcome (U1's own tests cover the collision math via an injected stub).
+    // regardless of position, and both markers stay accepted before and after — so this asserts
+    // *that* a recompute happened with fresh projections (via computeLabelPlacement), not that
+    // `onChange` fires again: an unchanged visible-id set is a no-op update and is suppressed.
     mockProject = (lat, lng) => ({ x: lng * 999, y: lat * 999 })
     fire('moveend')
-    expect(onChange).toHaveBeenCalledTimes(2)
+    expect(computeLabelPlacement).toHaveBeenCalledTimes(2)
+    expect(onChange).toHaveBeenCalledTimes(1)
     expect(onChange).toHaveBeenLastCalledWith(new Set(['a', 'b']))
   })
 
@@ -201,14 +207,20 @@ describe('LabelVisibility', () => {
     expect(onChange).toHaveBeenLastCalledWith(new Set(['b']))
   })
 
-  it('recomputes when `active` flips false -> true (mobile List pane switching back to Map)', () => {
+  it('nudges Leaflet via invalidateSize before recomputing when `active` flips false -> true (mobile List pane switching back to Map, KTD10)', () => {
     mockZoom = LABEL_ZOOM_FLOOR
     const onChange = vi.fn()
     const { rerender } = render(<LabelVisibility markers={MARKERS} active={false} onChange={onChange} />)
-    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(computeLabelPlacement).toHaveBeenCalledTimes(1)
+    expect(mockInvalidateSize).not.toHaveBeenCalled()
 
     rerender(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)
-    expect(onChange).toHaveBeenCalledTimes(2)
+    expect(mockInvalidateSize).toHaveBeenCalledTimes(1)
+    expect(computeLabelPlacement).toHaveBeenCalledTimes(2)
+
+    // Flipping active again with no other change is not a rising edge -- no further nudge.
+    rerender(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)
+    expect(mockInvalidateSize).toHaveBeenCalledTimes(1)
   })
 
   it('unsubscribes both zoomend and moveend on unmount', () => {

@@ -23,6 +23,7 @@ vi.mock('react-leaflet', () => {
     // (which calls these) not to throw.
     getSize: () => ({ x: 400, y: 400 }),
     latLngToContainerPoint: ([lat, lng]: [number, number]) => ({ x: lng * 10, y: lat * 10 }),
+    invalidateSize: () => {},
     on: () => {},
     off: () => {},
   }

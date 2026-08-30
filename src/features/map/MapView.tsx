@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
@@ -98,13 +98,21 @@ function CenterReporter({ onChange }: { onChange?: (center: GeoPoint) => void })
 
 /**
  * Recomputes which markers' name labels should be visible (R1-R4) and reports the accepted id
- * set to the consumer. Modeled on `CenterReporter`, but deliberately does NOT hold `markers`/
- * `active` in a ref (KTD2 sanctioned simplification): recompute must react to a facet-filter
- * toggle, a restaurant add/delete/edit/import, or the mobile List pane switching back to Map
- * (KTD10) — none of these fire a Leaflet event, so `markers`/`active` are listed directly in the
- * effect's own dependency array instead. `onChange` is not ref-optimized either: `MapView`
- * passes a `useState` setter, which is referentially stable across renders, so calling it
- * directly is safe and simpler.
+ * set to the consumer — only when it actually changed, since a same-shape result is a no-op
+ * update, not a fresh state push. Modeled on `CenterReporter`, but deliberately does NOT hold
+ * `markers` in a ref (KTD2 sanctioned simplification): recompute must react to a facet-filter
+ * toggle or a restaurant add/delete/edit/import, neither of which fires a Leaflet event, so
+ * `markers` is listed directly in `recompute`'s own dependency array instead. `onChange` is not
+ * ref-optimized either: `MapView` passes a `useState` setter, which is referentially stable
+ * across renders, so depending on it directly is safe and simpler.
+ *
+ * Also owns the mobile List-pane-restore nudge (KTD10): that pane switch keeps this component
+ * mounted but hidden (`display:none`) while inactive, a transition that fires no resize event, so
+ * both Leaflet's own tile grid and this component's screen-space projections go stale until the
+ * pane becomes visible again. `invalidateSize()` must run before the next `recompute()` reads
+ * `map.getSize()` — owning both calls in one effect here, rather than splitting them across this
+ * component and `MapView`'s own effect, keeps that order guaranteed instead of relying on two
+ * components' effects racing.
  *
  * Exported (rather than kept private) so tests can render it directly and observe what it
  * reports via `onChange`, without needing to reach into `MapView`'s own state.
@@ -119,19 +127,27 @@ export function LabelVisibility({
   onChange?: (visible: Set<string>) => void
 }) {
   const map = useMap()
+  const lastReportedRef = useRef<Set<string> | null>(null)
+
+  const recompute = useCallback(() => {
+    const zoomFloorMet = map.getZoom() >= LABEL_ZOOM_FLOOR
+    const size = map.getSize()
+    // Geometric pane center in container-pixel space, not adjusted for overlay UI (KTD7).
+    const viewCenter: ScreenPoint = { x: size.x / 2, y: size.y / 2 }
+    const candidates: LabelCandidate[] = markers.map((m) => {
+      const point = map.latLngToContainerPoint([m.lat, m.lng])
+      return { id: m.id, x: point.x, y: point.y, name: m.name, dimmed: m.dimmed }
+    })
+    const next = computeLabelPlacement(candidates, viewCenter, zoomFloorMet)
+    const prev = lastReportedRef.current
+    const changed = prev === null || next.size !== prev.size || [...next].some((id) => !prev.has(id))
+    if (changed) {
+      lastReportedRef.current = next
+      onChange?.(next)
+    }
+  }, [map, markers, onChange])
 
   useEffect(() => {
-    const recompute = () => {
-      const zoomFloorMet = map.getZoom() >= LABEL_ZOOM_FLOOR
-      const size = map.getSize()
-      // Geometric pane center in container-pixel space, not adjusted for overlay UI (KTD7).
-      const viewCenter: ScreenPoint = { x: size.x / 2, y: size.y / 2 }
-      const candidates: LabelCandidate[] = markers.map((m) => {
-        const point = map.latLngToContainerPoint([m.lat, m.lng])
-        return { id: m.id, x: point.x, y: point.y, name: m.name, dimmed: m.dimmed }
-      })
-      onChange?.(computeLabelPlacement(candidates, viewCenter, zoomFloorMet))
-    }
     recompute() // initial computation, so labels aren't absent when already past the zoom floor
     map.on('zoomend', recompute)
     map.on('moveend', recompute)
@@ -139,8 +155,17 @@ export function LabelVisibility({
       map.off('zoomend', recompute)
       map.off('moveend', recompute)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onChange (a useState setter) is stable
-  }, [map, markers, active])
+  }, [map, recompute])
+
+  const wasActiveRef = useRef(active)
+  useEffect(() => {
+    const becameActive = active && !wasActiveRef.current
+    wasActiveRef.current = active
+    if (becameActive) {
+      map.invalidateSize()
+      recompute()
+    }
+  }, [active, map, recompute])
 
   return null
 }
@@ -165,13 +190,6 @@ export function MapView({
   const [map, setMap] = useState<L.Map | null>(null)
   const [locating, setLocating] = useState(false)
   const [visibleLabelIds, setVisibleLabelIds] = useState<Set<string>>(new Set())
-
-  // The mobile List/Map toggle keeps this pane mounted but hidden (display:none) while
-  // inactive. A display:none -> block transition fires no resize event, so Leaflet never
-  // recomputes its tile grid until the pane becomes visible — nudge it once it does.
-  useEffect(() => {
-    if (map && active) map.invalidateSize()
-  }, [map, active])
 
   async function locate() {
     setLocating(true)
