@@ -93,6 +93,15 @@ describe('RestaurantDetail', () => {
     expect(link.href).toBe('https://maps.google.com/?q=1,1')
   })
 
+  it('shows "Google Maps" but hides "Go to" when only mapsUrl is known, with no address or coordinates', async () => {
+    const r = await createRestaurant({ name: 'X', mapsUrl: 'https://maps.google.com/?q=1,1' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
+    expect(link.href).toBe('https://maps.google.com/?q=1,1')
+    expect(screen.queryByRole('link', { name: /go to/i })).not.toBeInTheDocument()
+  })
+
   it('falls back "Google Maps" to a search URL built from the address when mapsUrl is absent', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, address: '1 Rue de Paris' })
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
