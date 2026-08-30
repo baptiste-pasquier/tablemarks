@@ -1,3 +1,4 @@
+import { isLocalDay } from '../../lib/dates'
 import { VERDICTS, type Restaurant, type Verdict, type Visit } from '../../types/models'
 
 /** Current export file-format version. Distinct from the IndexedDB database version. */
@@ -64,11 +65,25 @@ function isValidTimestamp(x: unknown): x is string {
 function isNumberOrNull(x: unknown): x is number | null {
   return x === null || (typeof x === 'number' && Number.isFinite(x))
 }
-function isStringOrNull(x: unknown): x is string | null {
-  return x === null || typeof x === 'string'
-}
 function isOptionalString(x: unknown): boolean {
   return x === undefined || typeof x === 'string'
+}
+/**
+ * `added` is an ISO instant when present (imports may omit it), mirroring `updated`'s check.
+ * `''` is also accepted as "absent" — `mappers.ts`'s sync-ingest path passes `added: ''` through
+ * unchanged as a deliberate, first-class local state (see `RestaurantDetail.tsx`), so the
+ * portability boundary must tolerate it too or round-tripping such a restaurant would fail.
+ */
+function isOptionalTimestamp(x: unknown): boolean {
+  return x === undefined || x === '' || isValidTimestamp(x)
+}
+/** `date` is always a local calendar day (`YYYY-MM-DD`), never a full instant. */
+function isLocalDayString(x: unknown): x is string {
+  return typeof x === 'string' && isLocalDay(x)
+}
+/** `latestVisitDate` is a local calendar day, or `null` for a visit-less restaurant. */
+function isLocalDayOrNull(x: unknown): x is string | null {
+  return x === null || isLocalDayString(x)
 }
 
 /** Coerce an unknown verdict to a known value rather than reject the file (mirrors remote ingest). */
@@ -84,8 +99,8 @@ function asRestaurant(x: unknown): Restaurant | null {
   if (!isNumberOrNull(r.lat) || !isNumberOrNull(r.lng)) return null
   if (typeof r.pending !== 'boolean') return null
   if (!isValidTimestamp(r.updated) || typeof r.deleted !== 'boolean') return null
-  if (!isOptionalString(r.address) || !isOptionalString(r.mapsUrl) || !isOptionalString(r.cuisine) || !isOptionalString(r.note) || !isOptionalString(r.added)) return null
-  if (!isStringOrNull(r.latestVisitDate)) return null
+  if (!isOptionalString(r.address) || !isOptionalString(r.mapsUrl) || !isOptionalString(r.cuisine) || !isOptionalString(r.note) || !isOptionalTimestamp(r.added)) return null
+  if (!isLocalDayOrNull(r.latestVisitDate)) return null
   if (typeof r.visitCount !== 'number') return null
   return {
     id: r.id,
@@ -112,7 +127,7 @@ function asVisit(x: unknown): Visit | null {
   if (typeof x !== 'object' || x === null) return null
   const v = x as Record<string, unknown>
   if (!isString(v.id) || v.id === '') return null
-  if (!isString(v.restaurantId) || !isString(v.date)) return null
+  if (!isString(v.restaurantId) || !isLocalDayString(v.date)) return null
   if (!isValidTimestamp(v.updated) || typeof v.deleted !== 'boolean') return null
   if (!isOptionalString(v.note)) return null
   return {

@@ -151,7 +151,32 @@ describe('parseImport', () => {
     expect(res.records.restaurants[0].added).toBeUndefined()
   })
 
-  it('preserves an empty-string added value on a restaurant', () => {
+  it('rejects a restaurant whose added is not a real ISO instant (R6)', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [
+          {
+            id: 'r1',
+            name: 'Chez Marcel',
+            lat: 48,
+            lng: 2,
+            cuisine: 'French',
+            pending: false,
+            latestVerdict: 'go_back',
+            latestVisitDate: '2026-05-01',
+            visitCount: 1,
+            updated: '2026-05-01T00:00:00Z',
+            added: 'not-a-timestamp',
+            deleted: false,
+          },
+        ],
+        visits: [],
+      },
+    }))
+    expect(res.ok).toBe(false)
+  })
+
+  it('accepts a restaurant whose added is the empty string, treating it like absent (mirrors mappers.ts sync-ingest pass-through)', () => {
     const res = parseImport(envelope({
       records: {
         restaurants: [
@@ -176,5 +201,25 @@ describe('parseImport', () => {
     expect(res.ok).toBe(true)
     if (!res.ok) return
     expect(res.records.restaurants[0].added).toBe('')
+  })
+
+  it('rejects a visit whose date is not YYYY-MM-DD shaped (AE4)', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [],
+        visits: [{ id: 'v1', restaurantId: 'r1', date: 'not-a-date', verdict: 'go_back', updated: '2026-05-01T00:00:00Z', deleted: false }],
+      },
+    }))
+    expect(res.ok).toBe(false)
+  })
+
+  it('rejects a restaurant whose latestVisitDate is a full instant instead of a local day (R6)', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [{ id: 'r1', name: 'X', lat: 1, lng: 2, pending: false, latestVerdict: null, latestVisitDate: '2026-05-01T00:00:00Z', visitCount: 0, updated: '2026-05-01T00:00:00Z', deleted: false }],
+        visits: [],
+      },
+    }))
+    expect(res.ok).toBe(false)
   })
 })

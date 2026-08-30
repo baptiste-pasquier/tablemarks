@@ -1,3 +1,4 @@
+import { normalizeInstant } from '../lib/dates'
 import { VERDICTS, type Restaurant, type Verdict, type Visit } from '../types/models'
 
 /** Coerce a remote string to a known Verdict, guarding against corrupt/drifted remote data. */
@@ -71,12 +72,12 @@ export function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
     mapsUrl: r.mapsUrl,
     cuisine: r.cuisine,
     note: r.note,
-    added: r.added,
+    added: r.added ? normalizeInstant(r.added) : r.added,
     pending: r.pending,
     latestVerdict: asVerdict(r.latestVerdict),
     latestVisitDate: r.latestVisitDate,
     visitCount: r.visitCount,
-    updated: r.syncedAt,
+    updated: r.syncedAt ? normalizeInstant(r.syncedAt) : r.syncedAt,
     deleted: r.deleted,
   }
 }
@@ -101,7 +102,7 @@ export function visitFromRemote(v: RemoteVisit): Visit {
     date: v.date,
     verdict: asVerdict(v.verdict) ?? 'once_was_enough',
     note: v.note,
-    updated: v.syncedAt,
+    updated: v.syncedAt ? normalizeInstant(v.syncedAt) : v.syncedAt,
     deleted: v.deleted,
   }
 }

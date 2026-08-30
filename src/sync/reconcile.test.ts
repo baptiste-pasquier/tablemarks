@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { pickWinner, reconcile } from './reconcile'
+import { normalizeInstant } from '../lib/dates'
+import { restaurantFromRemote, type RemoteRestaurant } from './mappers'
 import type { SyncFields } from '../types/models'
 
 function rec(id: string, updated: string, deleted = false): SyncFields {
@@ -21,6 +23,43 @@ describe('pickWinner', () => {
     const live = rec('a', '2026-01-01', false)
     const tomb = rec('a', '2026-02-01', true)
     expect(pickWinner(live, tomb)?.deleted).toBe(true)
+  })
+
+  it('never lets a zeroed remote updated ("") look newer than a real local edit', () => {
+    const local = rec('a', '2026-01-01T10:00:00.000Z')
+    const remote = rec('a', '')
+    expect(pickWinner(local, remote)).toBe(local)
+  })
+
+  it('a migration-reset empty remote syncedAt survives the mappers.ts boundary and still never looks newer than a real local edit', () => {
+    // Simulates the pocketbase migration that resets every row's syncedAt to '' on deploy:
+    // restaurantFromRemote must not throw on that empty string, and pickWinner must still
+    // treat the resulting '' updated as maximally stale rather than crashing or "winning".
+    const remoteRow: RemoteRestaurant = {
+      id: 'a',
+      name: 'Chez Marcel',
+      lat: 48.85,
+      lng: 2.35,
+      pending: false,
+      latestVerdict: null,
+      latestVisitDate: null,
+      visitCount: 0,
+      syncedAt: '',
+      deleted: false,
+    }
+    const local = rec('a', '2026-01-01T10:00:00.000Z')
+    const remote = restaurantFromRemote(remoteRow)
+    expect(remote.updated).toBe('')
+    expect(pickWinner(local, remote)).toBe(local)
+  })
+
+  it('a normalized remote updated compares correctly against a fresh local updated (KTD5)', () => {
+    // Simulates a PocketBase `date` field's space-separated shape being normalized at the
+    // mappers.ts boundary before it ever reaches pickWinner's string comparison.
+    const remoteRaw = '2026-02-01 10:00:00.000Z' // PocketBase-style, genuinely later than local
+    const local = rec('a', '2026-01-01T10:00:00.000Z')
+    const remote = rec('a', normalizeInstant(remoteRaw))
+    expect(pickWinner(local, remote)).toBe(remote)
   })
 })
 

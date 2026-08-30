@@ -12,6 +12,4 @@ export function newId(): string {
   return out
 }
 
-export function now(): string {
-  return new Date().toISOString()
-}
+export { now } from '../lib/dates'
