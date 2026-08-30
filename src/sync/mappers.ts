@@ -77,7 +77,7 @@ export function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
     latestVerdict: asVerdict(r.latestVerdict),
     latestVisitDate: r.latestVisitDate,
     visitCount: r.visitCount,
-    updated: normalizeInstant(r.syncedAt),
+    updated: r.syncedAt ? normalizeInstant(r.syncedAt) : r.syncedAt,
     deleted: r.deleted,
   }
 }
@@ -102,7 +102,7 @@ export function visitFromRemote(v: RemoteVisit): Visit {
     date: v.date,
     verdict: asVerdict(v.verdict) ?? 'once_was_enough',
     note: v.note,
-    updated: normalizeInstant(v.syncedAt),
+    updated: v.syncedAt ? normalizeInstant(v.syncedAt) : v.syncedAt,
     deleted: v.deleted,
   }
 }

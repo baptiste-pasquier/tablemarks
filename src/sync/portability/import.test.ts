@@ -166,7 +166,7 @@ describe('parseImport', () => {
             latestVisitDate: '2026-05-01',
             visitCount: 1,
             updated: '2026-05-01T00:00:00Z',
-            added: '',
+            added: 'not-a-timestamp',
             deleted: false,
           },
         ],
@@ -174,6 +174,33 @@ describe('parseImport', () => {
       },
     }))
     expect(res.ok).toBe(false)
+  })
+
+  it('accepts a restaurant whose added is the empty string, treating it like absent (mirrors mappers.ts sync-ingest pass-through)', () => {
+    const res = parseImport(envelope({
+      records: {
+        restaurants: [
+          {
+            id: 'r1',
+            name: 'Chez Marcel',
+            lat: 48,
+            lng: 2,
+            cuisine: 'French',
+            pending: false,
+            latestVerdict: 'go_back',
+            latestVisitDate: '2026-05-01',
+            visitCount: 1,
+            updated: '2026-05-01T00:00:00Z',
+            added: '',
+            deleted: false,
+          },
+        ],
+        visits: [],
+      },
+    }))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.records.restaurants[0].added).toBe('')
   })
 
   it('rejects a visit whose date is not YYYY-MM-DD shaped (AE4)', () => {

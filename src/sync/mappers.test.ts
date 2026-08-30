@@ -90,4 +90,18 @@ describe('mappers', () => {
     const back = visitFromRemote(remote)
     expect(back.updated).toBe('2026-02-01T10:00:00.000Z')
   })
+
+  it('does not throw on a migration-reset empty restaurant syncedAt, passing it through unchanged', () => {
+    const remote = { ...restaurantToRemote(restaurant, 'user1'), syncedAt: '' }
+    expect(() => restaurantFromRemote(remote)).not.toThrow()
+    const back = restaurantFromRemote(remote)
+    expect(back.updated).toBe('')
+  })
+
+  it('does not throw on a migration-reset empty visit syncedAt, passing it through unchanged', () => {
+    const remote = { ...visitToRemote(visit, 'user1'), syncedAt: '' }
+    expect(() => visitFromRemote(remote)).not.toThrow()
+    const back = visitFromRemote(remote)
+    expect(back.updated).toBe('')
+  })
 })

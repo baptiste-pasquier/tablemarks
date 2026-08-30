@@ -68,9 +68,14 @@ function isNumberOrNull(x: unknown): x is number | null {
 function isOptionalString(x: unknown): boolean {
   return x === undefined || typeof x === 'string'
 }
-/** `added` is an ISO instant when present (imports may omit it), mirroring `updated`'s check. */
+/**
+ * `added` is an ISO instant when present (imports may omit it), mirroring `updated`'s check.
+ * `''` is also accepted as "absent" — `mappers.ts`'s sync-ingest path passes `added: ''` through
+ * unchanged as a deliberate, first-class local state (see `RestaurantDetail.tsx`), so the
+ * portability boundary must tolerate it too or round-tripping such a restaurant would fail.
+ */
 function isOptionalTimestamp(x: unknown): boolean {
-  return x === undefined || isValidTimestamp(x)
+  return x === undefined || x === '' || isValidTimestamp(x)
 }
 /** `date` is always a local calendar day (`YYYY-MM-DD`), never a full instant. */
 function isLocalDayString(x: unknown): x is string {
