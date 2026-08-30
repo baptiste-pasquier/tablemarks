@@ -60,6 +60,11 @@ export interface Restaurant extends SyncFields {
   /** Stored when given; filtering by it is deferred to the faceting layer. */
   cuisine?: string
   note?: string
+  /**
+   * ISO timestamp stamped once at creation, never bumped again. Absent on any restaurant created
+   * before this field existed — never backfilled or approximated (R3).
+   */
+  added?: string
   /** Provisional record awaiting coordinate resolution (short link / offline). */
   pending: boolean
   /** Denormalized rollup, recomputed locally from visits — not the sync source of truth. */

@@ -23,7 +23,7 @@ In the admin UI: **Collections → users → Settings → OAuth2 → enable Goog
 
 Both collections are per-user (every record relates to an `owner`; collection rules scope reads/writes to `owner = @request.auth.id`).
 
-**restaurants** — `name`, `lat`, `lng`, `address`, `mapsUrl`, `cuisine`, `note`, `pending`, `latestVerdict`, `latestVisitDate`, `visitCount`, `syncedAt`, `deleted`.
+**restaurants** — `name`, `lat`, `lng`, `address`, `mapsUrl`, `cuisine`, `note`, `added`, `pending`, `latestVerdict`, `latestVisitDate`, `visitCount`, `syncedAt`, `deleted`.
 
 **visits** — `restaurant` (relation), `date`, `verdict`, `note`, `syncedAt`, `deleted`; indexed on `restaurant`.
 

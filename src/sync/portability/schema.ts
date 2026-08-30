@@ -84,7 +84,7 @@ function asRestaurant(x: unknown): Restaurant | null {
   if (!isNumberOrNull(r.lat) || !isNumberOrNull(r.lng)) return null
   if (typeof r.pending !== 'boolean') return null
   if (!isValidTimestamp(r.updated) || typeof r.deleted !== 'boolean') return null
-  if (!isOptionalString(r.address) || !isOptionalString(r.mapsUrl) || !isOptionalString(r.cuisine) || !isOptionalString(r.note)) return null
+  if (!isOptionalString(r.address) || !isOptionalString(r.mapsUrl) || !isOptionalString(r.cuisine) || !isOptionalString(r.note) || !isOptionalString(r.added)) return null
   if (!isStringOrNull(r.latestVisitDate)) return null
   if (typeof r.visitCount !== 'number') return null
   return {
@@ -96,6 +96,7 @@ function asRestaurant(x: unknown): Restaurant | null {
     mapsUrl: r.mapsUrl as string | undefined,
     cuisine: r.cuisine as string | undefined,
     note: r.note as string | undefined,
+    added: r.added as string | undefined,
     pending: r.pending,
     // `== null` catches both null and an absent (undefined) field — a visit-less place must
     // stay uncategorized, not get a fabricated default verdict.

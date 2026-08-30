@@ -25,6 +25,12 @@ describe('restaurant repository', () => {
     expect(await getRestaurant(r.id)).toEqual(r)
   })
 
+  it('stamps added with a valid ISO timestamp on create (R3)', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 48.85, lng: 2.35 })
+    expect(r.added).not.toBe('')
+    expect(Number.isNaN(Date.parse(r.added ?? ''))).toBe(false)
+  })
+
   it('bumps updated on edit', async () => {
     const r = await createRestaurant({ name: 'Old', lat: 1, lng: 1 })
     const after = await updateRestaurant(r.id, { name: 'New', cuisine: 'French' })

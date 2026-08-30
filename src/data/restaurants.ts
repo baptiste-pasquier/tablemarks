@@ -36,6 +36,7 @@ export async function createRestaurant(input: RestaurantInput): Promise<Restaura
     latestVisitDate: null,
     visitCount: 0,
     updated: now(),
+    added: now(),
     deleted: false,
   }
   const db = await getDB()

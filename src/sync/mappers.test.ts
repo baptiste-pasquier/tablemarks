@@ -44,6 +44,21 @@ describe('mappers', () => {
     expect(back).toEqual(local)
   })
 
+  it('round-trips the added field when present', () => {
+    const withAdded: Restaurant = { ...restaurant, added: '2026-01-15T09:00:00.000Z' }
+    const remote = restaurantToRemote(withAdded, 'user1')
+    expect(remote.added).toBe('2026-01-15T09:00:00.000Z')
+    const back = restaurantFromRemote(remote)
+    expect(back.added).toBe('2026-01-15T09:00:00.000Z')
+  })
+
+  it('round-trips the added field when absent', () => {
+    const remote = restaurantToRemote(restaurant, 'user1')
+    expect(remote.added).toBeUndefined()
+    const back = restaurantFromRemote(remote)
+    expect(back.added).toBeUndefined()
+  })
+
   it('maps restaurantId<->restaurant relation for visits', () => {
     const remote = visitToRemote(visit, 'user1')
     expect(remote.restaurant).toBe(visit.restaurantId)
