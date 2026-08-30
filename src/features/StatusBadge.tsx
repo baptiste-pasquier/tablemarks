@@ -28,7 +28,7 @@ export function VerdictBadge({ verdict }: { verdict: Verdict }) {
 
 /**
  * Fused status+verdict badge (R8, R9, KTD3): one element in place of a separate status pill and
- * rollup line. Built from the same classification `rollupLabel` uses, so it never carries a
+ * rollup line. Built from the same classification `badgeState` computes, so it never carries a
  * "· N visits" suffix (AE3) — it just renders that classification without the count.
  */
 export function StatusBadge({

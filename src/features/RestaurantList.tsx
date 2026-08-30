@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
-import { colorForCuisine, emojiForCuisine } from './facets/cuisines'
+import { colorForCuisine, cuisineDisplayName, emojiForCuisine } from './facets/cuisines'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
 import { distanceLabelFor } from '../lib/geo'
@@ -78,7 +78,7 @@ export function RestaurantList({
                   style={{ background: cuisineColor, color: badgeTextColor }}
                 >
                   <span aria-hidden="true">{emojiForCuisine(r.cuisine)}</span>
-                  {r.cuisine?.trim() || t('common.uncategorized')}
+                  {cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
