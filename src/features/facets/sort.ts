@@ -1,16 +1,14 @@
 import { haversineMeters } from '../../lib/geo'
 import type { GeoPoint } from '../../lib/geolocate'
 import type { Restaurant } from '../../types/models'
+import type { SortCriterion, DistanceDirection, DateDirection } from '../../lib/sortPreference'
 
-/** Which rule orders the (already facet-filtered, R11) restaurant list. */
-export type SortCriterion = 'distance' | 'date'
+export type { SortCriterion, DistanceDirection, DateDirection }
 
-/** Direction under the Distance rule (R5). */
-export type DistanceDirection = 'nearest-first' | 'farthest-first'
-
-/** Direction under the Date rule (R7), and within the Distance rule's trailing block (R6). */
-export type DateDirection = 'most-recent-first' | 'oldest-first'
-
+/**
+ * Direction for the active criterion. Reuses `sortPreference`'s vocabulary (KTD1) so the
+ * persisted shape, this comparator, and the sort bar's rendering never re-derive their own.
+ */
 export type SortDirection = DistanceDirection | DateDirection
 
 /** True once a restaurant's coordinates have resolved — false for provisional records (R6). */
@@ -70,12 +68,12 @@ export function sortRestaurants(
     const sortedByDistance = stableSortByKey(
       withCoords,
       (r) => haversineMeters(position.lat, position.lng, r.lat, r.lng),
-      direction === 'nearest-first',
+      direction === 'nearest',
     )
     // R6 + resolved decision: the trailing block is always most-recent-first internally,
     // independent of the active Distance direction — only the block above it flips.
     const trailing = sortByDateKey(withoutCoords, false)
     return [...sortedByDistance, ...trailing]
   }
-  return sortByDateKey(items, direction === 'oldest-first')
+  return sortByDateKey(items, direction === 'oldest')
 }

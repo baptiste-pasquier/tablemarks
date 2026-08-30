@@ -29,7 +29,7 @@ describe('sortRestaurants — distance', () => {
     const far = r({ id: 'far', lat: 0, lng: 2 })
     const near = r({ id: 'near', lat: 0, lng: 0.1 })
     const mid = r({ id: 'mid', lat: 0, lng: 1 })
-    const out = sortRestaurants([far, near, mid], 'distance', 'nearest-first', HERE)
+    const out = sortRestaurants([far, near, mid], 'distance', 'nearest', HERE)
     expect(ids(out)).toEqual(['near', 'mid', 'far'])
   })
 
@@ -37,7 +37,7 @@ describe('sortRestaurants — distance', () => {
     const far = r({ id: 'far', lat: 0, lng: 2 })
     const near = r({ id: 'near', lat: 0, lng: 0.1 })
     const mid = r({ id: 'mid', lat: 0, lng: 1 })
-    const out = sortRestaurants([far, near, mid], 'distance', 'farthest-first', HERE)
+    const out = sortRestaurants([far, near, mid], 'distance', 'farthest', HERE)
     expect(ids(out)).toEqual(['far', 'mid', 'near'])
   })
 
@@ -46,10 +46,10 @@ describe('sortRestaurants — distance', () => {
     const far = r({ id: 'far', lat: 0, lng: 2 })
     const noCoords = r({ id: 'no-coords', lat: null, lng: null })
 
-    const nearestFirst = sortRestaurants([noCoords, far, near], 'distance', 'nearest-first', HERE)
+    const nearestFirst = sortRestaurants([noCoords, far, near], 'distance', 'nearest', HERE)
     expect(ids(nearestFirst)).toEqual(['near', 'far', 'no-coords'])
 
-    const farthestFirst = sortRestaurants([noCoords, far, near], 'distance', 'farthest-first', HERE)
+    const farthestFirst = sortRestaurants([noCoords, far, near], 'distance', 'farthest', HERE)
     expect(ids(farthestFirst)).toEqual(['far', 'near', 'no-coords'])
   })
 
@@ -58,11 +58,11 @@ describe('sortRestaurants — distance', () => {
     const older = r({ id: 'older', lat: null, lng: null, added: '2020-01-01' })
     const newer = r({ id: 'newer', lat: null, lng: null, added: '2023-01-01' })
 
-    const nearestFirst = sortRestaurants([older, near, newer], 'distance', 'nearest-first', HERE)
+    const nearestFirst = sortRestaurants([older, near, newer], 'distance', 'nearest', HERE)
     expect(ids(nearestFirst)).toEqual(['near', 'newer', 'older'])
 
     // Reversing the Distance direction must NOT flip the trailing block's internal order.
-    const farthestFirst = sortRestaurants([older, near, newer], 'distance', 'farthest-first', HERE)
+    const farthestFirst = sortRestaurants([older, near, newer], 'distance', 'farthest', HERE)
     expect(ids(farthestFirst)).toEqual(['near', 'newer', 'older'])
   })
 
@@ -70,10 +70,10 @@ describe('sortRestaurants — distance', () => {
     const a = r({ id: 'a', lat: 0, lng: 0.1, added: '2020-01-01' })
     const b = r({ id: 'b', lat: 0, lng: 2, added: '2023-01-01' })
 
-    const withNull = sortRestaurants([a, b], 'distance', 'nearest-first', null)
+    const withNull = sortRestaurants([a, b], 'distance', 'nearest', null)
     expect(ids(withNull)).toEqual(['b', 'a']) // most-recent-first by added, not by distance
 
-    const withUndefined = sortRestaurants([a, b], 'distance', 'nearest-first', undefined)
+    const withUndefined = sortRestaurants([a, b], 'distance', 'nearest', undefined)
     expect(ids(withUndefined)).toEqual(['b', 'a'])
   })
 })
@@ -88,7 +88,7 @@ describe('sortRestaurants — date', () => {
       latestVisitDate: '2024-07-01',
       latestVerdict: 'never_again',
     })
-    const out = sortRestaurants([neverVisited, visited], 'date', 'most-recent-first', undefined)
+    const out = sortRestaurants([neverVisited, visited], 'date', 'newest', undefined)
     expect(ids(out)).toEqual(['visited', 'never-visited'])
   })
 
@@ -96,10 +96,10 @@ describe('sortRestaurants — date', () => {
     const dated = r({ id: 'dated', added: '2024-01-01' })
     const undated = r({ id: 'undated' }) // no `added`, never visited
 
-    const mostRecentFirst = sortRestaurants([undated, dated], 'date', 'most-recent-first', undefined)
+    const mostRecentFirst = sortRestaurants([undated, dated], 'date', 'newest', undefined)
     expect(ids(mostRecentFirst)).toEqual(['dated', 'undated'])
 
-    const oldestFirst = sortRestaurants([undated, dated], 'date', 'oldest-first', undefined)
+    const oldestFirst = sortRestaurants([undated, dated], 'date', 'oldest', undefined)
     expect(ids(oldestFirst)).toEqual(['undated', 'dated'])
   })
 
@@ -107,22 +107,22 @@ describe('sortRestaurants — date', () => {
     const first = r({ id: 'first' })
     const second = r({ id: 'second' })
 
-    const mostRecentFirst = sortRestaurants([first, second], 'date', 'most-recent-first', undefined)
+    const mostRecentFirst = sortRestaurants([first, second], 'date', 'newest', undefined)
     expect(ids(mostRecentFirst)).toEqual(['first', 'second'])
 
-    const oldestFirst = sortRestaurants([first, second], 'date', 'oldest-first', undefined)
+    const oldestFirst = sortRestaurants([first, second], 'date', 'oldest', undefined)
     expect(ids(oldestFirst)).toEqual(['first', 'second'])
 
     // Reversing twice returns them to where they started.
-    const backToMostRecentFirst = sortRestaurants([first, second], 'date', 'most-recent-first', undefined)
+    const backToMostRecentFirst = sortRestaurants([first, second], 'date', 'newest', undefined)
     expect(ids(backToMostRecentFirst)).toEqual(['first', 'second'])
   })
 })
 
 describe('sortRestaurants — misc', () => {
   it('returns an empty array for empty input, no error', () => {
-    expect(sortRestaurants([], 'distance', 'nearest-first', HERE)).toEqual([])
-    expect(sortRestaurants([], 'date', 'most-recent-first', undefined)).toEqual([])
+    expect(sortRestaurants([], 'distance', 'nearest', HERE)).toEqual([])
+    expect(sortRestaurants([], 'date', 'newest', undefined)).toEqual([])
   })
 
   it('does not mutate the input array, and is idempotent across repeated calls', () => {
@@ -131,11 +131,11 @@ describe('sortRestaurants — misc', () => {
     const input = [a, b]
     const snapshot = [...input]
 
-    const first = sortRestaurants(input, 'distance', 'nearest-first', HERE)
+    const first = sortRestaurants(input, 'distance', 'nearest', HERE)
     expect(input).toEqual(snapshot) // input untouched
     expect(ids(input)).toEqual(['a', 'b']) // original order preserved
 
-    const second = sortRestaurants(input, 'distance', 'nearest-first', HERE)
+    const second = sortRestaurants(input, 'distance', 'nearest', HERE)
     expect(ids(second)).toEqual(ids(first))
   })
 })
