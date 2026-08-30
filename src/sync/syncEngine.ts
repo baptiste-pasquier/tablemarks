@@ -1,7 +1,7 @@
 import type { Restaurant, Visit } from '../types/models'
 import {
   allRestaurantsForSync,
-  putRestaurantRaw,
+  mutateRestaurant,
   markRestaurantSynced,
 } from '../data/restaurants'
 import { allVisitsForSync, putVisitRaw, markVisitSynced } from '../data/visits'
@@ -45,16 +45,34 @@ export interface SyncOutcome {
 export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
   const [localR, remoteR] = await Promise.all([allRestaurantsForSync(), remote.listRestaurants()])
   const r = reconcile(localR, remoteR)
+  // The local snapshot `reconcile` actually compared against, per id — used below to detect a
+  // local edit that raced this pull between the snapshot read and the write.
+  const localSnapshotById = new Map(localR.map((rec) => [rec.id, rec]))
   // Recompute the rollup for every restaurant whose row OR visits we wrote. A pulled row wins LWW
   // carrying the peer's serialized rollup; the rollup is a local-derived cache, never trusted from
   // outside, so re-derive it from this device's visits. Keying only on written visits would leave a
   // pulled row with a stale foreign rollup (the same bug fixed on the import path).
   const affected = new Set<string>()
   for (const rec of r.toWriteLocal) {
+    const snapshotUpdated = localSnapshotById.get(rec.id)?.updated
+    let applied = false
+    // Single-transaction conditional write (mutateRestaurant): only apply the pulled row if the
+    // record's `updated` still matches the snapshot `reconcile` read it against — otherwise a
+    // local edit landed between the reconcile snapshot and this write, and applying the pull here
+    // would silently clobber that newer local edit. No-op in that case (return unchanged); the
+    // local edit's own emitLocalChange() will trigger the next sync cycle to re-reconcile.
     // Stamp synced in the same write as the pull — markRestaurantSynced afterward would be a
     // redundant read-modify-write and a second store-change emit for a record already in hand.
-    await putRestaurantRaw({ ...rec, syncedUpdated: rec.updated })
-    affected.add(rec.id)
+    await mutateRestaurant(
+      rec.id,
+      (current) => {
+        if (current?.updated !== snapshotUpdated) return undefined
+        applied = true
+        return { ...rec, syncedUpdated: rec.updated }
+      },
+      'store',
+    )
+    if (applied) affected.add(rec.id)
   }
   for (const rec of r.toPush) {
     await remote.pushRestaurant(rec)

@@ -5,12 +5,14 @@ import { getSyncStatus } from './syncStatus'
 import { pb } from './pocketbase'
 import {
   createRestaurant,
+  updateRestaurant,
   getRestaurant,
   allRestaurants,
   allRestaurantsForSync,
 } from '../data/restaurants'
 import { createVisit } from '../data/visits'
 import { closeDB } from '../data/db'
+import { onLocalChange, onStoreChange } from '../data/events'
 import type { Restaurant, Visit } from '../types/models'
 
 class FakeRemote implements RemoteStore {
@@ -218,6 +220,63 @@ describe('fullSync', () => {
     const recs = await allRestaurantsForSync()
     const synced = recs.filter((r) => r.syncedUpdated === r.updated)
     expect(synced.length).toBe(1) // exactly one of the two got marked before the failure
+  })
+
+  it('U2: a local edit landing between the reconcile snapshot and the pull-write is preserved, not clobbered', async () => {
+    const local = await createRestaurant({ id: 'r1', name: 'Original', lat: 1, lng: 1 })
+
+    // A remote whose listRestaurants() blocks indefinitely until the test releases it — this
+    // removes any dependency on real elapsed time (a fixed delay was flaky under load: whether
+    // it was "enough" time varied run to run). allRestaurantsForSync()'s own (ungated) read is
+    // free to complete on its own while the gate holds fullSync's Promise.all open.
+    let releaseRemote: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      releaseRemote = resolve
+    })
+    class GatedRemote extends FakeRemote {
+      async listRestaurants(): Promise<Restaurant[]> {
+        await gate
+        return super.listRestaurants()
+      }
+    }
+    const remote = new GatedRemote()
+    remote.restaurants.push(
+      remoteRestaurant({ id: 'r1', name: 'Remote pulled', updated: '2999-01-01T00:00:00Z' }),
+    )
+
+    const syncPromise = fullSync(remote)
+    // Flush pending IndexedDB task-queue callbacks so the (ungated) local snapshot read settles
+    // before the edit below — the gate above guarantees fullSync's write loop cannot possibly
+    // run before we release it, regardless of how long this flush takes.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const edited = await updateRestaurant(local.id, { name: 'Edited during sync' })
+    releaseRemote()
+    await syncPromise
+
+    const after = await getRestaurant('r1')
+    expect(after?.name).toBe('Edited during sync') // pull did NOT clobber the newer local edit
+    expect(after?.updated).toBe(edited.updated)
+    expect(after?.syncedUpdated).not.toBe('2999-01-01T00:00:00Z') // not falsely marked synced to the pull
+  })
+
+  it('U2: the pulled-restaurant write emits emitStoreChange(), not emitLocalChange()', async () => {
+    const remote = new FakeRemote()
+    remote.restaurants.push(remoteRestaurant({ id: 'remoteonly0001', updated: '2026-01-01T00:00:00Z' }))
+    const localFired = vi.fn()
+    const storeFired = vi.fn()
+    const offLocal = onLocalChange(localFired)
+    const offStore = onStoreChange(storeFired)
+
+    try {
+      await fullSync(remote)
+    } finally {
+      offLocal()
+      offStore()
+    }
+
+    expect(localFired).not.toHaveBeenCalled()
+    expect(storeFired).toHaveBeenCalled()
   })
 })
 

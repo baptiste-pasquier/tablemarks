@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect } from 'vitest'
 import { freshDB } from '../test/idb'
 import { rollupOf, recomputeRollup } from './rollup'
-import { createRestaurant, getRestaurant } from './restaurants'
+import { createRestaurant, getRestaurant, updateRestaurant } from './restaurants'
 import { createVisit, removeVisit } from './visits'
 import type { Visit } from '../types/models'
 
@@ -50,5 +50,21 @@ describe('recomputeRollup (persisted)', () => {
     const after = await getRestaurant(r.id)
     expect(after?.visitCount).toBe(0)
     expect(after?.latestVerdict).toBeNull()
+  })
+
+  it('leaves `updated` unchanged (U2 invariant) even though it writes through the shared mutateRestaurant helper', async () => {
+    // recomputeRollup is a local-derived cache, never the sync source of truth — bumping `updated`
+    // here would make every device's background rollup recompute look like a new local edit and
+    // break the last-write-wins sync comparison. Contrast with updateRestaurant, a real local edit,
+    // which must still bump it through the same shared helper.
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    await createVisit({ restaurantId: r.id, date: '2024-01-01', verdict: 'go_back' })
+
+    const rolled = await recomputeRollup(r.id)
+    expect(rolled?.visitCount).toBe(1)
+    expect(rolled?.updated).toBe(r.updated) // unchanged
+
+    const edited = await updateRestaurant(r.id, { cuisine: 'French' })
+    expect(edited.updated >= r.updated).toBe(true) // still bumps (or ties within the same ms), unlike the rollup write above
   })
 })
