@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
 import { colorForCuisine, emojiForCuisine } from './facets/cuisines'
-import type { Restaurant } from '../types/models'
+import { translateVisitsCount, type Restaurant } from '../types/models'
 
 /** Cream base the cuisine tint mixes into, matching the shipped "Carnet culinaire" page background. */
 const CARD_TINT_BASE = '#fdfaf6'
@@ -78,11 +78,7 @@ export function RestaurantList({
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <StatusBadge restaurant={r} />
-                {visited && (
-                  <span className="text-xs text-gray-600">
-                    {t('common.visitsCount', { count: r.visitCount })}
-                  </span>
-                )}
+                {visited && <span className="text-xs text-gray-600">{translateVisitsCount(r.visitCount)}</span>}
               </div>
             </button>
           </li>

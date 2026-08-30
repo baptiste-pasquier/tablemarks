@@ -15,7 +15,7 @@ const VARIANT_STYLES: Record<ModalHeaderVariant, { wrapper: string; title: strin
  * Shared title-bar chrome for every Modal-hosted panel (KTD3): a title plus a close button.
  * Purely presentational — Escape-close, backdrop-click, and focus-trap semantics all live in
  * `Modal.tsx` itself, so this component is safe to render even without a surrounding `Modal`
- * (e.g. `PortabilityPanel` nested in a future Settings panel).
+ * (e.g. `PortabilityPanel` nested in `SettingsPanel`).
  */
 export function ModalHeader({
   title,

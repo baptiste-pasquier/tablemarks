@@ -83,6 +83,16 @@ export function translateStatus(status: RestaurantStatus): string {
   return i18n.t(`statuses.${status}`)
 }
 
+/** Locale-aware "resolving…" label shown while a pending restaurant's coordinates are unresolved. */
+export function translatePending(): string {
+  return i18n.t('statuses.resolving')
+}
+
+/** Locale-aware "N visits" label, pluralized via i18next's `_one`/`_other` keys. */
+export function translateVisitsCount(count: number): string {
+  return i18n.t('common.visitsCount', { count })
+}
+
 /** Status is derived from visit count — never stored. */
 export function statusOf(r: Pick<Restaurant, 'visitCount'>): RestaurantStatus {
   return r.visitCount > 0 ? 'visited' : 'to_try'

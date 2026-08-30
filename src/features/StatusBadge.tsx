@@ -1,6 +1,5 @@
-import i18n from '../i18n/config'
 import { badgeState } from './display'
-import { translateStatus, translateVerdict, VERDICT_ICON, type Restaurant, type Verdict } from '../types/models'
+import { translatePending, translateStatus, translateVerdict, VERDICT_ICON, type Restaurant, type Verdict } from '../types/models'
 
 const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
   go_back: 'bg-verdict-go-back',
@@ -38,7 +37,7 @@ export function StatusBadge({
   restaurant: Pick<Restaurant, 'pending' | 'visitCount' | 'latestVerdict'>
 }) {
   const state = badgeState(restaurant)
-  if (state.kind === 'pending') return <Badge text={i18n.t('statuses.resolving')} className="bg-verdict-neutral" />
+  if (state.kind === 'pending') return <Badge text={translatePending()} className="bg-verdict-neutral" />
   if (state.kind === 'to_try') return <Badge text={translateStatus('to_try')} className="bg-verdict-neutral" />
   if (state.verdict) return <VerdictBadge verdict={state.verdict} />
   return <Badge text={translateStatus('visited')} className="bg-verdict-neutral" />
