@@ -221,6 +221,79 @@ describe('RestaurantDetail', () => {
     expect(screen.queryByRole('link', { name: /go to/i })).not.toBeInTheDocument()
   })
 
+  it('shows the distance from the current position when both it and the restaurant coordinates are known', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 48.8566, lng: 2.3522 })
+    render(
+      <RestaurantDetail
+        restaurantId={r.id}
+        onClose={vi.fn()}
+        currentPosition={{ lat: 48.8606, lng: 2.3376 }}
+      />,
+    )
+
+    // Same formatting the main list uses for identical inputs (formatDistance/haversineMeters).
+    expect(await screen.findByText('1.2 km')).toBeInTheDocument()
+  })
+
+  it('renders no distance when there is no current position', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 48.8566, lng: 2.3522 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    expect(screen.queryByText(/\d+(\.\d+)? (m|km)$/)).not.toBeInTheDocument()
+  })
+
+  it('renders no distance for a pending restaurant with unresolved coordinates, even with a current position', async () => {
+    const r = await createRestaurant({ name: 'X', pending: true })
+    render(
+      <RestaurantDetail
+        restaurantId={r.id}
+        onClose={vi.fn()}
+        currentPosition={{ lat: 48.8606, lng: 2.3376 }}
+      />,
+    )
+
+    await screen.findByText('X')
+    expect(screen.queryByText(/\d+(\.\d+)? (m|km)$/)).not.toBeInTheDocument()
+  })
+
+  it('shows the added date, sliced to YYYY-MM-DD, for a normally-created restaurant', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    const datePart = r.added!.slice(0, 10)
+    expect(screen.getByText(new RegExp(datePart))).toBeInTheDocument()
+  })
+
+  it('renders no added-date line for a pre-existing restaurant with no recorded added field', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    // Simulate a restaurant that existed before the `added` field did — strip it entirely rather
+    // than leaving it undefined-in-name-only, mirroring a genuinely pre-existing local record.
+    await mutateRestaurant(r.id, (existing) => {
+      if (!existing) return existing
+      const { added: _added, ...rest } = existing
+      return rest as typeof existing
+    })
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    expect(screen.queryByText(new RegExp(r.added!.slice(0, 10)))).not.toBeInTheDocument()
+  })
+
+  it('renders no added-date line for a restaurant backfilled with an empty-string added value', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    const originalDatePart = r.added!.slice(0, 10)
+    await mutateRestaurant(r.id, (existing) => (existing ? { ...existing, added: '' } : existing))
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    await screen.findByText('X')
+    expect(screen.queryByText(new RegExp(originalDatePart))).not.toBeInTheDocument()
+  })
+
   it('treats an invalid mapsUrl as absent, falling back to the synthesized search link', async () => {
     const r = await createRestaurant({
       name: 'X',

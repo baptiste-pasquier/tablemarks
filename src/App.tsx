@@ -225,7 +225,11 @@ export default function App() {
       )}
 
       {selectedId && (
-        <RestaurantDetail restaurantId={selectedId} onClose={() => setSelectedId(null)} />
+        <RestaurantDetail
+          restaurantId={selectedId}
+          onClose={() => setSelectedId(null)}
+          currentPosition={currentPosition}
+        />
       )}
 
       <ReloadPrompt />

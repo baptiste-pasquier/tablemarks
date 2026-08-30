@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MapPin, Navigation } from 'lucide-react'
+import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
@@ -10,6 +10,8 @@ import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { StatusBadge, VerdictBadge } from '../StatusBadge'
 import { VERDICTS, translateVerdict, type Verdict } from '../../types/models'
+import type { GeoPoint } from '../../lib/geolocate'
+import { formatDistance, haversineMeters } from '../../lib/geo'
 import {
   isHttpUrl,
   resolveDestination,
@@ -38,9 +40,11 @@ function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; di
 export function RestaurantDetail({
   restaurantId,
   onClose,
+  currentPosition,
 }: {
   restaurantId: string
   onClose: () => void
+  currentPosition?: GeoPoint | null
 }) {
   const { t } = useTranslation()
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
@@ -69,6 +73,13 @@ export function RestaurantDetail({
     const desiredNoteKey = `${restaurant.id}:${restaurant.note ?? ''}`
     if (desiredNoteKey !== noteKey) setNoteKey(desiredNoteKey)
   }
+
+  const distanceLabel =
+    currentPosition && restaurant.lat !== null && restaurant.lng !== null
+      ? formatDistance(
+          haversineMeters(currentPosition.lat, currentPosition.lng, restaurant.lat, restaurant.lng),
+        )
+      : null
 
   const destination = resolveDestination(restaurant)
   const googleMapsHref = isHttpUrl(restaurant.mapsUrl)
@@ -112,6 +123,23 @@ export function RestaurantDetail({
         <StatusBadge restaurant={restaurant} />
         {restaurant.address && <span>{restaurant.address}</span>}
       </div>
+
+      {(distanceLabel || restaurant.added) && (
+        <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
+          {distanceLabel && (
+            <span className="flex items-center gap-1">
+              <Navigation size={14} aria-hidden="true" />
+              {distanceLabel}
+            </span>
+          )}
+          {restaurant.added && (
+            <span className="flex items-center gap-1">
+              <Calendar size={14} aria-hidden="true" />
+              {t('visitDetail.addedOn', { date: restaurant.added.slice(0, 10) })}
+            </span>
+          )}
+        </div>
+      )}
 
       {(googleMapsHref || goToHref) && (
         <div className="mt-1 flex items-center gap-3 text-xs">

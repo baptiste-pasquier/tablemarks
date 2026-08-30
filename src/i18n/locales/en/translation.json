@@ -64,7 +64,8 @@
     "addPastVisit": "Add a past visit",
     "visitDateAria": "Visit date",
     "googleMaps": "Google Maps",
-    "goTo": "Go to"
+    "goTo": "Go to",
+    "addedOn": "Added {{date}}"
   },
   "filters": {
     "title": "Filter",
