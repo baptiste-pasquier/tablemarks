@@ -116,6 +116,11 @@ function currentPositionIcon(label: string): L.DivIcon {
 
 const DEFAULT_CENTER: [number, number] = [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]
 
+/** Centers `map` on `point` at its current zoom — shared by `Recenter`'s two tiers and `locate()`. */
+function centerOn(map: L.Map, point: GeoPoint) {
+  map.setView([point.lat, point.lng], map.getZoom())
+}
+
 /**
  * MapContainer's center/zoom apply only on initial render. This component performs the one-time
  * initial centering decision (R1-R4), via two independent once-only tiers rather than a single
@@ -149,7 +154,7 @@ function Recenter({
 
   useEffect(() => {
     if (currentPosition && !positionCentered.current) {
-      map.setView([currentPosition.lat, currentPosition.lng], map.getZoom())
+      centerOn(map, currentPosition)
       positionCentered.current = true
     }
   }, [currentPosition, map])
@@ -157,10 +162,10 @@ function Recenter({
   useEffect(() => {
     if (positionCentered.current || fallbackCentered.current) return
     if (fallbackCenter) {
-      map.setView([fallbackCenter.lat, fallbackCenter.lng], map.getZoom())
+      centerOn(map, fallbackCenter)
       fallbackCentered.current = true
     } else if (markers.length > 0) {
-      map.setView([markers[0].lat, markers[0].lng], map.getZoom())
+      centerOn(map, markers[0])
       fallbackCentered.current = true
     }
   }, [fallbackCenter, markers, map])
@@ -318,7 +323,7 @@ export function MapView({
     // Null-guard (KTD3): a failed/timed-out retry must not erase a working currentPosition, so
     // only report a point when one actually comes back.
     if (point) {
-      if (map) map.setView([point.lat, point.lng], map.getZoom())
+      if (map) centerOn(map, point)
       onLocate?.(point, generation)
     }
     setLocating(false)

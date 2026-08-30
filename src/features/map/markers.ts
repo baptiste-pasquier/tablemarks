@@ -20,6 +20,12 @@ export interface MapMarker {
   dimmed: boolean
 }
 
+/** Shared by `toMarkers` and `pickMostRecentRestaurantCenter` — a provisional (pending) record has
+ * no coordinates yet. */
+function hasResolvedCoordinates(r: Restaurant): r is Restaurant & { lat: number; lng: number } {
+  return !r.pending && r.lat !== null && r.lng !== null
+}
+
 /**
  * Build map markers from restaurants — only those with resolved coordinates (skips provisional).
  * Non-matching places are kept but flagged `dimmed` so the map stays a stable spatial reference.
@@ -27,7 +33,7 @@ export interface MapMarker {
 export function toMarkers(restaurants: Restaurant[], filter?: FacetFilter): MapMarker[] {
   const markers: MapMarker[] = []
   for (const r of restaurants) {
-    if (r.pending || r.lat === null || r.lng === null) continue
+    if (!hasResolvedCoordinates(r)) continue
     markers.push({
       id: r.id,
       lat: r.lat,
@@ -61,7 +67,7 @@ export function pickMostRecentRestaurantCenter(restaurants: Restaurant[]): GeoPo
   let bestKey = ''
   let bestUpdated = ''
   for (const r of restaurants) {
-    if (r.pending || r.lat === null || r.lng === null) continue
+    if (!hasResolvedCoordinates(r)) continue
     // `added: ''` is a deliberate, first-class "absent" state (see `isOptionalTimestamp` in
     // sync/portability/schema.ts) reachable on any restaurant that synced through the PocketBase
     // field retype — treat it the same as `undefined` rather than a real (and always-losing) key.
