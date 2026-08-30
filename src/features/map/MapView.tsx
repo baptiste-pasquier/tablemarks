@@ -29,6 +29,27 @@ function iconForColor(color: string, selected: boolean): L.DivIcon {
   return icon
 }
 
+const currentPositionIconCache = new Map<string, L.DivIcon>()
+
+/**
+ * A plain dot marking the device's own position — a circle, not `iconForColor`'s teardrop, so it
+ * can't be mistaken for a cuisine pin. Cached per accessible label so a locale change refreshes it.
+ */
+function currentPositionIcon(label: string): L.DivIcon {
+  let icon = currentPositionIconCache.get(label)
+  if (!icon) {
+    const size = 16
+    icon = L.divIcon({
+      className: '',
+      html: `<span role="img" aria-label="${label}" style="display:block;width:${size}px;height:${size}px;border-radius:9999px;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 2px rgba(37,99,235,.35),0 2px 4px rgba(0,0,0,.35);"></span>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
+    currentPositionIconCache.set(label, icon)
+  }
+  return icon
+}
+
 const DEFAULT_CENTER: [number, number] = [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]
 
 /**
@@ -74,8 +95,7 @@ export function MapView({
   onSelect,
   onCenterChange,
   onLocate,
-  // Accepted but not yet rendered — U3 consumes this to draw the current-position marker.
-  currentPosition: _currentPosition,
+  currentPosition,
   selectedId,
   active,
 }: {
@@ -140,6 +160,12 @@ export function MapView({
             </Popup>
           </Marker>
         ))}
+        {currentPosition && (
+          <Marker
+            position={[currentPosition.lat, currentPosition.lng]}
+            icon={currentPositionIcon(t('map.currentPositionAria'))}
+          />
+        )}
       </MapContainer>
       <button
         type="button"

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type L from 'leaflet'
@@ -10,7 +10,12 @@ import type { GeoPoint } from '../../lib/geolocate'
 // Spy on the stable map instance's setView, so the "Localiser" tests can assert the existing
 // recenter call fires (or doesn't) alongside the new onLocate callback. Declared via vi.hoisted
 // so the vi.mock factory below (itself hoisted above all imports) can safely close over it.
-const { mockMapSetView } = vi.hoisted(() => ({ mockMapSetView: vi.fn() }))
+// tileLayerProps captures the TileLayer's last render props so the crossOrigin regression guard
+// can assert on it without rendering a real TileLayer under jsdom.
+const { mockMapSetView, tileLayerProps } = vi.hoisted(() => ({
+  mockMapSetView: vi.fn(),
+  tileLayerProps: { current: null as Record<string, unknown> | null },
+}))
 
 // Leaflet needs real DOM dimensions jsdom doesn't provide; stub react-leaflet for the shell, but
 // let Marker forward the real icon leaflet's own `L.divIcon()` built, so size/color are assertable.
@@ -38,12 +43,36 @@ vi.mock('react-leaflet', () => {
       }, [])
       return <div>{children}</div>
     },
-    TileLayer: () => null,
-    Marker: ({ icon, position }: { icon: L.DivIcon; position: [number, number] }) => {
-      const iconSize = icon.options.iconSize as L.PointTuple | undefined
-      return <div data-testid={`marker-${position[0]}-${position[1]}`} data-size={iconSize?.[0]} />
+    TileLayer: (props: Record<string, unknown>) => {
+      tileLayerProps.current = props
+      return null
     },
-    Popup: () => null,
+    Marker: ({
+      icon,
+      position,
+      children,
+      eventHandlers,
+    }: {
+      icon: L.DivIcon
+      position: [number, number]
+      children?: React.ReactNode
+      eventHandlers?: { click?: () => void }
+    }) => {
+      const iconSize = icon.options.iconSize as L.PointTuple | undefined
+      return (
+        <div
+          data-testid={`marker-${position[0]}-${position[1]}`}
+          data-size={iconSize?.[0]}
+          data-icon-html={icon.options.html}
+          onClick={eventHandlers?.click}
+        >
+          {children}
+        </div>
+      )
+    },
+    Popup: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="popup">{children}</div>
+    ),
     useMap: () => map,
   }
 })
@@ -63,6 +92,7 @@ describe('MapView', () => {
   beforeEach(() => {
     mockGeolocate.mockReset()
     mockMapSetView.mockClear()
+    tileLayerProps.current = null
   })
 
   it('renders an unselected marker as a same-size teardrop pin', () => {
@@ -107,5 +137,50 @@ describe('MapView', () => {
       expect(onLocate).not.toHaveBeenCalled()
       expect(mockMapSetView).not.toHaveBeenCalled()
     })
+  })
+
+  describe('"you are here" marker (U3 R1)', () => {
+    it('renders no current-position marker when currentPosition is not set', () => {
+      render(<MapView markers={MARKERS} currentPosition={null} />)
+      expect(screen.getAllByTestId(/^marker-/)).toHaveLength(MARKERS.length)
+    })
+
+    it('renders a distinct current-position marker at the given point, carrying the accessible label', () => {
+      const point: GeoPoint = { lat: 5, lng: 6 }
+      render(<MapView markers={MARKERS} currentPosition={point} />)
+
+      const marker = screen.getByTestId('marker-5-6')
+      // 16px — distinct from the cuisine teardrop pins' 24px (unselected) / 30px (selected).
+      expect(marker.dataset.size).toBe('16')
+      expect(marker.dataset.iconHtml).toContain('aria-label="Your current location"')
+      expect(screen.getAllByTestId(/^marker-/)).toHaveLength(MARKERS.length + 1)
+    })
+
+    it('moves the current-position marker when currentPosition changes, e.g. after a "Localiser" tap', () => {
+      const { rerender } = render(<MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} />)
+      expect(screen.getByTestId('marker-5-6')).toBeInTheDocument()
+
+      rerender(<MapView markers={MARKERS} currentPosition={{ lat: 9, lng: 8 }} />)
+      expect(screen.queryByTestId('marker-5-6')).not.toBeInTheDocument()
+      expect(screen.getByTestId('marker-9-8')).toBeInTheDocument()
+    })
+
+    it('renders the current-position marker with no click handler and no popup, unlike restaurant pins', () => {
+      const onSelect = vi.fn()
+      render(
+        <MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} onSelect={onSelect} />,
+      )
+
+      const marker = screen.getByTestId('marker-5-6')
+      expect(within(marker).queryByTestId('popup')).not.toBeInTheDocument()
+
+      fireEvent.click(marker)
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+  })
+
+  it('keeps the TileLayer crossOrigin="anonymous" prop (regression guard for opaque tile caching)', () => {
+    render(<MapView markers={MARKERS} />)
+    expect(tileLayerProps.current?.crossOrigin).toBe('anonymous')
   })
 })
