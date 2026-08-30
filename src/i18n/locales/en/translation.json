@@ -16,12 +16,16 @@
     "addPlace": "+ Add a place",
     "addPlaceAria": "Add a place",
     "whereToEat": "Where to eat?",
-    "exportImport": "Export / Import",
     "viewNav": "View",
     "view": {
       "list": "List",
       "map": "Map"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "openAria": "Open settings",
+    "language": "Language"
   },
   "capture": {
     "title": "Add a place",

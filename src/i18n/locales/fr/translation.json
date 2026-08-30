@@ -16,12 +16,16 @@
     "addPlace": "+ Ajouter un lieu",
     "addPlaceAria": "Ajouter un lieu",
     "whereToEat": "Où manger ?",
-    "exportImport": "Exporter / Importer",
     "viewNav": "Vue",
     "view": {
       "list": "Liste",
       "map": "Carte"
     }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "openAria": "Ouvrir les paramètres",
+    "language": "Langue"
   },
   "capture": {
     "title": "Ajouter un lieu",

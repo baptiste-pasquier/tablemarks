@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Settings } from 'lucide-react'
 import { useRestaurants } from './features/useRestaurants'
 import { useAuth } from './auth/useAuth'
 import { RestaurantList } from './features/RestaurantList'
@@ -10,7 +11,7 @@ import { emptyFilter, matches } from './features/facets/filter'
 import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
-import { PortabilityPanel } from './features/portability/PortabilityPanel'
+import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
@@ -26,7 +27,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
-  const [portability, setPortability] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [anchor, setAnchor] = useState<GeoPoint | null>(DEFAULT_MAP_CENTER)
   const [filter, setFilter] = useState(emptyFilter())
   // Reset on every reload/relaunch (KTD5) — no persistence beyond component state.
@@ -56,28 +57,38 @@ export default function App() {
             <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">{t('shell.tagline')}</p>
           </div>
         </div>
-        {signedIn ? (
-          <div className="flex items-center gap-3 text-sm">
-            <SyncStatusIndicator />
-            <span className="hidden max-w-[10rem] truncate text-gray-500 sm:block">{email}</span>
+        <div className="flex items-center gap-2">
+          {signedIn ? (
+            <div className="flex items-center gap-3 text-sm">
+              <SyncStatusIndicator />
+              <span className="hidden max-w-[10rem] truncate text-gray-500 sm:block">{email}</span>
+              <button
+                type="button"
+                onClick={signOut}
+                className="rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200"
+              >
+                {t('shell.signOut')}
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={signOut}
-              className="rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200"
+              onClick={() => void signIn()}
+              className="rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium transition hover:bg-gray-100 active:bg-gray-200"
             >
-              {t('shell.signOut')}
+              {t('shell.signIn')}
+              <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
             </button>
-          </div>
-        ) : (
+          )}
           <button
             type="button"
-            onClick={() => void signIn()}
-            className="rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium transition hover:bg-gray-100 active:bg-gray-200"
+            onClick={() => setSettingsOpen(true)}
+            aria-label={t('settings.openAria')}
+            className="rounded-full border border-gray-300 p-1.5 transition hover:bg-gray-100 active:bg-gray-200"
           >
-            {t('shell.signIn')}
-            <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
+            <Settings className="h-4 w-4" aria-hidden="true" />
           </button>
-        )}
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -100,13 +111,6 @@ export default function App() {
               className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand transition hover:bg-brand-soft active:bg-brand-soft"
             >
               {t('shell.whereToEat')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPortability(true)}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 active:bg-gray-200"
-            >
-              {t('shell.exportImport')}
             </button>
           </div>
           <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} />
@@ -183,9 +187,9 @@ export default function App() {
         />
       )}
 
-      {portability && (
-        <Modal onClose={() => setPortability(false)} panelClassName="max-h-[90vh] overflow-y-auto">
-          <PortabilityPanel onClose={() => setPortability(false)} />
+      {settingsOpen && (
+        <Modal onClose={() => setSettingsOpen(false)} panelClassName="max-h-[90vh] overflow-y-auto">
+          <SettingsPanel onClose={() => setSettingsOpen(false)} />
         </Modal>
       )}
 
