@@ -60,7 +60,9 @@
     "noVisitsYet": "Aucune visite pour l'instant — c'est dans votre liste à essayer.",
     "deleteVisitAria": "Supprimer la visite du {{date}}",
     "addPastVisit": "Ajouter une visite passée",
-    "visitDateAria": "Date de la visite"
+    "visitDateAria": "Date de la visite",
+    "googleMaps": "Google Maps",
+    "goTo": "Itinéraire"
   },
   "filters": {
     "title": "Filtrer",

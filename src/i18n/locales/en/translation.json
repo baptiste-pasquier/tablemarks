@@ -60,7 +60,9 @@
     "noVisitsYet": "No visits yet — it’s on your to-try list.",
     "deleteVisitAria": "Delete visit on {{date}}",
     "addPastVisit": "Add a past visit",
-    "visitDateAria": "Visit date"
+    "visitDateAria": "Visit date",
+    "googleMaps": "Google Maps",
+    "goTo": "Go to"
   },
   "filters": {
     "title": "Filter",
