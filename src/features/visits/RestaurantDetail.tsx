@@ -12,6 +12,7 @@ import { StatusBadge, VerdictBadge } from '../StatusBadge'
 import { VERDICTS, translateVerdict, type Verdict } from '../../types/models'
 import type { GeoPoint } from '../../lib/geolocate'
 import { distanceLabelFor } from '../../lib/geo'
+import { instantToLocalDay } from '../../lib/dates'
 import {
   isHttpUrl,
   resolveDestination,
@@ -150,7 +151,7 @@ export function RestaurantDetail({
             {restaurant.added && (
               <span className="flex items-center gap-1">
                 <Calendar size={14} aria-hidden="true" />
-                {t('visitDetail.addedOn', { date: restaurant.added.slice(0, 10) })}
+                {t('visitDetail.addedOn', { date: instantToLocalDay(restaurant.added) })}
               </span>
             )}
           </div>

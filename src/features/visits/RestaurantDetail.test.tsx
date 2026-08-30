@@ -5,6 +5,7 @@ import { freshDB } from '../../test/idb'
 import { RestaurantDetail } from './RestaurantDetail'
 import { createRestaurant, getRestaurant, mutateRestaurant } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
+import { instantToLocalDay } from '../../lib/dates'
 
 beforeEach(freshDB)
 
@@ -269,14 +270,21 @@ describe('RestaurantDetail', () => {
     expect(screen.queryByText(/\d+(\.\d+)? (m|km)$/)).not.toBeInTheDocument()
   })
 
-  it('shows the added date, sliced to YYYY-MM-DD, for a normally-created restaurant', async () => {
+  it('shows the added date as the viewer\'s local calendar day, not the UTC slice (AE1)', async () => {
+    vi.stubEnv('TZ', 'America/Bogota') // UTC-5, no DST
+    // 2026-08-30T23:30:00Z in UTC-5 is still local calendar day 2026-08-30, not 2026-08-31 — the
+    // UTC slice of this instant would wrongly read 2026-08-31.
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    await mutateRestaurant(r.id, (existing) =>
+      existing ? { ...existing, added: '2026-08-30T23:30:00Z' } : existing,
+    )
 
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
 
-    await screen.findByText('X')
-    const datePart = r.added!.slice(0, 10)
-    expect(screen.getByText(new RegExp(datePart))).toBeInTheDocument()
+    expect(await screen.findByText(/2026-08-30/)).toBeInTheDocument()
+    expect(screen.queryByText(/2026-08-31/)).not.toBeInTheDocument()
+
+    vi.unstubAllEnvs()
   })
 
   it('renders no added-date line for a pre-existing restaurant with no recorded added field', async () => {
@@ -292,12 +300,12 @@ describe('RestaurantDetail', () => {
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
 
     await screen.findByText('X')
-    expect(screen.queryByText(new RegExp(r.added!.slice(0, 10)))).not.toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(instantToLocalDay(r.added!)))).not.toBeInTheDocument()
   })
 
   it('renders no added-date line for a restaurant backfilled with an empty-string added value', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
-    const originalDatePart = r.added!.slice(0, 10)
+    const originalDatePart = instantToLocalDay(r.added!)
     await mutateRestaurant(r.id, (existing) => (existing ? { ...existing, added: '' } : existing))
 
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
