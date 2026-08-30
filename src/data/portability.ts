@@ -4,4 +4,4 @@
 // under src/sync/portability/ because import reuses the pure reconcile/LWW core.
 export { exportCollection } from '../sync/portability/export'
 export { parseImport, applyImport, type ImportCounts } from '../sync/portability/import'
-export type { ImportRecords } from '../sync/portability/schema'
+export type { ImportRecords, ImportError, ImportErrorCode } from '../sync/portability/schema'

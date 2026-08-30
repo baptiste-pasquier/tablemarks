@@ -1,0 +1,148 @@
+{
+  "app": {
+    "title": "Tablemarks"
+  },
+  "common": {
+    "close": "Fermer",
+    "uncategorized": "Non catégorisé",
+    "visitsCount_one": "{{count}} visite",
+    "visitsCount_other": "{{count}} visites"
+  },
+  "shell": {
+    "tagline": "Votre carte des adresses qui valent le détour",
+    "signIn": "Se connecter",
+    "withGoogle": "avec Google",
+    "signOut": "Se déconnecter",
+    "addPlace": "+ Ajouter un lieu",
+    "addPlaceAria": "Ajouter un lieu",
+    "whereToEat": "Où manger ?",
+    "viewNav": "Vue",
+    "view": {
+      "list": "Liste",
+      "map": "Carte"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "openAria": "Ouvrir les paramètres",
+    "language": "Langue"
+  },
+  "capture": {
+    "title": "Ajouter un lieu",
+    "pasteLabel": "Collez un lien Google Maps, ou saisissez un nom de lieu",
+    "pastePlaceholder": "https://maps.app.goo.gl/…  ou  Chez Marcel Paris",
+    "cuisineLabel": "Cuisine",
+    "optional": "(facultatif)",
+    "cuisinePlaceholder": "ex. Italienne, Ramen…",
+    "working": "En cours…",
+    "submit": "Ajouter",
+    "errorNoMatches": "Aucun lieu correspondant trouvé.",
+    "errorSearchFailed": "Échec de la recherche. Réessayez.",
+    "errorAdd": "Impossible d'ajouter ce lieu.",
+    "alreadySaved": "est déjà enregistré.",
+    "openIt": "Ouvrir"
+  },
+  "decide": {
+    "title": "Où manger ?",
+    "within": "Dans un rayon de",
+    "moveMap": "Déplacez la carte pour choisir une zone.",
+    "emptyCandidates": "Rien à essayer ou qui vaille un retour dans un rayon de {{radius}}.",
+    "widenTo": "Étendre à {{radius}}",
+    "pickForMe": "🎲 Choisir pour moi",
+    "directions": "Itinéraire"
+  },
+  "visitDetail": {
+    "cuisineLabel": "Cuisine",
+    "cuisinePlaceholder": "Ajouter une cuisine…",
+    "howWasIt": "Comment c'était ?",
+    "hereNow": "J'y suis maintenant",
+    "visitsHeading": "Visites",
+    "noVisitsYet": "Aucune visite pour l'instant — c'est dans votre liste à essayer.",
+    "deleteVisitAria": "Supprimer la visite du {{date}}",
+    "addPastVisit": "Ajouter une visite passée",
+    "visitDateAria": "Date de la visite"
+  },
+  "filters": {
+    "title": "Filtrer",
+    "clearAll": "Tout effacer",
+    "cuisineGroup": "Cuisine",
+    "statusVerdictGroup": "Statut & verdict",
+    "collapse": "Réduire",
+    "showMore": "+{{count}} autres"
+  },
+  "portability": {
+    "title": "Export & import",
+    "description": "Téléchargez une sauvegarde complète de votre collection, ou fusionnez un fichier précédemment exporté.",
+    "exportBusy": "En cours…",
+    "exportAction": "Exporter la collection",
+    "importLabel": "Importer un fichier de sauvegarde",
+    "importBusy": "Importation…",
+    "confirmImport": "Confirmer l'import",
+    "errorExport": "Impossible d'exporter votre collection.",
+    "errorRead": "Impossible de lire ce fichier.",
+    "errorImport": "Impossible d'importer ce fichier.",
+    "error": {
+      "invalidJson": "Le fichier n'est pas un JSON valide.",
+      "notAnObject": "Le fichier n'est pas un objet JSON.",
+      "wrongFormat": "Ce n'est pas un fichier d'export Tablemarks.",
+      "invalidSchemaVersion": "Version de schéma manquante ou invalide.",
+      "schemaTooNew": "Ce fichier a été créé par une version plus récente (schéma {{schemaVersion}}). Mettez à jour l'application pour l'importer.",
+      "noRecords": "Le fichier ne contient aucune donnée.",
+      "invalidRecordsShape": "Les données doivent contenir des tableaux de restaurants et de visites.",
+      "malformedRestaurant": "Un restaurant est mal formé.",
+      "duplicateRestaurantIds": "Le fichier contient des identifiants de restaurants en double.",
+      "malformedVisit": "Une visite est mal formée.",
+      "duplicateVisitIds": "Le fichier contient des identifiants de visites en double."
+    },
+    "confirm": {
+      "place_one": "{{count}} lieu",
+      "place_other": "{{count}} lieux",
+      "visit_one": "{{count}} visite",
+      "visit_other": "{{count}} visites",
+      "question": "Importer {{places}} et {{visits}} ? Les entrées existantes sont fusionnées par dernière modification ; rien n'est supprimé."
+    },
+    "summary": "Importé : {{added}} ajoutés, {{updated}} mis à jour, {{unchanged}} inchangés."
+  },
+  "sync": {
+    "ariaLabel": "État de synchronisation",
+    "allSynced": "Tout est synchronisé",
+    "pendingCount": "{{count}} en attente",
+    "offline": "Hors ligne",
+    "offlinePending": "Hors ligne — {{count}} en attente",
+    "problemSignIn": "Reconnectez-vous pour reprendre la sauvegarde",
+    "problemUnreachable": "Impossible de joindre le serveur",
+    "detailSynced": "Tout ce que vous avez enregistré est sauvegardé.",
+    "detailPending_one": "{{count}} élément n'est pas encore sauvegardé. Il se synchronisera automatiquement.",
+    "detailPending_other": "{{count}} éléments ne sont pas encore sauvegardés. Ils se synchroniseront automatiquement.",
+    "detailOffline": "Vous êtes hors ligne. Les modifications sont enregistrées sur cet appareil et seront synchronisées une fois de retour en ligne.",
+    "detailProblemSignIn": "Votre session a expiré. Reconnectez-vous depuis l'en-tête pour reprendre la sauvegarde.",
+    "detailProblemUnreachable": "Impossible de joindre le serveur pour l'instant. Nous continuons d'essayer en arrière-plan."
+  },
+  "pwa": {
+    "appUpdateAria": "Mise à jour de l'application",
+    "newVersion": "Une nouvelle version est disponible.",
+    "reload": "Recharger",
+    "offlineReady": "Prêt à fonctionner hors ligne.",
+    "dismiss": "Ignorer"
+  },
+  "map": {
+    "locateAria": "Centrer sur ma position",
+    "locating": "Localisation…",
+    "locate": "📍 Localiser"
+  },
+  "restaurantList": {
+    "emptyTitle": "Aucun lieu pour l'instant",
+    "emptyBody": "Enregistrez une adresse que vous aimez ou que vous voulez essayer — collez un lien Google Maps ou recherchez un nom."
+  },
+  "verdicts": {
+    "go_back": "J'y retourne",
+    "worth_a_detour": "Vaut le détour",
+    "once_was_enough": "Une fois suffit",
+    "never_again": "Plus jamais"
+  },
+  "statuses": {
+    "to_try": "à essayer",
+    "visited": "visité",
+    "resolving": "Résolution…"
+  }
+}

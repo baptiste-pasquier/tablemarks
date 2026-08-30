@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { FilterBar } from './FilterBar'
 import { emptyFilter } from './filter'
+import { mockI18n } from '../../test/setup'
 import type { Restaurant } from '../../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
@@ -90,7 +91,20 @@ describe('FilterBar', () => {
   it('renders the cuisine and status/verdict groups under separate labels with a divider', () => {
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
     expect(screen.getByText('Cuisine')).toBeInTheDocument()
+    expect(screen.getByText('Status & verdict')).toBeInTheDocument()
+  })
+
+  it('shows the status/verdict heading and overflow toggle in French when the active language is French, and only in English otherwise (R1)', async () => {
+    const { rerender } = render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+    expect(screen.getByText('Status & verdict')).toBeInTheDocument()
+    expect(screen.queryByText('Statut & verdict')).not.toBeInTheDocument()
+
+    await mockI18n.changeLanguage('fr')
+    rerender(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
     expect(screen.getByText('Statut & verdict')).toBeInTheDocument()
+    expect(screen.queryByText('Status & verdict')).not.toBeInTheDocument()
+
+    await mockI18n.changeLanguage('en')
   })
 
   it('shows each cuisine chip with its emoji as a separate aria-hidden element from the label', () => {
@@ -107,7 +121,7 @@ describe('FilterBar', () => {
       'Once was enough': '🤷',
       'Never again': '🚫',
     }
-    const group = screen.getByText('Statut & verdict').parentElement as HTMLElement
+    const group = screen.getByText('Status & verdict').parentElement as HTMLElement
     const buttons = Object.keys(verdictIcons).map((label) => within(group).getByRole('button', { name: label }))
     const order = buttons.map((b) => within(group).getAllByRole('button').indexOf(b))
     expect(order).toEqual([...order].sort((a, b) => a - b))
@@ -119,7 +133,7 @@ describe('FilterBar', () => {
     }
   })
 
-  it('collapses cuisines beyond 6 behind a "+N autres" control, expandable via "Réduire"', async () => {
+  it('collapses cuisines beyond 6 behind a "+N more" control, expandable via "Collapse"', async () => {
     const many = ['Thai', 'Indian', 'French', 'Italian', 'Japanese', 'Chinese', 'Mexican'].map((cuisine, i) =>
       r({ id: `p${i}`, cuisine }),
     )
@@ -127,12 +141,12 @@ describe('FilterBar', () => {
 
     // All 7 cuisines have one restaurant each, so the tie-break is alphabetical: "Thai" (last
     // alphabetically) is the one bumped into overflow.
-    const toggle = screen.getByRole('button', { name: '+1 autres' })
+    const toggle = screen.getByRole('button', { name: '+1 more' })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('button', { name: 'Thai' })).not.toBeInTheDocument()
 
     await userEvent.click(toggle)
-    const collapseButton = screen.getByRole('button', { name: 'Réduire' })
+    const collapseButton = screen.getByRole('button', { name: 'Collapse' })
     expect(collapseButton).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('button', { name: 'Thai' })).toBeInTheDocument()
     // Same button across the toggle (KTD6) — it keeps focus rather than being unmounted/remounted.
@@ -140,12 +154,12 @@ describe('FilterBar', () => {
     expect(collapseButton).toHaveFocus()
   })
 
-  it('does not render a "+N autres" control with 6 or fewer cuisines present', () => {
+  it('does not render a "+N more" control with 6 or fewer cuisines present', () => {
     const six = ['Thai', 'Indian', 'French', 'Italian', 'Japanese', 'Chinese'].map((cuisine, i) =>
       r({ id: `p${i}`, cuisine }),
     )
     render(<FilterBar restaurants={six} filter={emptyFilter()} onChange={vi.fn()} />)
-    expect(screen.queryByRole('button', { name: /autres/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /more/i })).not.toBeInTheDocument()
   })
 
   it('keeps an active cuisine outside the top 6 pinned into the default (collapsed) row', () => {
@@ -161,7 +175,7 @@ describe('FilterBar', () => {
     render(<FilterBar restaurants={restaurants} filter={filter} onChange={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'Ethiopian' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: '+1 autres' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '+1 more' })).toBeInTheDocument()
   })
 
   it('grows the default row past 6 when more than 6 cuisines are simultaneously active', () => {
@@ -173,7 +187,7 @@ describe('FilterBar', () => {
     for (const cuisine of cuisines) {
       expect(screen.getByRole('button', { name: cuisine })).toHaveAttribute('aria-pressed', 'true')
     }
-    expect(screen.queryByRole('button', { name: /autres/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /more/i })).not.toBeInTheDocument()
   })
 
   it('reflows the default row immediately when a pinned, off-top-6 active cuisine is deselected', () => {
@@ -190,6 +204,6 @@ describe('FilterBar', () => {
 
     rerender(<FilterBar restaurants={restaurants} filter={emptyFilter()} onChange={vi.fn()} />)
     expect(screen.queryByRole('button', { name: 'Ethiopian' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '+1 autres' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '+1 more' })).toBeInTheDocument()
   })
 })

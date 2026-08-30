@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRestaurants } from '../useRestaurants'
 import { StatusBadge } from '../StatusBadge'
 import { decideCandidates, pickForMe, type Anchor, type Candidate } from './candidates'
 import { Modal } from '../ui/Modal'
+import { ModalHeader } from '../ui/ModalHeader'
 
 const RADIUS_PRESETS_KM = [0.5, 1, 5] as const
 const DEFAULT_RADIUS_KM = 1
@@ -29,6 +31,7 @@ export function DecidePanel({
   onClose: () => void
   onOpenRestaurant: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const restaurants = useRestaurants()
   const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM)
   const [pickedId, setPickedId] = useState<string | null>(null)
@@ -42,15 +45,10 @@ export function DecidePanel({
 
   return (
     <Modal onClose={onClose} zIndexClassName="z-[1100]" panelClassName="flex max-h-[88vh] flex-col">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Where to eat?</h2>
-        <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
-          ✕
-        </button>
-      </div>
+      <ModalHeader title={t('decide.title')} onClose={onClose} />
 
       <div className="mb-3 flex items-center gap-2 text-sm">
-        <span className="text-gray-500">Within</span>
+        <span className="text-gray-500">{t('decide.within')}</span>
         {RADIUS_PRESETS_KM.map((km) => (
           <button
             key={km}
@@ -70,17 +68,17 @@ export function DecidePanel({
       </div>
 
       {!anchor ? (
-        <p className="text-sm text-gray-500">Move the map to choose an area.</p>
+        <p className="text-sm text-gray-500">{t('decide.moveMap')}</p>
       ) : candidates.length === 0 ? (
         <div className="text-sm text-gray-500">
-          <p>Nothing to try or worth a return within {formatRadiusKm(radiusKm)}.</p>
+          <p>{t('decide.emptyCandidates', { radius: formatRadiusKm(radiusKm) })}</p>
           {nextRadius && (
             <button
               type="button"
               onClick={() => setRadiusKm(nextRadius)}
               className="mt-1 font-medium text-brand underline"
             >
-              Widen to {formatRadiusKm(nextRadius)}
+              {t('decide.widenTo', { radius: formatRadiusKm(nextRadius) })}
             </button>
           )}
         </div>
@@ -91,7 +89,7 @@ export function DecidePanel({
             onClick={() => setPickedId(pickForMe(candidates)?.restaurant.id ?? null)}
             className="mb-3 w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
           >
-            🎲 Pick for me
+            {t('decide.pickForMe')}
           </button>
           <ul className="-mx-1 divide-y divide-gray-100 overflow-y-auto">
             {candidates.map(({ restaurant, distanceM }) => (
@@ -118,7 +116,7 @@ export function DecidePanel({
                       rel="noreferrer"
                       className="shrink-0 text-xs font-medium text-brand underline"
                     >
-                      Directions
+                      {t('decide.directions')}
                     </a>
                   )}
                 </div>

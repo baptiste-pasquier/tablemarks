@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { RestaurantList } from './RestaurantList'
-import { VERDICT_ICON, VERDICT_LABELS, VERDICTS, type Restaurant } from '../types/models'
+import { VERDICT_ICON, VERDICTS, translateVerdict, type Restaurant } from '../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'name'>): Restaurant {
   return {
@@ -47,7 +47,7 @@ describe('RestaurantList', () => {
     )
 
     for (const v of VERDICTS) {
-      const label = screen.getByText(VERDICT_LABELS[v])
+      const label = screen.getByText(translateVerdict(v))
       const badge = label.parentElement
       expect(badge).not.toBeNull()
       const icon = within(badge as HTMLElement).getByText(VERDICT_ICON[v])

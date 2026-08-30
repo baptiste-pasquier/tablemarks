@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { auth } from './auth/auth.ts'
 import { startPendingResolver } from './capture/resolvePending.ts'
+import './i18n/config.ts'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
 

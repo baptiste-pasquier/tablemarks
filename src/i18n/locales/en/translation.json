@@ -1,0 +1,148 @@
+{
+  "app": {
+    "title": "Tablemarks"
+  },
+  "common": {
+    "close": "Close",
+    "uncategorized": "Uncategorized",
+    "visitsCount_one": "{{count}} visit",
+    "visitsCount_other": "{{count}} visits"
+  },
+  "shell": {
+    "tagline": "Your map of places worth a table",
+    "signIn": "Sign in",
+    "withGoogle": "with Google",
+    "signOut": "Sign out",
+    "addPlace": "+ Add a place",
+    "addPlaceAria": "Add a place",
+    "whereToEat": "Where to eat?",
+    "viewNav": "View",
+    "view": {
+      "list": "List",
+      "map": "Map"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "openAria": "Open settings",
+    "language": "Language"
+  },
+  "capture": {
+    "title": "Add a place",
+    "pasteLabel": "Paste a Google Maps link, or type a place name",
+    "pastePlaceholder": "https://maps.app.goo.gl/…  or  Chez Marcel Paris",
+    "cuisineLabel": "Cuisine",
+    "optional": "(optional)",
+    "cuisinePlaceholder": "e.g. Italian, Ramen…",
+    "working": "Working…",
+    "submit": "Add",
+    "errorNoMatches": "No matching places found.",
+    "errorSearchFailed": "Search failed. Try again.",
+    "errorAdd": "Could not add that place.",
+    "alreadySaved": "is already saved.",
+    "openIt": "Open it"
+  },
+  "decide": {
+    "title": "Where to eat?",
+    "within": "Within",
+    "moveMap": "Move the map to choose an area.",
+    "emptyCandidates": "Nothing to try or worth a return within {{radius}}.",
+    "widenTo": "Widen to {{radius}}",
+    "pickForMe": "🎲 Pick for me",
+    "directions": "Directions"
+  },
+  "visitDetail": {
+    "cuisineLabel": "Cuisine",
+    "cuisinePlaceholder": "Add a cuisine…",
+    "howWasIt": "How was it?",
+    "hereNow": "I’m here now",
+    "visitsHeading": "Visits",
+    "noVisitsYet": "No visits yet — it’s on your to-try list.",
+    "deleteVisitAria": "Delete visit on {{date}}",
+    "addPastVisit": "Add a past visit",
+    "visitDateAria": "Visit date"
+  },
+  "filters": {
+    "title": "Filter",
+    "clearAll": "Clear all",
+    "cuisineGroup": "Cuisine",
+    "statusVerdictGroup": "Status & verdict",
+    "collapse": "Collapse",
+    "showMore": "+{{count}} more"
+  },
+  "portability": {
+    "title": "Export & import",
+    "description": "Download a full backup of your collection, or merge in a previously exported file.",
+    "exportBusy": "Working…",
+    "exportAction": "Export collection",
+    "importLabel": "Import a backup file",
+    "importBusy": "Importing…",
+    "confirmImport": "Confirm import",
+    "errorExport": "Could not export your collection.",
+    "errorRead": "Could not read that file.",
+    "errorImport": "Could not import that file.",
+    "error": {
+      "invalidJson": "File is not valid JSON.",
+      "notAnObject": "File is not a JSON object.",
+      "wrongFormat": "Not a Tablemarks export file.",
+      "invalidSchemaVersion": "Missing or invalid schema version.",
+      "schemaTooNew": "This file was made by a newer version (schema {{schemaVersion}}). Update the app to import it.",
+      "noRecords": "File has no records.",
+      "invalidRecordsShape": "Records must contain restaurant and visit arrays.",
+      "malformedRestaurant": "A restaurant record is malformed.",
+      "duplicateRestaurantIds": "The file contains duplicate restaurant ids.",
+      "malformedVisit": "A visit record is malformed.",
+      "duplicateVisitIds": "The file contains duplicate visit ids."
+    },
+    "confirm": {
+      "place_one": "{{count}} place",
+      "place_other": "{{count}} places",
+      "visit_one": "{{count}} visit",
+      "visit_other": "{{count}} visits",
+      "question": "Import {{places}} and {{visits}}? Existing entries merge by last edit; nothing is deleted."
+    },
+    "summary": "Imported: {{added}} added, {{updated}} updated, {{unchanged}} unchanged."
+  },
+  "sync": {
+    "ariaLabel": "Sync status",
+    "allSynced": "All synced",
+    "pendingCount": "{{count}} pending",
+    "offline": "Offline",
+    "offlinePending": "Offline — {{count}} pending",
+    "problemSignIn": "Sign in again to keep backing up",
+    "problemUnreachable": "Can't reach the server",
+    "detailSynced": "Everything you've saved is backed up.",
+    "detailPending_one": "{{count}} item hasn't backed up yet. It'll sync automatically.",
+    "detailPending_other": "{{count}} items haven't backed up yet. They'll sync automatically.",
+    "detailOffline": "You're offline. Changes are saved on this device and will sync when you're back online.",
+    "detailProblemSignIn": "Your sign-in expired. Sign in again from the header to resume backing up.",
+    "detailProblemUnreachable": "We can't reach the server right now. We'll keep trying in the background."
+  },
+  "pwa": {
+    "appUpdateAria": "App update",
+    "newVersion": "A new version is available.",
+    "reload": "Reload",
+    "offlineReady": "Ready to work offline.",
+    "dismiss": "Dismiss"
+  },
+  "map": {
+    "locateAria": "Center on my location",
+    "locating": "Locating…",
+    "locate": "📍 Locate"
+  },
+  "restaurantList": {
+    "emptyTitle": "No places yet",
+    "emptyBody": "Save a spot you love or one you want to try — paste a Google Maps link or search a name."
+  },
+  "verdicts": {
+    "go_back": "Go back",
+    "worth_a_detour": "Worth a detour",
+    "once_was_enough": "Once was enough",
+    "never_again": "Never again"
+  },
+  "statuses": {
+    "to_try": "To try",
+    "visited": "Visited",
+    "resolving": "Resolving…"
+  }
+}

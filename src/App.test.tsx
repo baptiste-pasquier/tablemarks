@@ -2,6 +2,13 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { freshDB } from './test/idb'
+import { useAuth } from './auth/useAuth'
+
+vi.mock('./auth/useAuth', () => ({
+  useAuth: vi.fn(),
+}))
+
+const mockUseAuth = vi.mocked(useAuth)
 
 // Leaflet needs real DOM dimensions jsdom doesn't provide; stub the map for the shell test.
 vi.mock('react-leaflet', () => {
@@ -25,7 +32,10 @@ vi.mock('react-leaflet', () => {
 
 import App from './App.tsx'
 
-beforeEach(freshDB)
+beforeEach(async () => {
+  await freshDB()
+  mockUseAuth.mockReturnValue({ signedIn: false, email: null, signIn: vi.fn(), signOut: vi.fn() })
+})
 
 describe('App shell', () => {
   it('renders the app name and the empty list state', async () => {
@@ -34,6 +44,39 @@ describe('App shell', () => {
     expect(await screen.findByText(/no places yet/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add a place/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /where to eat/i })).toBeInTheDocument()
+  })
+
+  it('no longer renders the standalone Export/Import button (U4)', async () => {
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    expect(screen.queryByRole('button', { name: /export.*import/i })).not.toBeInTheDocument()
+  })
+
+  it('shows a settings button with a translated accessible name that opens the Settings panel, when signed out', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    const settingsButton = screen.getByRole('button', { name: /settings|paramètres/i })
+    expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument()
+
+    await user.click(settingsButton)
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  })
+
+  it('shows the settings button (not nested in the auth ternary) and opens Settings, when signed in', async () => {
+    mockUseAuth.mockReturnValue({
+      signedIn: true,
+      email: 'person@example.com',
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    })
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    const settingsButton = screen.getByRole('button', { name: /settings|paramètres/i })
+
+    await user.click(settingsButton)
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
   })
 
   it('switches the mobile view toggle between list and map', async () => {

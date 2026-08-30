@@ -1,3 +1,5 @@
+import i18n from '../i18n/config'
+
 /** Returnability verdict — the entire rating (no numeric score). */
 export type Verdict = 'go_back' | 'worth_a_detour' | 'once_was_enough' | 'never_again'
 
@@ -8,11 +10,13 @@ export const VERDICTS: readonly Verdict[] = [
   'never_again',
 ]
 
-export const VERDICT_LABELS: Record<Verdict, string> = {
-  go_back: 'Go back',
-  worth_a_detour: 'Worth a detour',
-  once_was_enough: 'Once was enough',
-  never_again: 'Never again',
+/**
+ * Locale-aware verdict label (R1, R4). Resolved through i18next's instance API rather than the
+ * `useTranslation()` hook so this also works from plain, non-component code (display.ts,
+ * StatusBadge.tsx, map/markers.ts) as well as from components.
+ */
+export function translateVerdict(verdict: Verdict): string {
+  return i18n.t(`verdicts.${verdict}`)
 }
 
 /** Ordering for sort/filter — higher is better. go_back > worth_a_detour > once_was_enough > never_again. */
@@ -74,7 +78,20 @@ export interface Visit extends SyncFields {
 
 export type RestaurantStatus = 'to_try' | 'visited'
 
-export const STATUS_LABELS: Record<RestaurantStatus, string> = { to_try: 'To try', visited: 'Visited' }
+/** Locale-aware status label (R1, R4) — see {@link translateVerdict} for why this uses i18next directly. */
+export function translateStatus(status: RestaurantStatus): string {
+  return i18n.t(`statuses.${status}`)
+}
+
+/** Locale-aware "resolving…" label shown while a pending restaurant's coordinates are unresolved. */
+export function translatePending(): string {
+  return i18n.t('statuses.resolving')
+}
+
+/** Locale-aware "N visits" label, pluralized via i18next's `_one`/`_other` keys. */
+export function translateVisitsCount(count: number): string {
+  return i18n.t('common.visitsCount', { count })
+}
 
 /** Status is derived from visit count — never stored. */
 export function statusOf(r: Pick<Restaurant, 'visitCount'>): RestaurantStatus {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { MapMarker } from './markers'
@@ -81,6 +82,7 @@ export function MapView({
   selectedId?: string | null
   active?: boolean
 }) {
+  const { t } = useTranslation()
   const center: [number, number] = markers.length
     ? [markers[0].lat, markers[0].lng]
     : DEFAULT_CENTER
@@ -133,10 +135,10 @@ export function MapView({
         type="button"
         onClick={() => void locate()}
         disabled={locating}
-        aria-label="Center on my location"
+        aria-label={t('map.locateAria')}
         className="absolute right-3 top-3 z-[1000] rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm shadow disabled:opacity-50"
       >
-        {locating ? 'Locating…' : '📍 Locate'}
+        {locating ? t('map.locating') : t('map.locate')}
       </button>
     </div>
   )

@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 
 /**
@@ -7,6 +8,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
  * Also shows a one-off "ready to work offline" note. Renders nothing when neither applies.
  */
 export function ReloadPrompt() {
+  const { t } = useTranslation()
   // Synchronous guard: updateServiceWorker(true) triggers a reload, so a double-click could fire it
   // twice before the page navigates. The ref blocks the second call without waiting for a re-render.
   const reloadingRef = useRef(false)
@@ -40,27 +42,27 @@ export function ReloadPrompt() {
     <div
       role="region"
       aria-live="polite"
-      aria-label="App update"
+      aria-label={t('pwa.appUpdateAria')}
       className="fixed left-4 right-[6.5rem] z-[2000] flex items-center gap-3 rounded-full bg-gray-900 px-4 py-2.5 text-sm text-white shadow-lg bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2"
     >
       {needRefresh ? (
         <>
-          <span>A new version is available.</span>
+          <span>{t('pwa.newVersion')}</span>
           <button
             type="button"
             onClick={reload}
             className="rounded-full bg-brand px-3 py-1 font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong"
           >
-            Reload
+            {t('pwa.reload')}
           </button>
         </>
       ) : (
-        <span>Ready to work offline.</span>
+        <span>{t('pwa.offlineReady')}</span>
       )}
       <button
         type="button"
         onClick={dismiss}
-        aria-label="Dismiss"
+        aria-label={t('pwa.dismiss')}
         className="rounded-full p-1 text-gray-400 transition hover:text-white active:text-white"
       >
         ✕

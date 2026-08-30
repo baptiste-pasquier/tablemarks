@@ -53,6 +53,12 @@ describe('PortabilityPanel', () => {
     const user = userEvent.setup()
 
     await user.upload(screen.getByLabelText(/import a backup file/i), jsonFile(validEnvelope))
+
+    // validEnvelope carries 1 restaurant and 0 visits — assert the nested-interpolation
+    // confirmation copy (place/visit pluralization composed into the question) renders correctly
+    // before confirming, so a broken plural key or a leaked raw `{{places}}` token is caught (#4).
+    expect(await screen.findByText('Import 1 place and 0 visits? Existing entries merge by last edit; nothing is deleted.')).toBeInTheDocument()
+
     await user.click(await screen.findByRole('button', { name: /confirm import/i }))
 
     await waitFor(async () => expect((await getRestaurant('r1'))?.name).toBe('Imported'))
@@ -80,5 +86,15 @@ describe('PortabilityPanel', () => {
     await user.click(await screen.findByRole('button', { name: /confirm import/i }))
 
     expect(await screen.findByText(/0 added/i)).toBeInTheDocument()
+  })
+
+  it('renders as a headless section — no backdrop or dialog chrome of its own — when not wrapped in a Modal (KTD3)', async () => {
+    const { container } = render(<PortabilityPanel onClose={vi.fn()} />)
+
+    expect(await screen.findByRole('heading', { name: /export/i })).toBeInTheDocument()
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    // Modal's backdrop is a `fixed inset-0 ... bg-black/50` div — none of that chrome exists here.
+    expect(container.innerHTML).not.toContain('bg-black/50')
+    expect(container.innerHTML).not.toContain('fixed inset-0')
   })
 })

@@ -1,10 +1,12 @@
 import { useId, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { capturePaste, captureSearchPick, type CaptureResult } from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
 import { updateRestaurant } from '../../data/restaurants'
 import { useRestaurants } from '../useRestaurants'
 import { cuisineOptions } from '../facets/cuisines'
 import { Modal } from '../ui/Modal'
+import { ModalHeader } from '../ui/ModalHeader'
 import type { Restaurant } from '../../types/models'
 
 export function AddPlace({
@@ -14,6 +16,7 @@ export function AddPlace({
   onClose: () => void
   onOpenExisting: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [cuisine, setCuisine] = useState('')
   const [busy, setBusy] = useState(false)
@@ -44,9 +47,9 @@ export function AddPlace({
     try {
       const found = await searchPlaces(query)
       setCandidates(found)
-      if (found.length === 0) setError('No matching places found.')
+      if (found.length === 0) setError(t('capture.errorNoMatches'))
     } catch {
-      setError('Search failed. Try again.')
+      setError(t('capture.errorSearchFailed'))
     } finally {
       setBusy(false)
     }
@@ -60,7 +63,7 @@ export function AddPlace({
     try {
       await handle(await capturePaste(input))
     } catch {
-      setError('Could not add that place.')
+      setError(t('capture.errorAdd'))
     } finally {
       setBusy(false)
     }
@@ -71,7 +74,7 @@ export function AddPlace({
     try {
       await handle(await captureSearchPick(candidate))
     } catch {
-      setError('Could not add that place.')
+      setError(t('capture.errorAdd'))
     } finally {
       setBusy(false)
     }
@@ -79,15 +82,10 @@ export function AddPlace({
 
   return (
     <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Add a place</h2>
-        <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
-          ✕
-        </button>
-      </div>
+      <ModalHeader title={t('capture.title')} onClose={onClose} />
 
       <label className="block text-sm text-gray-600" htmlFor="add-input">
-        Paste a Google Maps link, or type a place name
+        {t('capture.pasteLabel')}
       </label>
       <textarea
         id="add-input"
@@ -95,11 +93,11 @@ export function AddPlace({
         onChange={(e) => setInput(e.target.value)}
         rows={2}
         className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
-        placeholder="https://maps.app.goo.gl/…  or  Chez Marcel Paris"
+        placeholder={t('capture.pastePlaceholder')}
       />
 
       <label className="mt-3 block text-sm text-gray-600" htmlFor="add-cuisine">
-        Cuisine <span className="text-gray-400">(optional)</span>
+        {t('capture.cuisineLabel')} <span className="text-gray-400">{t('capture.optional')}</span>
       </label>
       <input
         id="add-cuisine"
@@ -107,7 +105,7 @@ export function AddPlace({
         value={cuisine}
         onChange={(e) => setCuisine(e.target.value)}
         className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
-        placeholder="e.g. Italian, Ramen…"
+        placeholder={t('capture.cuisinePlaceholder')}
       />
       <datalist id={cuisineListId}>
         {options.map((o) => (
@@ -121,7 +119,7 @@ export function AddPlace({
         disabled={busy || !input.trim()}
         className="mt-3 w-full rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50"
       >
-        {busy ? 'Working…' : 'Add'}
+        {busy ? t('capture.working') : t('capture.submit')}
       </button>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
@@ -129,14 +127,14 @@ export function AddPlace({
       {duplicate && (
         <div className="mt-3 rounded-md bg-brand-soft p-3 text-sm">
           <p>
-            <strong>{duplicate.name}</strong> is already saved.
+            <strong>{duplicate.name}</strong> {t('capture.alreadySaved')}
           </p>
           <button
             type="button"
             onClick={() => onOpenExisting(duplicate.id)}
             className="mt-1 font-medium text-brand underline"
           >
-            Open it
+            {t('capture.openIt')}
           </button>
         </div>
       )}
