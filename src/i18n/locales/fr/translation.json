@@ -54,6 +54,8 @@
   "visitDetail": {
     "cuisineLabel": "Cuisine",
     "cuisinePlaceholder": "Ajouter une cuisine…",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Ajouter une note…",
     "howWasIt": "Comment c'était ?",
     "hereNow": "J'y suis maintenant",
     "visitsHeading": "Visites",

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
 import { RestaurantDetail } from './RestaurantDetail'
-import { createRestaurant, getRestaurant } from '../../data/restaurants'
+import { createRestaurant, getRestaurant, mutateRestaurant } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 
 beforeEach(freshDB)
@@ -66,6 +66,74 @@ describe('RestaurantDetail', () => {
     await user.tab()
 
     await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBeUndefined())
+  })
+
+  it('pre-fills the notes textarea with an existing note', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1, note: 'Great terrace' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    expect(await screen.findByLabelText('Notes')).toHaveValue('Great terrace')
+  })
+
+  it('edits and persists the note on blur', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText('Notes'), 'Ask for the corner table')
+    await user.tab() // blur commits the edit
+
+    await waitFor(async () =>
+      expect((await getRestaurant(r.id))?.note).toBe('Ask for the corner table'),
+    )
+  })
+
+  it('renders an empty notes textarea when there is no existing note, with no leftover placeholder text after typing', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    const textarea = await screen.findByLabelText('Notes')
+    expect(textarea).toHaveValue('')
+
+    await user.type(textarea, 'Loud on weekends')
+    expect(textarea).toHaveValue('Loud on weekends')
+  })
+
+  it('inserts a newline on Enter in the notes textarea instead of saving', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    const textarea = await screen.findByLabelText('Notes')
+    await user.type(textarea, 'Line one{enter}Line two')
+
+    expect(textarea).toHaveValue('Line one\nLine two')
+    // No blur happened, so nothing should have been persisted yet.
+    expect((await getRestaurant(r.id))?.note).toBeUndefined()
+  })
+
+  it('keeps in-progress unsaved note text when an external store write lands while the field is focused', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, note: 'original note' })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    const textarea = await screen.findByLabelText('Notes')
+    await user.click(textarea) // focus, without blurring
+    await user.type(textarea, ' plus my edit')
+
+    // Simulate a rollup/check-in-triggered write landing on the same restaurant while the user is
+    // still typing an unsaved note — e.g. a visit-triggered rollup recompute racing the edit.
+    await mutateRestaurant(
+      r.id,
+      (existing) => (existing ? { ...existing, note: 'external note from rollup' } : existing),
+      'store',
+    )
+
+    // The textarea must still show what the user typed, not the external value, and must not have
+    // been remounted out from under them.
+    await waitFor(() => expect(textarea).toHaveValue('original note plus my edit'))
+    expect(screen.getByLabelText('Notes')).toBe(textarea)
   })
 
   it('returns a place to to-try when its last visit is deleted', async () => {
