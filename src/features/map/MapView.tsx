@@ -13,7 +13,38 @@ import { computeLabelPlacement, type LabelCandidate, type ScreenPoint } from './
  */
 export const LABEL_ZOOM_FLOOR = 14
 
-const iconCache = new Map<string, L.DivIcon>()
+/**
+ * Restaurant names longer than this are truncated with an ellipsis for the on-map label only
+ * (the Popup always shows the full name) — an unbounded name would otherwise render as an
+ * unclipped banner that can cover most of the map. 24 is a judgment call, not a design spec.
+ */
+const MAX_LABEL_CHARS = 24
+
+/** Truncates a name for on-map label display only — never for the Popup's full name. */
+function truncateLabel(name: string): string {
+  return name.length > MAX_LABEL_CHARS ? `${name.slice(0, MAX_LABEL_CHARS - 1)}…` : name
+}
+
+/**
+ * Cache of just the teardrop pin's own HTML fragment, keyed on `color:selected` only — bounded by
+ * (distinct cuisine colors) x 2, so many same-color/selection markers share one cached string
+ * regardless of restaurant name. Deliberately does NOT include `labelText` in the key: that used
+ * to make this cache grow unbounded with restaurant-name cardinality.
+ */
+const pinHtmlCache = new Map<string, string>()
+
+function pinHtml(color: string, selected: boolean): string {
+  const key = `${color}:${selected ? 1 : 0}`
+  let html = pinHtmlCache.get(key)
+  if (!html) {
+    const shadow = selected
+      ? `box-shadow:0 0 0 5px ${color}33, 0 3px 6px rgba(0,0,0,.4);`
+      : `box-shadow:0 2px 4px rgba(0,0,0,.35);`
+    html = `<span style="position:absolute;inset:0;display:block;border-radius:50% 50% 50% 0;background:${color};border:2px solid #fff;transform:rotate(-45deg);${shadow}"><span style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:9999px;background:rgba(255,255,255,.92)"></span></span>`
+    pinHtmlCache.set(key, html)
+  }
+  return html
+}
 
 /** Escapes text for safe interpolation into a raw HTML string (restaurant names are user data). */
 function escapeHtml(s: string): string {
@@ -26,34 +57,29 @@ function escapeHtml(s: string): string {
 }
 
 /**
- * A teardrop pin in the cuisine color (cached per color+selected+label), with a brand halo when
- * selected and, when `labelText` is given, a name label rendered beside the pin (R1/R3). The
- * label is baked directly into the icon's HTML (rather than a separate react-leaflet Tooltip) so
- * it moves and z-index-stacks with the marker for free, and so `aria-hidden` can be hand-written
- * into the markup — the label is decorative only, the accessible name lives in the marker's
- * Popup (KTD7).
+ * A teardrop pin in the cuisine color, with a brand halo when selected and, when `labelText` is
+ * given, a name label rendered beside the pin (R1/R3). The label is baked directly into the
+ * icon's HTML (rather than a separate react-leaflet Tooltip) so it moves and z-index-stacks with
+ * the marker for free, and so `aria-hidden` can be hand-written into the markup — the label is
+ * decorative only, the accessible name lives in the marker's Popup (KTD7).
+ *
+ * Only the pin's own HTML fragment is cached (see `pinHtml`, keyed on color+selected only); this
+ * function itself builds a fresh `L.divIcon` per call so a per-restaurant-name `labelText` never
+ * grows an unbounded cache — constructing the wrapper/label markup and the `L.divIcon` object is
+ * cheap, so there's no caching benefit to lose there.
  */
 function iconForColor(color: string, selected: boolean, labelText?: string): L.DivIcon {
-  const key = `${color}:${selected ? 1 : 0}:${labelText ?? ''}`
-  let icon = iconCache.get(key)
-  if (!icon) {
-    const size = selected ? 30 : 24
-    const shadow = selected
-      ? `box-shadow:0 0 0 5px ${color}33, 0 3px 6px rgba(0,0,0,.4);`
-      : `box-shadow:0 2px 4px rgba(0,0,0,.35);`
-    const label = labelText
-      ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;color:#1f2937;white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
-      : ''
-    icon = L.divIcon({
-      className: '',
-      html: `<span style="position:relative;display:block;width:${size}px;height:${size}px;"><span style="position:absolute;inset:0;display:block;border-radius:50% 50% 50% 0;background:${color};border:2px solid #fff;transform:rotate(-45deg);${shadow}"><span style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:9999px;background:rgba(255,255,255,.92)"></span></span>${label}</span>`,
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size],
-      popupAnchor: [0, -size],
-    })
-    iconCache.set(key, icon)
-  }
-  return icon
+  const size = selected ? 30 : 24
+  const label = labelText
+    ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;font-family:system-ui, sans-serif;color:#1f2937;white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
+    : ''
+  return L.divIcon({
+    className: '',
+    html: `<span style="position:relative;display:block;width:${size}px;height:${size}px;">${pinHtml(color, selected)}${label}</span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size],
+  })
 }
 
 const DEFAULT_CENTER: [number, number] = [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]
@@ -110,9 +136,13 @@ function CenterReporter({ onChange }: { onChange?: (center: GeoPoint) => void })
  * mounted but hidden (`display:none`) while inactive, a transition that fires no resize event, so
  * both Leaflet's own tile grid and this component's screen-space projections go stale until the
  * pane becomes visible again. `invalidateSize()` must run before the next `recompute()` reads
- * `map.getSize()` — owning both calls in one effect here, rather than splitting them across this
- * component and `MapView`'s own effect, keeps that order guaranteed instead of relying on two
- * components' effects racing.
+ * `map.getSize()` — both calls (plus the zoomend/moveend subscription and the initial compute)
+ * live in one single effect below, keyed on `[map, recompute, active]`, so there is exactly one
+ * ordering path: the rising-edge check and its `invalidateSize()` always run first, before the
+ * one `recompute()` call in that same effect execution, regardless of which prop changed. Two
+ * separate effects that could both call `recompute()` in the same commit (e.g. one keyed on
+ * `[map, recompute]`, another on `[active, map, recompute]`) would race whenever `markers` and
+ * `active` change together, since `recompute`'s identity changes with `markers`.
  *
  * Exported (rather than kept private) so tests can render it directly and observe what it
  * reports via `onChange`, without needing to reach into `MapView`'s own state.
@@ -120,10 +150,18 @@ function CenterReporter({ onChange }: { onChange?: (center: GeoPoint) => void })
 export function LabelVisibility({
   markers,
   active,
+  selectedId,
   onChange,
 }: {
   markers: MapMarker[]
   active?: boolean
+  /**
+   * Used purely as a geometry input (which icon radius — 24 vs 30 — applies to the selected
+   * marker), never to suppress/prioritize a label: visibility eligibility is still governed
+   * solely by `visibleLabelIds`/`computeLabelPlacement`, no special-casing of `selectedId` here
+   * (KTD7 — see MapView's own guard for the enforcement point).
+   */
+  selectedId?: string | null
   onChange?: (visible: Set<string>) => void
 }) {
   const map = useMap()
@@ -136,7 +174,14 @@ export function LabelVisibility({
     const viewCenter: ScreenPoint = { x: size.x / 2, y: size.y / 2 }
     const candidates: LabelCandidate[] = markers.map((m) => {
       const point = map.latLngToContainerPoint([m.lat, m.lng])
-      return { id: m.id, x: point.x, y: point.y, name: m.name, dimmed: m.dimmed }
+      return {
+        id: m.id,
+        x: point.x,
+        y: point.y,
+        name: truncateLabel(m.name),
+        dimmed: m.dimmed,
+        iconRadius: (m.id === selectedId ? 30 : 24) / 2,
+      }
     })
     const next = computeLabelPlacement(candidates, viewCenter, zoomFloorMet)
     const prev = lastReportedRef.current
@@ -145,17 +190,7 @@ export function LabelVisibility({
       lastReportedRef.current = next
       onChange?.(next)
     }
-  }, [map, markers, onChange])
-
-  useEffect(() => {
-    recompute() // initial computation, so labels aren't absent when already past the zoom floor
-    map.on('zoomend', recompute)
-    map.on('moveend', recompute)
-    return () => {
-      map.off('zoomend', recompute)
-      map.off('moveend', recompute)
-    }
-  }, [map, recompute])
+  }, [map, markers, onChange, selectedId])
 
   const wasActiveRef = useRef(active)
   useEffect(() => {
@@ -163,9 +198,15 @@ export function LabelVisibility({
     wasActiveRef.current = active
     if (becameActive) {
       map.invalidateSize()
-      recompute()
     }
-  }, [active, map, recompute])
+    recompute() // initial computation, so labels aren't absent when already past the zoom floor
+    map.on('zoomend', recompute)
+    map.on('moveend', recompute)
+    return () => {
+      map.off('zoomend', recompute)
+      map.off('moveend', recompute)
+    }
+  }, [map, recompute, active])
 
   return null
 }
@@ -210,7 +251,12 @@ export function MapView({
         />
         <Recenter markers={markers} />
         <CenterReporter onChange={onCenterChange} />
-        <LabelVisibility markers={markers} active={active} onChange={setVisibleLabelIds} />
+        <LabelVisibility
+          markers={markers}
+          active={active}
+          selectedId={selectedId}
+          onChange={setVisibleLabelIds}
+        />
         {markers.map((m) => (
           <Marker
             key={m.id}
@@ -222,7 +268,7 @@ export function MapView({
               // never selectedId/popup-open state. !m.dimmed is defense-in-depth — the upstream
               // placement algorithm already excludes dimmed candidates — so this layer's own
               // guarantee doesn't silently rely on that upstream behavior.
-              visibleLabelIds.has(m.id) && !m.dimmed ? m.name : undefined,
+              visibleLabelIds.has(m.id) && !m.dimmed ? truncateLabel(m.name) : undefined,
             )}
             opacity={m.dimmed ? 0.3 : 1}
             eventHandlers={onSelect ? { click: () => onSelect(m.id) } : undefined}

@@ -17,6 +17,8 @@ export interface LabelCandidate {
   name: string
   /** True when an active filter excludes this restaurant (KTD5/R4) — pruned before placement. */
   dimmed: boolean
+  /** Half the marker icon's on-screen size (px) — the label's real box is anchored off this, not off `x`/`y` directly (R3). */
+  iconRadius: number
 }
 
 export interface ScreenPoint {
@@ -34,10 +36,19 @@ export interface LabelPlacementOptions {
   font?: string
   /** Fixed label box height (px) used for collision checks. */
   labelHeight?: number
+  /** Horizontal gap (px) between the icon's edge and the label's left edge — matches the rendered `margin-left`. */
+  offsetX?: number
+  /** Horizontal padding (px) applied on both sides of the measured text — matches the rendered `padding`. */
+  paddingX?: number
 }
 
-const DEFAULT_FONT = '13px system-ui, sans-serif'
-const DEFAULT_LABEL_HEIGHT = 16
+// Font, height, offset and padding below are kept in lockstep with the label span's actual
+// rendered CSS in MapView.tsx's `iconForColor` (font-size:11px, line-height:1.5, margin-left:6px,
+// padding:1px 6px) so the collision geometry here matches what really paints on screen (R3).
+const DEFAULT_FONT = '11px system-ui, sans-serif'
+const DEFAULT_LABEL_HEIGHT = 19
+const DEFAULT_OFFSET_X = 6
+const DEFAULT_PADDING_X = 6
 
 interface Box {
   left: number
@@ -68,12 +79,28 @@ function measureCached(measure: MeasureTextWidth, name: string, font: string): n
   return width
 }
 
-function boxFor(candidate: LabelCandidate, width: number, height: number): Box {
+/**
+ * Models the label's real screen footprint (R3), not a box centered on the marker's raw point:
+ * the rendered label sits to the right of the icon (`left:100%` plus `offsetX` margin) with
+ * `paddingX` on both sides of the measured text, and is vertically centered on the icon's own
+ * midpoint (`candidate.y - iconRadius`, since the marker's anchor point is the icon's bottom
+ * edge per `iconAnchor:[size/2, size]`), not on `candidate.y` itself.
+ */
+function boxFor(
+  candidate: LabelCandidate,
+  width: number,
+  height: number,
+  offsetX: number,
+  paddingX: number,
+): Box {
+  const left = candidate.x + candidate.iconRadius + offsetX
+  const right = left + width + 2 * paddingX
+  const verticalCenter = candidate.y - candidate.iconRadius
   return {
-    left: candidate.x - width / 2,
-    right: candidate.x + width / 2,
-    top: candidate.y - height / 2,
-    bottom: candidate.y + height / 2,
+    left,
+    right,
+    top: verticalCenter - height / 2,
+    bottom: verticalCenter + height / 2,
   }
 }
 
@@ -107,6 +134,8 @@ export function computeLabelPlacement(
     measureTextWidth = measureTextWidthWithCanvas,
     font = DEFAULT_FONT,
     labelHeight = DEFAULT_LABEL_HEIGHT,
+    offsetX = DEFAULT_OFFSET_X,
+    paddingX = DEFAULT_PADDING_X,
   } = options
 
   const eligible = candidates.filter((c) => !c.dimmed)
@@ -123,7 +152,7 @@ export function computeLabelPlacement(
 
   for (const candidate of sorted) {
     const width = measureCached(measureTextWidth, candidate.name, font)
-    const box = boxFor(candidate, width, labelHeight)
+    const box = boxFor(candidate, width, labelHeight, offsetX, paddingX)
     if (!acceptedBoxes.some((existing) => boxesOverlap(box, existing))) {
       acceptedBoxes.push(box)
       acceptedIds.add(candidate.id)

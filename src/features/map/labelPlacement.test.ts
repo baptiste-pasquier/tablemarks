@@ -6,8 +6,10 @@ const CENTER = { x: 0, y: 0 }
 /** Deterministic stub: never touches a real canvas, width scales with character count. */
 const stubMeasure: MeasureTextWidth = (text) => text.length * 10
 
+// iconRadius defaults to 0 so existing candidates' x/y stay their own box's left/top edge,
+// preserving this file's pre-existing symmetric-ish test math untouched (finding #1).
 function candidate(over: Partial<LabelCandidate> & Pick<LabelCandidate, 'id'>): LabelCandidate {
-  return { x: 0, y: 0, name: 'X', dimmed: false, ...over }
+  return { x: 0, y: 0, name: 'X', dimmed: false, iconRadius: 0, ...over }
 }
 
 describe('computeLabelPlacement', () => {

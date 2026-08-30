@@ -17,7 +17,11 @@ vi.mock('./labelPlacement', async (importOriginal) => {
 // Mutable per-test knobs for the mocked map, plus a handler registry so tests can simulate
 // Leaflet firing `zoomend`/`moveend` by invoking the recorded handlers directly.
 let mockZoom = 12
-let mockProject = (lat: number, lng: number) => ({ x: lng * 10, y: lat * 10 })
+// Scaled up (was *10) so the two default MARKERS project far enough apart that their label boxes
+// don't overlap under finding #1's real-footprint geometry (box left edge now starts past the
+// icon's own radius+offset, not centered on the marker point) — keeps this default projection's
+// intent (both markers get an unobstructed label) matching pre-existing test expectations below.
+let mockProject = (lat: number, lng: number) => ({ x: lng * 20, y: lat * 20 })
 const handlers = new Map<string, Set<() => void>>()
 const mockInvalidateSize = vi.fn()
 
@@ -67,7 +71,7 @@ vi.mock('react-leaflet', () => {
 
 beforeEach(() => {
   mockZoom = 12
-  mockProject = (lat, lng) => ({ x: lng * 10, y: lat * 10 })
+  mockProject = (lat, lng) => ({ x: lng * 20, y: lat * 20 })
   handlers.clear()
   vi.mocked(computeLabelPlacement).mockClear()
   mockInvalidateSize.mockClear()
