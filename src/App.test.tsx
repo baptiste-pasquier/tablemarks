@@ -183,4 +183,33 @@ describe('currentPosition state and fetch wiring (U2)', () => {
     await waitFor(() => expect(mockGeolocate).toHaveBeenCalledTimes(2))
     expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(initial)
   })
+
+  it('keeps the fresher "Localiser" result even when the earlier-started mount fetch resolves later (KTD3 generation guard)', async () => {
+    const user = userEvent.setup()
+    let resolveMount!: (p: GeoPoint | null) => void
+    let resolveTap!: (p: GeoPoint | null) => void
+    const mountFetch = new Promise<GeoPoint | null>((resolve) => {
+      resolveMount = resolve
+    })
+    const tapFetch = new Promise<GeoPoint | null>((resolve) => {
+      resolveTap = resolve
+    })
+    mockGeolocate.mockReturnValueOnce(mountFetch).mockReturnValueOnce(tapFetch)
+
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    await waitFor(() => expect(mockGeolocate).toHaveBeenCalledTimes(1))
+
+    await user.click(screen.getByRole('button', { name: /center on my location/i }))
+    await waitFor(() => expect(mockGeolocate).toHaveBeenCalledTimes(2))
+
+    const tapPoint: GeoPoint = { lat: 9, lng: 9 }
+    const mountPoint: GeoPoint = { lat: 1, lng: 1 }
+    resolveTap(tapPoint)
+    await waitFor(() => expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(tapPoint))
+
+    resolveMount(mountPoint)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(tapPoint)
+  })
 })

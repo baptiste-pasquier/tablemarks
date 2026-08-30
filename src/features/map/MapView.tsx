@@ -94,6 +94,7 @@ export function MapView({
   markers,
   onSelect,
   onCenterChange,
+  beginLocate,
   onLocate,
   currentPosition,
   selectedId,
@@ -102,7 +103,8 @@ export function MapView({
   markers: MapMarker[]
   onSelect?: (id: string) => void
   onCenterChange?: (center: GeoPoint) => void
-  onLocate?: (p: GeoPoint) => void
+  beginLocate?: () => number
+  onLocate?: (p: GeoPoint, generation: number) => void
   currentPosition?: GeoPoint | null
   selectedId?: string | null
   active?: boolean
@@ -123,12 +125,15 @@ export function MapView({
 
   async function locate() {
     setLocating(true)
+    // Generation token (KTD3): tags this fetch so App can drop it if a later-started fetch
+    // (the mount effect, or another tap) resolves and commits first.
+    const generation = beginLocate?.() ?? 0
     const point = await geolocate()
     // Null-guard (KTD3): a failed/timed-out retry must not erase a working currentPosition, so
     // only report a point when one actually comes back.
     if (point) {
       if (map) map.setView([point.lat, point.lng], map.getZoom())
-      onLocate?.(point)
+      onLocate?.(point, generation)
     }
     setLocating(false)
   }
@@ -164,6 +169,8 @@ export function MapView({
           <Marker
             position={[currentPosition.lat, currentPosition.lng]}
             icon={currentPositionIcon(t('map.currentPositionAria'))}
+            interactive={false}
+            keyboard={false}
           />
         )}
       </MapContainer>

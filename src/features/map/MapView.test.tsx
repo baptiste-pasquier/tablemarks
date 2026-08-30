@@ -52,11 +52,15 @@ vi.mock('react-leaflet', () => {
       position,
       children,
       eventHandlers,
+      interactive,
+      keyboard,
     }: {
       icon: L.DivIcon
       position: [number, number]
       children?: React.ReactNode
       eventHandlers?: { click?: () => void }
+      interactive?: boolean
+      keyboard?: boolean
     }) => {
       const iconSize = icon.options.iconSize as L.PointTuple | undefined
       return (
@@ -64,6 +68,8 @@ vi.mock('react-leaflet', () => {
           data-testid={`marker-${position[0]}-${position[1]}`}
           data-size={iconSize?.[0]}
           data-icon-html={icon.options.html}
+          data-interactive={interactive}
+          data-keyboard={keyboard}
           onClick={eventHandlers?.click}
         >
           {children}
@@ -121,8 +127,22 @@ describe('MapView', () => {
 
       await user.click(screen.getByRole('button', { name: /center on my location/i }))
 
-      await waitFor(() => expect(onLocate).toHaveBeenCalledWith(point))
+      await waitFor(() => expect(onLocate).toHaveBeenCalledWith(point, expect.any(Number)))
       expect(mockMapSetView).toHaveBeenCalledWith([point.lat, point.lng], 12)
+    })
+
+    it('tags each fetch with the generation from beginLocate so the caller can drop a stale resolution (KTD3)', async () => {
+      const user = userEvent.setup()
+      const point: GeoPoint = { lat: 9, lng: 8 }
+      mockGeolocate.mockResolvedValue(point)
+      const onLocate = vi.fn()
+      const beginLocate = vi.fn().mockReturnValue(7)
+      render(<MapView markers={[]} beginLocate={beginLocate} onLocate={onLocate} />)
+
+      await user.click(screen.getByRole('button', { name: /center on my location/i }))
+
+      await waitFor(() => expect(onLocate).toHaveBeenCalledWith(point, 7))
+      expect(beginLocate).toHaveBeenCalledTimes(1)
     })
 
     it('does not call onLocate or recenter when the fetch resolves null — denied/timeout/no support (KTD3 null-guard, R6)', async () => {
@@ -176,6 +196,14 @@ describe('MapView', () => {
 
       fireEvent.click(marker)
       expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    it('renders the current-position marker as non-interactive and non-keyboard-focusable, unlike restaurant pins', () => {
+      render(<MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} />)
+
+      const marker = screen.getByTestId('marker-5-6')
+      expect(marker.dataset.interactive).toBe('false')
+      expect(marker.dataset.keyboard).toBe('false')
     })
   })
 

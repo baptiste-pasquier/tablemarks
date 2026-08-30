@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 import { useRestaurants } from './features/useRestaurants'
@@ -46,11 +46,27 @@ export default function App() {
     [restaurants, filter, i18n.language],
   )
 
+  // Generation token (KTD3): the on-load fetch (F1) and the "Localiser" tap (F2) can overlap,
+  // and whichever resolves first should win regardless of which one started first. Each fetch
+  // tags itself via beginLocate() and commitLocate() only applies a result whose generation is
+  // still the latest, so a slower fetch can never clobber a fresher one that already landed.
+  const positionGenerationRef = useRef(0)
+
+  function beginLocate(): number {
+    positionGenerationRef.current += 1
+    return positionGenerationRef.current
+  }
+
+  function commitLocate(point: GeoPoint, generation: number) {
+    if (generation === positionGenerationRef.current) setCurrentPosition(point)
+  }
+
   // On-load fetch (F1, R1). A failed/unavailable fix resolves null and is ignored (KTD3's
   // null-guard) rather than overwriting `currentPosition`, which starts null anyway (R6).
   useEffect(() => {
+    const generation = beginLocate()
     void geolocate().then((point) => {
-      if (point) setCurrentPosition(point)
+      if (point) commitLocate(point, generation)
     })
   }, [])
 
@@ -140,7 +156,8 @@ export default function App() {
             markers={markers}
             onSelect={setSelectedId}
             onCenterChange={setAnchor}
-            onLocate={setCurrentPosition}
+            beginLocate={beginLocate}
+            onLocate={commitLocate}
             currentPosition={currentPosition}
             selectedId={selectedId}
             active={view === 'map'}
