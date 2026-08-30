@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import { toMarkers } from './markers'
 import { colorForCuisine } from '../facets/cuisines'
 import { emptyFilter } from '../facets/filter'
-import { mockI18n } from '../../test/setup'
 import type { Restaurant } from '../../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
@@ -21,9 +20,17 @@ function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
 }
 
 describe('toMarkers', () => {
-  it('includes resolved restaurants and labels them with the rollup', () => {
+  it('carries pending, visitCount, latestVerdict, and cuisine through unchanged', () => {
     const markers = toMarkers([
-      r({ id: 'a', name: 'A', lat: 48, lng: 2, visitCount: 2, latestVerdict: 'go_back' }),
+      r({
+        id: 'a',
+        name: 'A',
+        lat: 48,
+        lng: 2,
+        visitCount: 2,
+        latestVerdict: 'go_back',
+        cuisine: 'French',
+      }),
     ])
     expect(markers).toEqual([
       {
@@ -31,11 +38,25 @@ describe('toMarkers', () => {
         lat: 48,
         lng: 2,
         name: 'A',
-        label: 'Go back · 2 visits',
-        color: colorForCuisine(undefined),
+        pending: false,
+        visitCount: 2,
+        latestVerdict: 'go_back',
+        cuisine: 'French',
+        color: colorForCuisine('French'),
         dimmed: false,
       },
     ])
+  })
+
+  it('produces a null latestVerdict for a to-try restaurant (visitCount: 0)', () => {
+    const markers = toMarkers([r({ id: 'a', visitCount: 0, latestVerdict: null })])
+    expect(markers[0].visitCount).toBe(0)
+    expect(markers[0].latestVerdict).toBeNull()
+  })
+
+  it('leaves cuisine unset when the restaurant has none, rather than synthesizing a default', () => {
+    const markers = toMarkers([r({ id: 'a' })])
+    expect(markers[0].cuisine).toBeUndefined()
   })
 
   it('flags non-matching markers dimmed but still places them (R9)', () => {
@@ -64,19 +85,12 @@ describe('toMarkers', () => {
     expect(markers.map((m) => m.id)).toEqual(['ok'])
   })
 
-  it('re-translates the label when the active language changes (App.tsx\'s i18n.language memo dependency)', async () => {
-    const restaurant = r({ id: 'a', name: 'A', visitCount: 2, latestVerdict: 'go_back' })
-
-    const englishLabel = toMarkers([restaurant])[0].label
-    expect(englishLabel).toBe('Go back · 2 visits')
-
-    await mockI18n.changeLanguage('fr')
-    try {
-      const frenchLabel = toMarkers([restaurant])[0].label
-      expect(frenchLabel).toBe("J'y retourne · 2 visites")
-      expect(frenchLabel).not.toBe(englishLabel)
-    } finally {
-      await mockI18n.changeLanguage('en')
-    }
+  it('always produces pending: false, since pending restaurants are filtered out beforehand', () => {
+    const markers = toMarkers([
+      r({ id: 'a', pending: false }),
+      r({ id: 'b', pending: true }),
+    ])
+    expect(markers.map((m) => m.id)).toEqual(['a'])
+    expect(markers.every((m) => m.pending === false)).toBe(true)
   })
 })

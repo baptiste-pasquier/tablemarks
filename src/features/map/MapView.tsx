@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { MapMarker } from './markers'
 import { geolocate, type GeoPoint } from '../../lib/geolocate'
 import { DEFAULT_MAP_CENTER } from '../../lib/geo'
+import { StatusBadge } from '../StatusBadge'
+import { badgeState } from '../display'
+import { cuisineDisplayName, emojiForCuisine } from '../facets/cuisines'
+import { translateVisitsCount } from '../../types/models'
 import { computeLabelPlacement, type LabelCandidate, type ScreenPoint } from './labelPlacement'
 
 /**
@@ -15,21 +19,36 @@ export const LABEL_ZOOM_FLOOR = 14
 
 /**
  * Restaurant names longer than this are truncated with an ellipsis for the on-map label only
- * (the Popup always shows the full name) — an unbounded name would otherwise render as an
+ * (the tooltip always shows the full name) — an unbounded name would otherwise render as an
  * unclipped banner that can cover most of the map. 24 is a judgment call, not a design spec.
  */
 const MAX_LABEL_CHARS = 24
 
-/** Truncates a name for on-map label display only — never for the Popup's full name. */
+/** Truncates a name for on-map label display only — never for the tooltip's full name. */
 function truncateLabel(name: string): string {
   return name.length > MAX_LABEL_CHARS ? `${name.slice(0, MAX_LABEL_CHARS - 1)}…` : name
 }
 
 /**
+ * Escapes a string for safe interpolation into an HTML attribute value (and text content) in a
+ * raw HTML string handed to `L.divIcon`. Restaurant names are user-entered free text, unlike the
+ * translated UI labels `currentPositionIcon` interpolates below, so they must not be trusted to
+ * pass through unescaped into `aria-label="..."`.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
  * Cache of just the teardrop pin's own HTML fragment, keyed on `color:selected` only — bounded by
  * (distinct cuisine colors) x 2, so many same-color/selection markers share one cached string
- * regardless of restaurant name. Deliberately does NOT include `labelText` in the key: that used
- * to make this cache grow unbounded with restaurant-name cardinality.
+ * regardless of restaurant name. Deliberately does NOT include the name/label text in the key:
+ * that would make this cache grow unbounded with restaurant-name cardinality.
  */
 const pinHtmlCache = new Map<string, string>()
 
@@ -46,39 +65,31 @@ function pinHtml(color: string, selected: boolean): string {
   return html
 }
 
-/** Escapes text for safe interpolation into a raw HTML string (restaurant names are user data). */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
 /**
- * A teardrop pin in the cuisine color, with a brand halo when selected and, when `labelText` is
- * given, a name label rendered beside the pin (R1/R3). The label is baked directly into the
- * icon's HTML (rather than a separate react-leaflet Tooltip) so it moves and z-index-stacks with
- * the marker for free, and so `aria-hidden` can be hand-written into the markup — the label is
- * decorative only, the accessible name lives in the marker's Popup (KTD7).
+ * A teardrop pin in the cuisine color, with a brand halo when selected. Always carries the
+ * restaurant's name as an accessible name (`role="img" aria-label`, R6, mirroring
+ * `currentPositionIcon` below) so keyboard/AT users focusing the marker can tell which restaurant
+ * it is, now that the tooltip only reveals content on hover/focus. When `labelText` is given, an
+ * always-visible decorative name label is also rendered beside the pin (R1/R3) — `aria-hidden`
+ * since it's decorative only; the accessible name always comes from `name`/`aria-label`, never
+ * from this label, so it stays correct whether or not the label is currently shown.
  *
- * Only the pin's own HTML fragment is cached (see `pinHtml`, keyed on color+selected only); this
- * function itself builds a fresh `L.divIcon` per call so a per-restaurant-name `labelText` never
- * grows an unbounded cache — constructing the wrapper/label markup and the `L.divIcon` object is
- * cheap, so there's no caching benefit to lose there.
+ * Only the pin's own HTML fragment is cached (`pinHtml`, keyed on color+selected only, bounded);
+ * this function builds a fresh wrapper + `L.divIcon` per call so per-restaurant `name`/`labelText`
+ * never grows an unbounded cache.
  */
-function iconForColor(color: string, selected: boolean, labelText?: string): L.DivIcon {
+function iconForColor(color: string, selected: boolean, name: string, labelText?: string): L.DivIcon {
   const size = selected ? 30 : 24
   const label = labelText
     ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;font-family:system-ui, sans-serif;color:#1f2937;white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
     : ''
   return L.divIcon({
     className: '',
-    html: `<span style="position:relative;display:block;width:${size}px;height:${size}px;">${pinHtml(color, selected)}${label}</span>`,
+    html: `<span role="img" aria-label="${escapeHtml(name)}" style="position:relative;display:block;width:${size}px;height:${size}px;">${pinHtml(color, selected)}${label}</span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size],
-    popupAnchor: [0, -size],
+    // Tooltip reads `tooltipAnchor` (not `popupAnchor`) to position itself against the icon.
+    tooltipAnchor: [0, -size],
   })
 }
 
@@ -292,29 +303,101 @@ export function MapView({
           selectedId={selectedId}
           onChange={setVisibleLabelIds}
         />
-        {markers.map((m) => (
-          <Marker
-            key={m.id}
-            position={[m.lat, m.lng]}
-            icon={iconForColor(
-              m.color,
-              m.id === selectedId,
-              // Popups don't special-case labels (KTD7): visibility follows visibleLabelIds only,
-              // never selectedId/popup-open state. !m.dimmed is defense-in-depth — the upstream
-              // placement algorithm already excludes dimmed candidates — so this layer's own
-              // guarantee doesn't silently rely on that upstream behavior.
-              visibleLabelIds.has(m.id) && !m.dimmed ? truncateLabel(m.name) : undefined,
-            )}
-            opacity={m.dimmed ? 0.3 : 1}
-            eventHandlers={onSelect ? { click: () => onSelect(m.id) } : undefined}
-          >
-            <Popup>
-              <strong>{m.name}</strong>
-              <br />
-              {m.label}
-            </Popup>
-          </Marker>
-        ))}
+        {markers.map((m) => {
+          // R4/R5: badge + visit-count (only when visited, exactly like RestaurantList's row)
+          // + cuisine emoji/label, joined with a middle dot — only present segments produce a
+          // separator, so a to-try place (no visit-count segment) never shows a stray "· ·".
+          const visited = badgeState(m).kind === 'visited'
+          const metaParts: React.ReactNode[] = [<StatusBadge key="badge" restaurant={m} />]
+          if (visited) metaParts.push(translateVisitsCount(m.visitCount))
+          metaParts.push(
+            <span key="cuisine">
+              <span aria-hidden="true">{emojiForCuisine(m.cuisine)}</span>{' '}
+              {cuisineDisplayName(m.cuisine, t('common.uncategorized'))}
+            </span>,
+          )
+
+          return (
+            <Marker
+              key={m.id}
+              position={[m.lat, m.lng]}
+              icon={iconForColor(
+                m.color,
+                m.id === selectedId,
+                m.name,
+                // Labels don't special-case the tooltip/selection (KTD7): visibility follows
+                // visibleLabelIds only, never selectedId/tooltip-open state. !m.dimmed is
+                // defense-in-depth — the upstream placement algorithm already excludes dimmed
+                // candidates — so this layer's own guarantee doesn't silently rely on that
+                // upstream behavior.
+                visibleLabelIds.has(m.id) && !m.dimmed ? truncateLabel(m.name) : undefined,
+              )}
+              opacity={m.dimmed ? 0.3 : 1}
+              eventHandlers={
+                onSelect
+                  ? {
+                      click: (event: L.LeafletMouseEvent) => {
+                        const marker = event.target as L.Marker
+                        // KTD3: Leaflet's Tooltip also opens on click internally — it's just
+                        // another listener bound to this same 'click' event (via `bindTooltip`'s
+                        // `_initTooltipInteractions`). Whether that internal listener or this one
+                        // runs first for a given click depends on effect-mount order, which we
+                        // must not rely on. Deferring past the synchronous listener-dispatch phase
+                        // guarantees this always runs *after* every 'click' listener registered
+                        // for this event — including Leaflet's own — regardless of which one it
+                        // happened to invoke first, so the tooltip never survives past a click.
+                        queueMicrotask(() => {
+                          marker.closeTooltip()
+                          // KTD4: blur before selecting, so RestaurantDetail's modal doesn't
+                          // restore focus to the marker on close (which would re-trigger the
+                          // tooltip's native focus listener and reopen it — R3).
+                          marker.getElement()?.blur()
+                          onSelect(m.id)
+                          // KTD6: Leaflet's own internal tooltip-open click handler
+                          // (`Tooltip.prototype._openTooltip`) does not open synchronously while
+                          // the map is still coasting from an inertial pan/drag at the moment
+                          // this click fires — it registers its own one-time
+                          // `map.once('moveend', ...)` and opens later instead (see
+                          // node_modules/leaflet/src/layer/Tooltip.js's `dragging.moving()`
+                          // check). The `closeTooltip()` above can't cancel that later callback,
+                          // so a click made mid-coast could otherwise pop the tooltip back open
+                          // seconds afterward, once the pan settles, after the modal has already
+                          // opened. Arm a matching one-time close on the same 'moveend' so it
+                          // always wins. This check must stay inside this same queueMicrotask
+                          // (not run synchronously alongside the `click` dispatch above): for the
+                          // same reason KTD3 defers past the synchronous listener-dispatch phase,
+                          // this guarantees our 'moveend' listener is always registered *after*
+                          // Leaflet's own — regardless of which 'click' listener Leaflet happened
+                          // to invoke first — so ours always runs last and wins.
+                          // `L.Map['dragging']` is typed as the base `Handler` interface, which
+                          // doesn't declare `moving()` — it's really an `L.Handler.MapDrag`
+                          // instance at runtime, which does (see
+                          // node_modules/leaflet/src/map/handler/Map.Drag.js), but @types/leaflet
+                          // doesn't model that subtype, hence the cast.
+                          const dragging = map?.dragging as { moving?: () => boolean } | undefined
+                          if (dragging?.moving?.()) {
+                            map?.once('moveend', () => marker.closeTooltip())
+                          }
+                        })
+                      },
+                    }
+                  : undefined
+              }
+            >
+              <Tooltip direction="top" className="marker-tooltip" opacity={1}>
+                <span className="block font-display font-semibold text-gray-900">{m.name}</span>
+                <span className="mt-0.5 block text-xs text-gray-600">
+                  {metaParts.map((part, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 align-middle">
+                      {i > 0 && <span aria-hidden="true" className="mx-1">·</span>}
+                      {part}
+                    </span>
+                  ))}
+                </span>
+              </Tooltip>
+            </Marker>
+          )
+        })}
         {currentPosition && (
           <Marker
             position={[currentPosition.lat, currentPosition.lng]}

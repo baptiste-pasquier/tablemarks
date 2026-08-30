@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -17,10 +17,84 @@ import type { GeoPoint } from '../../lib/geolocate'
 // so the vi.mock factory below (itself hoisted above all imports) can safely close over it.
 // tileLayerProps captures the TileLayer's last render props so the crossOrigin regression guard
 // can assert on it without rendering a real TileLayer under jsdom.
-const { mockMapSetView, tileLayerProps } = vi.hoisted(() => ({
-  mockMapSetView: vi.fn(),
-  tileLayerProps: { current: null as Record<string, unknown> | null },
-}))
+// fakeMarkerTarget / blurSpy stand in for Leaflet's real click-event target (a `L.Marker`
+// instance), which production code calls `closeTooltip()` / `getElement().blur()` on.
+// internalTooltipOpen stands in for Leaflet's own internal click-to-open-tooltip listener
+// (bound via `bindTooltip`'s `_initTooltipInteractions`) — a *second*, independent listener
+// on the same 'click' event, which the ordering test below registers alongside ours.
+// clickListenerOrder lets each ordering-test variant control which of the two listeners the
+// mock's marker element registers (and therefore dispatches) first, proving the production
+// click handler's ordering guarantee holds regardless of which one Leaflet happens to run first.
+//
+// tooltipOpen / mapMoving / moveEndListeners make the tooltip stand-in *stateful*, mirroring
+// Leaflet's real `Tooltip.prototype._openTooltip` (node_modules/leaflet/src/layer/Tooltip.js):
+// when `mapMoving.current` is true at "open" time, it doesn't open — it arms itself on the
+// mock map's `once('moveend', ...)` and re-checks once that fires, exactly like the real
+// `dragging.moving()` guard. This is what lets the KTD6 regression test below actually prove
+// the production fix (arming a competing one-time `moveend` close) wins against Leaflet's own
+// deferred re-open, instead of merely asserting a spy was called.
+const {
+  mockMapSetView,
+  tileLayerProps,
+  fakeMarkerTarget,
+  blurSpy,
+  internalTooltipOpen,
+  clickListenerOrder,
+  tooltipOpen,
+  mapMoving,
+  fireMoveEnd,
+  onceMoveEnd,
+} = vi.hoisted(() => {
+  const blur = vi.fn()
+  const tooltipOpen = { current: false }
+  const mapMoving = { current: false }
+  const moveEndListeners: Array<() => void> = []
+  const onceMoveEnd = (cb: () => void) => {
+    moveEndListeners.push(cb)
+  }
+  const fireMoveEnd = () => {
+    // Real `map.once` fires each registered listener exactly once, then drops it — snapshot
+    // and clear before invoking so a listener that re-arms itself (as the internal tooltip's
+    // recursive re-check below does while still moving) doesn't get invoked in the same pass.
+    const listeners = moveEndListeners.splice(0)
+    listeners.forEach((listener) => listener())
+  }
+  const openOnceFlag = { current: false }
+  // Mirrors Tooltip.js's `_openTooltip`: bails out to a deferred `moveend` re-check while the
+  // map is moving, otherwise opens. Wrapped in vi.fn() below so it stays spy-able (the existing
+  // ordering test reads `.mock.invocationCallOrder`) while actually modeling open/closed state.
+  function openInternalTooltip(_event?: unknown) {
+    if (mapMoving.current && !openOnceFlag.current) {
+      openOnceFlag.current = true
+      onceMoveEnd(() => {
+        openOnceFlag.current = false
+        openInternalTooltip()
+      })
+      return
+    }
+    tooltipOpen.current = true
+  }
+  return {
+    mockMapSetView: vi.fn(),
+    tileLayerProps: { current: null as Record<string, unknown> | null },
+    blurSpy: blur,
+    fakeMarkerTarget: {
+      closeTooltip: vi.fn(() => {
+        tooltipOpen.current = false
+      }),
+      getElement: () => ({ blur }),
+    },
+    internalTooltipOpen: vi.fn(openInternalTooltip),
+    clickListenerOrder: { current: 'internal-first' as 'internal-first' | 'real-first' },
+    tooltipOpen,
+    mapMoving,
+    fireMoveEnd,
+    // Exposed so the react-leaflet mock's `map` object (below, in the vi.mock factory) can wire
+    // its own `dragging.moving()` / `once('moveend', ...)` to this same state — production code
+    // calls these on the *map* (via `useMap()`/the MapContainer ref), not on the marker.
+    onceMoveEnd,
+  }
+})
 
 // Defaults to the real algorithm (so every existing test keeps exercising real placement logic),
 // but individual tests below can queue a `mockReturnValueOnce` to force a specific visible-label
@@ -58,7 +132,7 @@ function fire(event: string) {
 vi.mock('react-leaflet', () => {
   // Stable map instance — real react-leaflet's useMap() returns the same object across renders;
   // a fresh object each call would make effects keyed on `map` loop forever.
-  const map = createMockLeafletMap({
+  const baseMap = createMockLeafletMap({
     setView: mockMapSetView,
     getZoom: () => mockZoom,
     // Fixed container size (KTD7's viewCenter math), unless a test has armed the stale-size
@@ -78,6 +152,23 @@ vi.mock('react-leaflet', () => {
       handlers.get(event)?.delete(handler)
     },
   })
+  // `createMockLeafletMap`'s override type doesn't model `dragging`/`once` (only MapView.tsx's
+  // click/tooltip guard needs them, not LabelVisibility), so they're added here rather than
+  // passed through its typed parameter.
+  const map = {
+    ...baseMap,
+    // KTD6: mirrors the real `L.Map`'s public `dragging.moving()` accessor (see
+    // node_modules/leaflet/src/map/handler/Map.Drag.js's `moving()`), which the production
+    // click handler reads to detect an inertia-coasting map at click time, and `once()`, which
+    // it uses to arm a matching one-time close for Leaflet's own deferred tooltip re-open.
+    // Deliberately separate from the `on`/`off` handler registry above (which models Leaflet's
+    // *continuous* zoomend/moveend subscriptions for LabelVisibility): `once` here only serves
+    // the one-shot KTD6 path via `onceMoveEnd`/`fireMoveEnd`.
+    dragging: { moving: () => mapMoving.current },
+    once: (event: string, cb: () => void) => {
+      if (event === 'moveend') onceMoveEnd(cb)
+    },
+  }
   return {
     // Forwards `ref` to the stable map instance — MapView.tsx reads it back via `ref={setMap}`
     // (React 19 ref-as-prop) to call `map.setView(...)` from the "Localiser" tap.
@@ -108,27 +199,49 @@ vi.mock('react-leaflet', () => {
       icon: L.DivIcon
       position: [number, number]
       children?: React.ReactNode
-      eventHandlers?: { click?: () => void }
+      eventHandlers?: { click?: (event: L.LeafletMouseEvent) => void }
       interactive?: boolean
       keyboard?: boolean
     }) => {
       const iconSize = icon.options.iconSize as L.PointTuple | undefined
+      const elementRef = useRef<HTMLDivElement | null>(null)
+      // Real Leaflet dispatches a native DOM click that can carry more than one 'click'
+      // listener on the same element (ours, and Leaflet's own internal tooltip-open
+      // listener) — simulate that with real addEventListener calls (not the `onClick` prop,
+      // which would only ever model a single React-attached handler) so registration order
+      // is under the test's control, matching real DOM dispatch order.
+      useEffect(() => {
+        const el = elementRef.current
+        const real = eventHandlers?.click
+        if (!el || !real) return
+        const fakeEvent = { target: fakeMarkerTarget } as unknown as L.LeafletMouseEvent
+        const onReal = () => real(fakeEvent)
+        const onInternal = () => internalTooltipOpen(fakeEvent)
+        const listeners =
+          clickListenerOrder.current === 'internal-first' ? [onInternal, onReal] : [onReal, onInternal]
+        listeners.forEach((listener) => el.addEventListener('click', listener))
+        return () => {
+          listeners.forEach((listener) => el.removeEventListener('click', listener))
+        }
+      }, [eventHandlers])
       return (
         <div
+          ref={elementRef}
           data-testid={`marker-${position[0]}-${position[1]}`}
           data-size={iconSize?.[0]}
           data-html={icon.options.html as string}
           data-icon-html={icon.options.html}
           data-interactive={interactive}
           data-keyboard={keyboard}
-          onClick={eventHandlers?.click}
         >
           {children}
         </div>
       )
     },
-    Popup: ({ children }: { children?: React.ReactNode }) => (
-      <div data-testid="popup">{children}</div>
+    Tooltip: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+      <div data-testid="tooltip" className={className}>
+        {children}
+      </div>
     ),
     useMap: () => map,
   }
@@ -150,8 +263,8 @@ vi.mock('../../lib/geolocate', async (importOriginal) => {
 })
 
 const MARKERS: MapMarker[] = [
-  { id: 'a', lat: 1, lng: 1, name: 'A', label: '', color: '#111111', dimmed: false },
-  { id: 'b', lat: 2, lng: 2, name: 'B', label: '', color: '#222222', dimmed: false },
+  { id: 'a', lat: 1, lng: 1, name: 'A', pending: false, visitCount: 0, latestVerdict: null, color: '#111111', dimmed: false },
+  { id: 'b', lat: 2, lng: 2, name: 'B', pending: false, visitCount: 0, latestVerdict: null, color: '#222222', dimmed: false },
 ]
 
 describe('MapView', () => {
@@ -159,12 +272,53 @@ describe('MapView', () => {
     mockGeolocate.mockReset()
     mockMapSetView.mockClear()
     tileLayerProps.current = null
+    fakeMarkerTarget.closeTooltip.mockClear()
+    blurSpy.mockClear()
+    internalTooltipOpen.mockClear()
+    clickListenerOrder.current = 'internal-first'
+    tooltipOpen.current = false
+    mapMoving.current = false
   })
 
   it('renders an unselected marker as a same-size teardrop pin', () => {
     const { getByTestId } = render(<MapView markers={MARKERS} />)
     expect(getByTestId('marker-1-1').dataset.size).toBe('24')
     expect(getByTestId('marker-2-2').dataset.size).toBe('24')
+  })
+
+  describe('marker accessible name (U4 R6, KTD7)', () => {
+    it("sets the icon's aria-label to the restaurant's name", () => {
+      render(<MapView markers={MARKERS} />)
+      expect(screen.getByTestId('marker-1-1').dataset.iconHtml).toContain('aria-label="A"')
+      expect(screen.getByTestId('marker-2-2').dataset.iconHtml).toContain('aria-label="B"')
+    })
+
+    it("does not affect the current-position marker's own accessible label", () => {
+      render(<MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} />)
+      expect(screen.getByTestId('marker-5-6').dataset.iconHtml).toContain(
+        'aria-label="Your current location"',
+      )
+    })
+
+    it('gives two same-color, same-selection restaurants their own correctly-named icon (cache-key fix)', () => {
+      const sameColor: MapMarker[] = [
+        { ...MARKERS[0], id: 'x', lat: 10, lng: 10, name: 'Same Color X', color: '#abcabc' },
+        { ...MARKERS[1], id: 'y', lat: 11, lng: 11, name: 'Same Color Y', color: '#abcabc' },
+      ]
+      render(<MapView markers={sameColor} />)
+      expect(screen.getByTestId('marker-10-10').dataset.iconHtml).toContain('aria-label="Same Color X"')
+      expect(screen.getByTestId('marker-11-11').dataset.iconHtml).toContain('aria-label="Same Color Y"')
+    })
+
+    it('HTML-escapes a restaurant name containing quotes/markup before interpolating it into the icon HTML', () => {
+      const tricky: MapMarker[] = [
+        { ...MARKERS[0], id: 'z', lat: 20, lng: 20, name: `<b>"Tom's"</b> & Jerry` },
+      ]
+      render(<MapView markers={tricky} />)
+      const html = screen.getByTestId('marker-20-20').dataset.iconHtml ?? ''
+      expect(html).toContain('aria-label="&lt;b&gt;&quot;Tom&#39;s&quot;&lt;/b&gt; &amp; Jerry"')
+      expect(html).not.toContain('aria-label="<b>"Tom\'s"</b> & Jerry"')
+    })
   })
 
   it('renders the selected marker larger, and moves the glow when selection changes', () => {
@@ -175,6 +329,82 @@ describe('MapView', () => {
     rerender(<MapView markers={MARKERS} selectedId="b" onSelect={vi.fn()} />)
     expect(getByTestId('marker-1-1').dataset.size).toBe('24')
     expect(getByTestId('marker-2-2').dataset.size).toBe('30')
+  })
+
+  describe('marker click / tooltip guard (U2 R2, R3, KTD3, KTD4)', () => {
+    it('still calls onSelect(m.id) when a restaurant marker is clicked (regression)', async () => {
+      const onSelect = vi.fn()
+      render(<MapView markers={MARKERS} onSelect={onSelect} />)
+
+      fireEvent.click(screen.getByTestId('marker-1-1'))
+
+      await waitFor(() => expect(onSelect).toHaveBeenCalledWith('a'))
+    })
+
+    it.each([
+      ['internal-first', 'internal-first' as const],
+      ['real-first', 'real-first' as const],
+    ])(
+      'closes the tooltip and blurs the marker before selecting, and after Leaflet\'s own internal tooltip-open click handler — registration order: %s',
+      async (_label, order) => {
+        clickListenerOrder.current = order
+        const onSelect = vi.fn()
+        render(<MapView markers={MARKERS} onSelect={onSelect} />)
+
+        fireEvent.click(screen.getByTestId('marker-1-1'))
+
+        // The close/blur/select sequence is deferred (queueMicrotask) past the synchronous
+        // click-dispatch phase — wait for it to flush before asserting.
+        await waitFor(() => expect(onSelect).toHaveBeenCalledWith('a'))
+
+        const closeOrder = fakeMarkerTarget.closeTooltip.mock.invocationCallOrder[0]
+        const blurOrder = blurSpy.mock.invocationCallOrder[0]
+        const selectOrder = onSelect.mock.invocationCallOrder[0]
+        const internalOrder = internalTooltipOpen.mock.invocationCallOrder[0]
+
+        // KTD3: the tooltip-close always runs after Leaflet's own internal tooltip-open
+        // click binding, regardless of which one Leaflet happened to register (and thus
+        // invoke) first.
+        expect(closeOrder).toBeGreaterThan(internalOrder)
+        // KTD4: close and blur happen before the modal-opening onSelect fires.
+        expect(closeOrder).toBeLessThan(selectOrder)
+        expect(blurOrder).toBeLessThan(selectOrder)
+      },
+    )
+
+    it.each([
+      ['internal-first', 'internal-first' as const],
+      ['real-first', 'real-first' as const],
+    ])(
+      "closes the tooltip again after a deferred 'moveend' when the map is coasting from inertia at click time, so Leaflet's own deferred tooltip re-open never resurfaces after the modal has opened (KTD6 regression) — registration order: %s",
+      async (_label, order) => {
+        clickListenerOrder.current = order
+        mapMoving.current = true // the map is still coasting from an inertial pan at click time
+        const onSelect = vi.fn()
+        render(<MapView markers={MARKERS} onSelect={onSelect} />)
+
+        fireEvent.click(screen.getByTestId('marker-1-1'))
+        await waitFor(() => expect(onSelect).toHaveBeenCalledWith('a'))
+
+        // Leaflet's own internal click-to-open-tooltip handler saw the map moving and deferred
+        // itself (armed its own one-time 'moveend' re-check) instead of opening synchronously —
+        // it has not opened yet.
+        expect(tooltipOpen.current).toBe(false)
+
+        // The pan settles.
+        mapMoving.current = false
+        fireMoveEnd()
+
+        // Leaflet's deferred handler re-checks on 'moveend' and — now that the map has
+        // stopped — opens the tooltip. Without KTD6, that would be the end of it and this
+        // would now be `true`. The production fix's own 'moveend' listener is armed inside the
+        // same queueMicrotask that runs the close/blur/select sequence, which is guaranteed to
+        // run after every synchronous 'click' listener (including Leaflet's own) regardless of
+        // dispatch order, so it is always registered — and therefore always fires — after
+        // Leaflet's deferred re-open, closing the tooltip a second time.
+        expect(tooltipOpen.current).toBe(false)
+      },
+    )
   })
 
   describe('"Localiser" tap (U2 F2)', () => {
@@ -245,14 +475,14 @@ describe('MapView', () => {
       expect(screen.getByTestId('marker-9-8')).toBeInTheDocument()
     })
 
-    it('renders the current-position marker with no click handler and no popup, unlike restaurant pins', () => {
+    it('renders the current-position marker with no click handler and no tooltip, unlike restaurant pins', () => {
       const onSelect = vi.fn()
       render(
         <MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} onSelect={onSelect} />,
       )
 
       const marker = screen.getByTestId('marker-5-6')
-      expect(within(marker).queryByTestId('popup')).not.toBeInTheDocument()
+      expect(within(marker).queryByTestId('tooltip')).not.toBeInTheDocument()
 
       fireEvent.click(marker)
       expect(onSelect).not.toHaveBeenCalled()
@@ -270,6 +500,60 @@ describe('MapView', () => {
   it('keeps the TileLayer crossOrigin="anonymous" prop (regression guard for opaque tile caching)', () => {
     render(<MapView markers={MARKERS} />)
     expect(tileLayerProps.current?.crossOrigin).toBe('anonymous')
+  })
+
+  describe('tooltip content (U3 R4, R5, KTD5)', () => {
+    const visitedMarker: MapMarker = {
+      id: 'v',
+      lat: 3,
+      lng: 3,
+      name: 'Visited Place',
+      pending: false,
+      visitCount: 3,
+      latestVerdict: 'go_back',
+      cuisine: 'Italian',
+      color: '#333333',
+      dimmed: false,
+    }
+    const toTryMarker: MapMarker = {
+      id: 't',
+      lat: 4,
+      lng: 4,
+      name: 'To Try Place',
+      pending: false,
+      visitCount: 0,
+      latestVerdict: null,
+      color: '#444444',
+      dimmed: false,
+    }
+
+    it("shows the visited restaurant's status badge text and visit-count text", () => {
+      render(<MapView markers={[visitedMarker]} />)
+      const tooltip = screen.getByTestId('tooltip')
+      expect(within(tooltip).getByText('Go back')).toBeInTheDocument()
+      expect(within(tooltip).getByText('3 visits')).toBeInTheDocument()
+    })
+
+    it("shows a to-try restaurant's status badge with no visit-count text", () => {
+      render(<MapView markers={[toTryMarker]} />)
+      const tooltip = screen.getByTestId('tooltip')
+      expect(within(tooltip).getByText('To try')).toBeInTheDocument()
+      expect(within(tooltip).queryByText(/visit/i)).not.toBeInTheDocument()
+    })
+
+    it('shows the cuisine emoji and name when set, and the uncategorized emoji/label when not set', () => {
+      render(<MapView markers={[visitedMarker, toTryMarker]} />)
+      const [visitedTooltip, toTryTooltip] = screen.getAllByTestId('tooltip')
+      expect(within(visitedTooltip).getByText('🍝')).toBeInTheDocument()
+      expect(within(visitedTooltip).getByText('Italian')).toBeInTheDocument()
+      expect(within(toTryTooltip).getByText('🍽️')).toBeInTheDocument()
+      expect(within(toTryTooltip).getByText('Uncategorized')).toBeInTheDocument()
+    })
+
+    it('gives the tooltip element the marker-tooltip wrapping CSS class (KTD5)', () => {
+      render(<MapView markers={[visitedMarker]} />)
+      expect(screen.getByTestId('tooltip')).toHaveClass('marker-tooltip')
+    })
   })
 })
 
@@ -328,7 +612,7 @@ describe('MapView name labels (U3)', () => {
     // exercises escapeHtml alone — while still covering all five characters it replaces.
     const dangerousName = `A&<B>"C'`
     const markers: MapMarker[] = [
-      { id: 'x', lat: 5, lng: 5, name: dangerousName, label: '', color: '#444444', dimmed: false },
+      { id: 'x', lat: 5, lng: 5, name: dangerousName, pending: false, visitCount: 0, latestVerdict: null, color: '#444444', dimmed: false },
     ]
     vi.mocked(computeLabelPlacement).mockReturnValueOnce(new Set(['x']))
     const { getByTestId } = render(<MapView markers={markers} />)
@@ -436,7 +720,7 @@ describe('LabelVisibility', () => {
     // never changes -- this is exactly the scenario `wasActiveRef` must guard against a false nudge.
     const changedMarkers: MapMarker[] = [
       ...MARKERS,
-      { id: 'c', lat: 3, lng: 3, name: 'C', label: '', color: '#333333', dimmed: false },
+      { id: 'c', lat: 3, lng: 3, name: 'C', pending: false, visitCount: 0, latestVerdict: null, color: '#333333', dimmed: false },
     ]
     rerender(<LabelVisibility markers={changedMarkers} active={true} onChange={onChange} />)
 

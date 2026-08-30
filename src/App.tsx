@@ -21,7 +21,7 @@ import { DEFAULT_MAP_CENTER } from './lib/geo'
 type MobileView = 'list' | 'map'
 
 export default function App() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const restaurants = useRestaurants()
   const { signedIn, email, signIn, signOut } = useAuth()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -39,12 +39,10 @@ export default function App() {
   // App re-renders on every map pan/zoom (anchor state); memoize so the list and markers
   // aren't recomputed against every restaurant on each move.
   const visible = useMemo(() => restaurants.filter((r) => matches(r, filter)), [restaurants, filter])
-  // `i18n.language` is a dependency so verdict/status labels baked into marker popups (via
-  // rollupLabel) re-translate immediately on a language switch, without a page reload.
-  const markers = useMemo(
-    () => toMarkers(restaurants, filter),
-    [restaurants, filter, i18n.language],
-  )
+  // Markers carry raw data (status, verdict, visit count, cuisine), not pre-translated text —
+  // StatusBadge, translateVisitsCount, and emojiForCuisine translate at render time inside
+  // MapView and react to a language switch on their own, so no `i18n.language` dependency here.
+  const markers = useMemo(() => toMarkers(restaurants, filter), [restaurants, filter])
 
   // Generation token (KTD3): the on-load fetch (F1) and the "Localiser" tap (F2) can overlap,
   // and whichever resolves first should win regardless of which one started first. Each fetch

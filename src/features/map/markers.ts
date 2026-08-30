@@ -1,14 +1,17 @@
-import { rollupLabel } from '../display'
 import { colorForCuisine } from '../facets/cuisines'
 import { matches, type FacetFilter } from '../facets/filter'
-import type { Restaurant } from '../../types/models'
+import type { Restaurant, Verdict } from '../../types/models'
 
 export interface MapMarker {
   id: string
   lat: number
   lng: number
   name: string
-  label: string
+  /** Always false — `toMarkers` filters out pending restaurants before this point. */
+  pending: boolean
+  visitCount: number
+  latestVerdict: Verdict | null
+  cuisine?: string
   /** Marker color from the single cuisine-to-color source (neutral when uncategorized). */
   color: string
   /** True when an active filter excludes this place — still placed, just de-emphasized (R9). */
@@ -28,7 +31,10 @@ export function toMarkers(restaurants: Restaurant[], filter?: FacetFilter): MapM
       lat: r.lat,
       lng: r.lng,
       name: r.name,
-      label: rollupLabel(r),
+      pending: false,
+      visitCount: r.visitCount,
+      latestVerdict: r.latestVerdict,
+      cuisine: r.cuisine,
       color: colorForCuisine(r.cuisine),
       dimmed: filter ? !matches(r, filter) : false,
     })

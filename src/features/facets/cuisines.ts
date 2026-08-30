@@ -79,6 +79,11 @@ export function emojiForCuisine(cuisine: string | null | undefined): string {
   return CUISINE_EMOJI.get(key.toLowerCase()) ?? GENERIC_CUISINE_EMOJI
 }
 
+/** The one cuisine-to-display-name source: its own trimmed name, or the given uncategorized label. */
+export function cuisineDisplayName(cuisine: string | null | undefined, uncategorizedLabel: string): string {
+  return cuisine?.trim() || uncategorizedLabel
+}
+
 /** Picker options: curated cuisines unioned with any already in use, de-duped case-insensitively, sorted. */
 export function cuisineOptions(restaurants: ReadonlyArray<{ cuisine?: string | null }>): string[] {
   // Keyed by lowercase so 'french' and 'French' collapse to one option, keeping the
