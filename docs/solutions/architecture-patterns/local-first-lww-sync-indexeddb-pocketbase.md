@@ -1,7 +1,7 @@
 ---
 title: Local-first last-write-wins sync between IndexedDB and PocketBase
 date: 2026-06-13
-last_updated: 2026-06-13
+last_updated: 2026-08-30
 category: architecture-patterns
 module: sync + data model
 problem_type: architecture_pattern
@@ -40,6 +40,8 @@ Load-bearing rules:
 
 2. **Never use the backend's own `updated` field as your LWW key.** PocketBase reserves `updated` as a system autodate column it overwrites on every save — a client value pushed there is discarded. The schema stores the client timestamp in a *custom* field `syncedAt`; `src/sync/mappers.ts` maps local `updated` ↔ remote `syncedAt` in both directions, and LWW always compares the local `updated`.
 
+   **On pull, guard against an empty `syncedAt`/`added`, not just `undefined`.** A PocketBase field-type change (e.g. retyping `syncedAt` from `text` to `date`) unavoidably resets every existing row's value for that field to an empty string — passing that straight into a strict ISO-parsing normalizer throws. `restaurantFromRemote`/`visitFromRemote` guard with `r.syncedAt ? normalizeInstant(r.syncedAt) : r.syncedAt` rather than normalizing unconditionally. See `docs/solutions/database-issues/guard-empty-syncedat-after-pocketbase-field-retype.md` for the full incident and the PocketBase field-retype internals behind it.
+
 3. **Tombstones are first-class records.** Deletes set `deleted: true` with a fresh `updated`; they participate in LWW like any record, so a delete wins by recency and is not resurrected by a stale peer. Hard-deleting remote records would destroy the tombstone and make the deletion invisible to other devices.
 
 4. **`reconcile()` returns sets, it doesn't mutate.** It returns `{ merged, toWriteLocal, toPush }` keyed by id; the caller in `syncEngine.ts` does the writes. This keeps the conflict logic pure and testable.
@@ -62,16 +64,20 @@ Apply when the app must work fully offline with sync as a background concern, co
 
 ## Examples
 
-The core gotcha — map the client timestamp to a field the backend doesn't own (`src/sync/mappers.ts`):
+The core gotcha — map the client timestamp to a field the backend doesn't own, and guard the pull direction against an empty value (`src/sync/mappers.ts`):
 
 ```typescript
 // local -> remote (push): the client's `updated` rides in `syncedAt`, never PB's `updated`
 function restaurantToRemote(r: Restaurant, owner: string): RemoteRestaurant {
   return { id: r.id, owner, name: r.name, /* … */ syncedAt: r.updated, deleted: r.deleted }
 }
-// remote -> local (pull): restore it
+// remote -> local (pull): restore it, guarding against a migration-reset empty string
 function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
-  return { id: r.id, name: r.name, /* … */ updated: r.syncedAt, deleted: r.deleted }
+  return {
+    id: r.id, name: r.name, /* … */
+    updated: r.syncedAt ? normalizeInstant(r.syncedAt) : r.syncedAt,
+    deleted: r.deleted,
+  }
 }
 ```
 
@@ -110,6 +116,7 @@ try {
 
 ## Related
 
-- Source: `src/sync/reconcile.ts` (LWW union), `src/sync/mappers.ts` (the `updated`↔`syncedAt` and relation mapping), `src/sync/syncEngine.ts` (fullSync + upsert), `src/data/ids.ts`, `src/data/rollup.ts`, `pocketbase/pb_migrations/1718200000_init_collections.js`.
+- Source: `src/sync/reconcile.ts` (LWW union), `src/sync/mappers.ts` (the `updated`↔`syncedAt` and relation mapping), `src/sync/syncEngine.ts` (fullSync + upsert), `src/data/ids.ts`, `src/data/rollup.ts`, `pocketbase/pb_migrations/1718200000_init_collections.js`, `pocketbase/pb_migrations/1788048000_restaurant_visit_date_fields.js` (retypes `added`/`syncedAt` to native `date` fields — see the linked incident below for what that migration does to existing data).
 - Project docs: `docs/architecture.md` (system narrative), `docs/data-model.md` (the field-mapping table), `docs/brainstorms/2026-06-12-local-first-architecture-requirements.md` (the requirements this implements).
 - Sibling learning in the same subsystem, different concern: `docs/solutions/architecture-patterns/restart-controllers-on-startup.md` — the controller *lifecycle* (resume on bootstrap) vs. this doc's *data model*.
+- `docs/solutions/database-issues/guard-empty-syncedat-after-pocketbase-field-retype.md` — the incident and fix behind the empty-`syncedAt` guard in the pull-direction example above, plus the underlying PocketBase field-retype data-reset behavior.
