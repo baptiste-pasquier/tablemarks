@@ -1,6 +1,6 @@
 import { getDB } from './db'
-import { newId, now } from './ids'
-import { today } from '../lib/dates'
+import { newId } from './ids'
+import { now, today } from '../lib/dates'
 import { recomputeRollup } from './rollup'
 import { emitLocalChange, emitStoreChange } from './events'
 import type { Verdict, Visit } from '../types/models'

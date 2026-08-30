@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
 import { RestaurantDetail } from './RestaurantDetail'
 import { createRestaurant, getRestaurant, mutateRestaurant } from '../../data/restaurants'
@@ -8,6 +8,7 @@ import { createVisit } from '../../data/visits'
 import { instantToLocalDay } from '../../lib/dates'
 
 beforeEach(freshDB)
+afterEach(() => vi.unstubAllEnvs())
 
 function enabled(buttons: HTMLElement[]): HTMLElement {
   const found = buttons.find((b) => !(b as HTMLButtonElement).disabled)
@@ -283,8 +284,6 @@ describe('RestaurantDetail', () => {
 
     expect(await screen.findByText(/2026-08-30/)).toBeInTheDocument()
     expect(screen.queryByText(/2026-08-31/)).not.toBeInTheDocument()
-
-    vi.unstubAllEnvs()
   })
 
   it('renders no added-date line for a pre-existing restaurant with no recorded added field', async () => {
