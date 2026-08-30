@@ -1,6 +1,10 @@
 import { render } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type L from 'leaflet'
+// Imported before './MapView' (which itself imports 'react-leaflet') so this binding is already
+// initialized by the time importing './MapView' triggers the `vi.mock('react-leaflet', ...)`
+// factory below, which calls it -- reversing this order throws a TDZ ReferenceError.
+import { createMockLeafletMap } from '../../test/mockLeafletMap'
 import { MapView, LabelVisibility, LABEL_ZOOM_FLOOR } from './MapView'
 import { computeLabelPlacement } from './labelPlacement'
 import type { MapMarker } from './markers'
@@ -24,6 +28,13 @@ let mockZoom = 12
 let mockProject = (lat: number, lng: number) => ({ x: lng * 20, y: lat * 20 })
 const handlers = new Map<string, Set<() => void>>()
 const mockInvalidateSize = vi.fn()
+// Simulates Leaflet's `getSize()` staying stale (e.g. a container that was hidden via
+// `display:none`, per KTD10) until `invalidateSize()` runs — lets finding #2's rising-edge test
+// assert the "invalidateSize *before* recompute" ordering guarantee behaviorally, not just via
+// call counts: while true, `getSize()` reports a deliberately wrong (zero) size, so a reordering
+// regression (recompute reading the size before invalidateSize runs) would make that recompute
+// see the wrong viewCenter, which the test can catch.
+let mockSizeIsStale = false
 
 function fire(event: string) {
   handlers.get(event)?.forEach((h) => h())
@@ -34,23 +45,25 @@ function fire(event: string) {
 vi.mock('react-leaflet', () => {
   // Stable map instance — real react-leaflet's useMap() returns the same object across renders;
   // a fresh object each call would make effects keyed on `map` loop forever.
-  const map = {
-    setView: () => {},
+  const map = createMockLeafletMap({
     getZoom: () => mockZoom,
-    getCenter: () => ({ lat: 0, lng: 0 }),
-    // Fixed container size (KTD7's viewCenter math), and a deterministic lat/lng -> pixel
+    // Fixed container size (KTD7's viewCenter math), unless a test has armed the stale-size
+    // simulation (`mockSizeIsStale`, finding #2) — and a deterministic lat/lng -> pixel
     // projection tests can swap out (`mockProject`) to simulate a pan changing marker positions.
-    getSize: () => ({ x: 400, y: 400 }),
-    latLngToContainerPoint: ([lat, lng]: [number, number]) => mockProject(lat, lng),
-    invalidateSize: () => mockInvalidateSize(),
-    on: (event: string, handler: () => void) => {
+    getSize: () => (mockSizeIsStale ? { x: 0, y: 0 } : { x: 400, y: 400 }),
+    latLngToContainerPoint: ([lat, lng]) => mockProject(lat, lng),
+    invalidateSize: () => {
+      mockInvalidateSize()
+      mockSizeIsStale = false
+    },
+    on: (event, handler) => {
       if (!handlers.has(event)) handlers.set(event, new Set())
       handlers.get(event)!.add(handler)
     },
-    off: (event: string, handler: () => void) => {
+    off: (event, handler) => {
       handlers.get(event)?.delete(handler)
     },
-  }
+  })
   return {
     MapContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
     TileLayer: () => null,
@@ -72,6 +85,7 @@ vi.mock('react-leaflet', () => {
 beforeEach(() => {
   mockZoom = 12
   mockProject = (lat, lng) => ({ x: lng * 20, y: lat * 20 })
+  mockSizeIsStale = false
   handlers.clear()
   vi.mocked(computeLabelPlacement).mockClear()
   mockInvalidateSize.mockClear()
@@ -148,6 +162,23 @@ describe('MapView name labels (U3)', () => {
     expect(htmlB).toContain('aria-hidden="true"')
     expect(htmlB).toContain('>B<')
   })
+
+  it('escapes HTML-significant characters in a restaurant name so it cannot inject markup into the raw marker HTML (escapeHtml)', () => {
+    mockZoom = LABEL_ZOOM_FLOOR
+    // Short enough (8 chars) to survive truncateLabel's 24-char cap untouched, so this test
+    // exercises escapeHtml alone — while still covering all five characters it replaces.
+    const dangerousName = `A&<B>"C'`
+    const markers: MapMarker[] = [
+      { id: 'x', lat: 5, lng: 5, name: dangerousName, label: '', color: '#444444', dimmed: false },
+    ]
+    vi.mocked(computeLabelPlacement).mockReturnValueOnce(new Set(['x']))
+    const { getByTestId } = render(<MapView markers={markers} />)
+
+    const html = getByTestId('marker-5-5').dataset.html ?? ''
+    expect(html).toContain('A&amp;&lt;B&gt;&quot;C&#39;')
+    expect(html).not.toContain(dangerousName)
+    expect(html).not.toContain('<B>')
+  })
 })
 
 // Tested via the exported `LabelVisibility` component directly, rather than through `MapView`'s
@@ -218,13 +249,56 @@ describe('LabelVisibility', () => {
     expect(computeLabelPlacement).toHaveBeenCalledTimes(1)
     expect(mockInvalidateSize).not.toHaveBeenCalled()
 
+    // Simulate the pane having been hidden: getSize() reports a stale (zero) size until
+    // invalidateSize() runs. If MapView read the size before invalidating it (a reordering
+    // regression), this rising-edge recompute would see viewCenter {x:0,y:0} instead of the real
+    // {x:200,y:200} -- a plain call-count assertion couldn't distinguish the two orderings.
+    mockSizeIsStale = true
     rerender(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)
     expect(mockInvalidateSize).toHaveBeenCalledTimes(1)
     expect(computeLabelPlacement).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(computeLabelPlacement).mock.calls[1][1]).toEqual({ x: 200, y: 200 })
 
     // Flipping active again with no other change is not a rising edge -- no further nudge.
     rerender(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)
     expect(mockInvalidateSize).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not re-nudge invalidateSize when the merged effect re-runs for a reason other than a rising edge (active stays true throughout, only markers change)', () => {
+    mockZoom = LABEL_ZOOM_FLOOR
+    const onChange = vi.fn()
+    const { rerender } = render(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)
+    // Mounting already active is not a rising edge (wasActiveRef starts equal to `active`).
+    expect(mockInvalidateSize).not.toHaveBeenCalled()
+    expect(computeLabelPlacement).toHaveBeenCalledTimes(1)
+
+    // Change `markers`'s reference so `recompute`'s own useCallback identity changes, forcing the
+    // merged effect (keyed on [map, recompute, active]) to re-run even though `active` itself
+    // never changes -- this is exactly the scenario `wasActiveRef` must guard against a false nudge.
+    const changedMarkers: MapMarker[] = [
+      ...MARKERS,
+      { id: 'c', lat: 3, lng: 3, name: 'C', label: '', color: '#333333', dimmed: false },
+    ]
+    rerender(<LabelVisibility markers={changedMarkers} active={true} onChange={onChange} />)
+
+    expect(computeLabelPlacement).toHaveBeenCalledTimes(2) // the effect did re-run...
+    expect(mockInvalidateSize).not.toHaveBeenCalled() // ...but wasActiveRef correctly suppressed a nudge
+  })
+
+  it('fires invalidateSize again on a genuine second rising edge (true -> false -> true)', () => {
+    mockZoom = LABEL_ZOOM_FLOOR
+    const onChange = vi.fn()
+    const { rerender } = render(<LabelVisibility markers={MARKERS} active={false} onChange={onChange} />)
+    expect(mockInvalidateSize).not.toHaveBeenCalled()
+
+    rerender(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)
+    expect(mockInvalidateSize).toHaveBeenCalledTimes(1)
+
+    rerender(<LabelVisibility markers={MARKERS} active={false} onChange={onChange} />)
+    expect(mockInvalidateSize).toHaveBeenCalledTimes(1) // falling edge -- no nudge
+
+    rerender(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)
+    expect(mockInvalidateSize).toHaveBeenCalledTimes(2) // genuine second rising edge
   })
 
   it('unsubscribes both zoomend and moveend on unmount', () => {

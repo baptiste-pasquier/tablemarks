@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { freshDB } from './test/idb'
+import { createMockLeafletMap } from './test/mockLeafletMap'
 import { useAuth } from './auth/useAuth'
 
 vi.mock('./auth/useAuth', () => ({
@@ -13,20 +14,12 @@ const mockUseAuth = vi.mocked(useAuth)
 // Leaflet needs real DOM dimensions jsdom doesn't provide; stub the map for the shell test.
 vi.mock('react-leaflet', () => {
   // Stable map instance — real react-leaflet's useMap() returns the same object across renders;
-  // a fresh object each call would make effects keyed on `map` loop forever.
-  const map = {
-    setView: () => {},
-    getZoom: () => 12,
-    getCenter: () => ({ lat: 0, lng: 0 }),
-    // Fixed container size and a simple, deterministic lat/lng -> pixel projection — this test
-    // suite doesn't fire zoomend/moveend, it just needs LabelVisibility's mount-time recompute
-    // (which calls these) not to throw.
-    getSize: () => ({ x: 400, y: 400 }),
-    latLngToContainerPoint: ([lat, lng]: [number, number]) => ({ x: lng * 10, y: lat * 10 }),
-    invalidateSize: () => {},
-    on: () => {},
-    off: () => {},
-  }
+  // a fresh object each call would make effects keyed on `map` loop forever. This suite doesn't
+  // fire zoomend/moveend, it just needs LabelVisibility's mount-time recompute (which calls
+  // getSize/latLngToContainerPoint/invalidateSize) not to throw — so the shared factory's static
+  // defaults are enough, no mutable knobs or handler registry needed here (see MapView.test.tsx
+  // for those).
+  const map = createMockLeafletMap()
   return {
     MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map">{children}</div>,
     TileLayer: () => null,
