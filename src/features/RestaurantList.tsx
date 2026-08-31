@@ -2,31 +2,13 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
 import { colorForCuisine, cuisineDisplayName, emojiForCuisine } from './facets/cuisines'
+import { Badge } from './ui/Badge'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
 import { distanceLabelFor } from '../lib/geo'
 
 /** Cream base the cuisine tint mixes into, matching the shipped "Carnet culinaire" page background. */
 const CARD_TINT_BASE = '#fdfaf6'
-
-function luminance(hex: string): number {
-  const n = parseInt(hex.slice(1), 16)
-  const channel = (c: number) => {
-    const s = c / 255
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
-  }
-  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
-}
-
-/**
- * White or near-black text for a solid cuisine-colored surface (the cuisine badge), picked from
- * the relative-luminance crossover point where black-on-color and white-on-color contrast ratios
- * are equal — curated and hashed cuisine colors span too wide a luminance range for one fixed
- * badge text color (KTD8).
- */
-function textColorFor(bgHex: string): string {
-  return luminance(bgHex) > 0.179 ? '#000000' : '#ffffff'
-}
 
 export function RestaurantList({
   items,
@@ -55,7 +37,6 @@ export function RestaurantList({
     <ul className="space-y-2 p-3">
       {items.map((r) => {
         const cuisineColor = colorForCuisine(r.cuisine)
-        const badgeTextColor = textColorFor(cuisineColor)
         const visited = badgeState(r).kind === 'visited'
         const distanceLabel = distanceLabelFor(currentPosition, r)
         return (
@@ -73,13 +54,11 @@ export function RestaurantList({
                 <span className="min-w-0 truncate font-display text-base font-semibold text-gray-900">
                   {r.name}
                 </span>
-                <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                  style={{ background: cuisineColor, color: badgeTextColor }}
-                >
-                  <span aria-hidden="true">{emojiForCuisine(r.cuisine)}</span>
-                  {cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
-                </span>
+                <Badge
+                  text={cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
+                  icon={emojiForCuisine(r.cuisine)}
+                  color={cuisineColor}
+                />
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
