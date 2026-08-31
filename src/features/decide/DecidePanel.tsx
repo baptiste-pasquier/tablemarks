@@ -66,13 +66,9 @@ export function DecidePanel({
         <div className="text-sm text-gray-500">
           <p>{t('decide.emptyCandidates', { radius: formatRadiusKm(radiusKm) })}</p>
           {nextRadius && (
-            <button
-              type="button"
-              onClick={() => setRadiusKm(nextRadius)}
-              className="mt-1 font-medium text-brand underline"
-            >
+            <Button variant="link" className="mt-1" onClick={() => setRadiusKm(nextRadius)}>
               {t('decide.widenTo', { radius: formatRadiusKm(nextRadius) })}
-            </button>
+            </Button>
           )}
         </div>
       ) : (

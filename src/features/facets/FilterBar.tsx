@@ -10,6 +10,7 @@ import {
 } from '../../types/models'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
+import { Button } from '../ui/Button'
 import { Eyebrow } from '../ui/Eyebrow'
 import { ToggleChip } from '../ui/ToggleChip'
 
@@ -99,9 +100,9 @@ export function FilterBar({
       <div className="flex items-center justify-between">
         <Eyebrow>{t('filters.title')}</Eyebrow>
         {!isEmptyFilter(filter) && (
-          <button type="button" onClick={() => onChange(emptyFilter())} className="text-xs text-brand hover:underline">
+          <Button variant="link" size="xs" onClick={() => onChange(emptyFilter())}>
             {t('filters.clearAll')}
-          </button>
+          </Button>
         )}
       </div>
 

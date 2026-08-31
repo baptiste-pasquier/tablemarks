@@ -80,4 +80,36 @@ describe('Button', () => {
     expect(button).toHaveClass('w-full')
     expect(button).toHaveClass('bg-brand')
   })
+
+  it('applies the brand-underline classes for the link variant', () => {
+    render(<Button variant="link">Go</Button>)
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('text-brand', 'underline')
+  })
+
+  it('defaults the link variant to text-sm', () => {
+    render(<Button variant="link">Go</Button>)
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('text-sm')
+  })
+
+  it('renders the link variant at text-xs when size="xs" is requested', () => {
+    render(
+      <Button variant="link" size="xs">
+        Go
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('text-xs')
+    expect(button).not.toHaveClass('text-sm')
+  })
+
+  it('merges a caller-supplied className alongside the link variant base classes', () => {
+    render(
+      <Button variant="link" className="mt-1">
+        Go
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('mt-1')
+    expect(button).toHaveClass('text-brand')
+  })
 })
