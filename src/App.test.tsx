@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { freshDB } from './test/idb'
@@ -470,5 +470,126 @@ describe('sort criterion/direction wiring (U4)', () => {
     await user.click(dateButton)
 
     expect(readSortPreference()?.criterion).toBe('distance')
+  })
+})
+
+describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
+  /** Scopes queries to the Modal panel whose ModalHeader carries `title` (R6 — disambiguates from
+   *  the desktop overlay's own FilterBar/SortBar, which stay mounted underneath the sheet). */
+  function sheetPanel(title: string) {
+    const heading = screen.getByRole('heading', { name: title })
+    const panel = heading.closest('[class*="rounded-t-2xl"]')
+    if (!panel) throw new Error(`Modal panel for "${title}" not found`)
+    return within(panel as HTMLElement)
+  }
+
+  it('hides FilterBar and SortBar from the mobile inline flow without unmounting them (R4) — both stay under a `hidden md:block` wrapper', async () => {
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+
+    const filterWrapper = screen.getByRole('button', { name: 'French' }).closest('[class*="md:fixed"]')
+    expect(filterWrapper).toHaveClass('hidden', 'md:block')
+
+    const sortWrapper = screen.getByRole('button', { name: 'Date' }).closest('[class*="md:block"]')
+    expect(sortWrapper).toHaveClass('hidden', 'md:block')
+  })
+
+  it('does not render the pill when the restaurant list is empty', async () => {
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(screen.queryByRole('button', { name: /^filters ·/i })).not.toBeInTheDocument()
+  })
+
+  it('renders the pill in the list pane and, independently after switching views, in the map pane — same styling both times', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+
+    const listPill = screen.getByRole('button', { name: 'Filters · 0' })
+    expect(listPill).toHaveClass('fixed', 'md:hidden', 'rounded-full', 'bg-brand')
+    const listPillClassName = listPill.className
+
+    await user.click(screen.getByRole('button', { name: /^map$/i }))
+
+    // Exactly one pill mounted at a time — the list pane's is gone, the map pane's has replaced it.
+    const mapPills = screen.getAllByRole('button', { name: 'Filters · 0' })
+    expect(mapPills).toHaveLength(1)
+    expect(mapPills[0].className).toBe(listPillClassName)
+  })
+
+  it("updates the pill's count to match activeFilterCount as a filter is toggled (KTD5)", async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    expect(screen.getByRole('button', { name: 'Filters · 0' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'French' }))
+
+    expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument()
+  })
+
+  it('opens the bottom sheet with FilterBar and SortBar when the pill is tapped, and Escape closes it back to the same (list) pane', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+
+    const sheet = sheetPanel('Filters')
+    expect(sheet.getByRole('button', { name: 'French' })).toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: 'Date' })).toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: 'Distance' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('heading', { name: 'Filters' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('opens the bottom sheet from the map pane too, and its own close button returns to the same (map) pane', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: /^map$/i }))
+
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+    const sheet = sheetPanel('Filters')
+
+    await user.click(sheet.getByRole('button', { name: /close/i }))
+
+    expect(screen.queryByRole('heading', { name: 'Filters' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^map$/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('applies a filter toggled inside the sheet to the restaurant list behind it, once the sheet closes (R6)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'french', name: 'French Place', lat: 1, lng: 1, cuisine: 'French' })
+    await createRestaurant({ id: 'thai', name: 'Thai Place', lat: 2, lng: 2, cuisine: 'Thai' })
+
+    render(<App />)
+    await screen.findByText('French Place')
+    expect(screen.getByText('Thai Place')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+    const sheet = sheetPanel('Filters')
+    await user.click(sheet.getByRole('button', { name: 'French' }))
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('heading', { name: 'Filters' })).not.toBeInTheDocument()
+    expect(screen.getByText('French Place')).toBeInTheDocument()
+    expect(screen.queryByText('Thai Place')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument()
   })
 })

@@ -7,7 +7,7 @@ import { RestaurantList } from './features/RestaurantList'
 import { MapView } from './features/map/MapView'
 import { toMarkers, pickMostRecentRestaurantCenter } from './features/map/markers'
 import { FilterBar } from './features/facets/FilterBar'
-import { emptyFilter, matches } from './features/facets/filter'
+import { activeFilterCount, emptyFilter, matches } from './features/facets/filter'
 import { SortBar } from './features/facets/SortBar'
 import { sortRestaurants } from './features/facets/sort'
 import { readSortPreference, writeSortPreference, type SortPreference, type SortCriterion } from './lib/sortPreference'
@@ -16,6 +16,7 @@ import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
 import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
+import { ModalHeader } from './features/ui/ModalHeader'
 import { Button } from './features/ui/Button'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
@@ -52,6 +53,11 @@ export default function App() {
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Gates the mobile filters/sort bottom sheet (U4, KTD6) — a sibling of the other panel-open
+  // flags above, not a new `MobileView` variant: the sheet opens regardless of whether `view` is
+  // 'list' or 'map', and while open it blocks the rest of the UI including the bottom nav, exactly
+  // like every other Modal-hosted panel in this app.
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [anchor, setAnchor] = useState<GeoPoint | null>(DEFAULT_MAP_CENTER)
   // Sibling to `anchor`, deliberately not merged with it (KTD1): `anchor` is pan-driven and
   // belongs to the Decide flow, while `currentPosition` is fed only by the on-load geolocation
@@ -70,6 +76,9 @@ export default function App() {
   // App re-renders on every map pan/zoom (anchor state); memoize so the list and markers
   // aren't recomputed against every restaurant on each move.
   const visible = useMemo(() => restaurants.filter((r) => matches(r, filter)), [restaurants, filter])
+  // Drives the mobile "Filtres · N" pill badge (U4, KTD5) — reuses U2's activeFilterCount rather
+  // than re-deriving the count from `filter` here.
+  const activeCount = activeFilterCount(filter)
   // Distance is selectable only once a position is known (R1). Until then, the effective
   // criterion falls back to Date regardless of what's persisted — this is what AE1 and AE6 render
   // as "active" and what R11's sort step actually uses.
@@ -224,28 +233,43 @@ export default function App() {
             </button>
           </div>
           {/* Desktop (KTD2): floating card pinned atop the map, `position: fixed` since this div
-              is authored inside <aside> but must render visually over <main>. Below md, no
-              positioning classes apply, so this wrapper is inert and FilterBar renders exactly
-              where it does today, in the sidebar's normal flow (R7, U4 still owns the eventual
-              mobile pill/sheet). `layout="inline"` lays its cuisine/status/verdict groups
+              is authored inside <aside> but must render visually over <main>. Below md, FilterBar
+              no longer renders inline here at all (U4) — its mobile home is the "Filtres · N"
+              pill's bottom sheet instead, so this wrapper (and SortBar just below it) is hidden
+              entirely below md. `layout="inline"` lays its cuisine/status/verdict groups
               side-by-side, matching a horizontal floating card instead of a vertical sidebar
               stack. */}
           <div
             ref={filterOverlayRef}
-            className="md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:w-96 md:max-h-[50vh] md:overflow-y-auto md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg"
+            className="hidden md:block md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:w-96 md:max-h-[50vh] md:overflow-y-auto md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg"
           >
             <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="inline" />
           </div>
-          <SortBar
-            criterion={effectiveSortCriterion}
-            direction={effectiveSortDirection}
-            distanceSelectable={distanceSelectable}
-            onCriterionChange={handleSortCriterionChange}
-            onDirectionToggle={handleSortDirectionToggle}
-          />
+          <div className="hidden md:block">
+            <SortBar
+              criterion={effectiveSortCriterion}
+              direction={effectiveSortDirection}
+              distanceSelectable={distanceSelectable}
+              onCriterionChange={handleSortCriterionChange}
+              onDirectionToggle={handleSortDirectionToggle}
+            />
+          </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <RestaurantList items={sorted} onSelect={setSelectedId} currentPosition={currentPosition} />
           </div>
+          {/* Mobile-only "Filtres · N" pill (U4, R4): opens the filters/sort bottom sheet.
+              Rendered only while this pane is the active mobile view (mirrors the map pane's "Add
+              a place" FAB below), and only once there's something to filter (mirrors FilterBar's
+              own `restaurants.length === 0` guard) so it never floats over the empty-list state. */}
+          {view === 'list' && restaurants.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(true)}
+              className="fixed bottom-[calc(var(--safe-area-floating-offset)+1rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+            >
+              {t('filters.mobilePillLabel', { count: activeCount })}
+            </button>
+          )}
         </aside>
 
         <main
@@ -273,6 +297,18 @@ export default function App() {
               className="absolute bottom-[calc(var(--safe-area-floating-offset)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
               +
+            </button>
+          )}
+          {/* Mobile-only "Filtres · N" pill (U4, R4) — same trigger, same position, and the same
+              empty-list guard as the list pane's pill above; only one of the two is ever mounted
+              at a time since each is gated on the currently active mobile view. */}
+          {view === 'map' && restaurants.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(true)}
+              className="fixed bottom-[calc(var(--safe-area-floating-offset)+1rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+            >
+              {t('filters.mobilePillLabel', { count: activeCount })}
             </button>
           )}
         </main>
@@ -323,6 +359,24 @@ export default function App() {
       {settingsOpen && (
         <Modal onClose={() => setSettingsOpen(false)} panelClassName="max-h-[90vh] overflow-y-auto">
           <SettingsPanel onClose={() => setSettingsOpen(false)} />
+        </Modal>
+      )}
+
+      {/* Mobile filters/sort bottom sheet (U4, KTD4/KTD6): reuses FilterBar/SortBar as-is —
+          same `filter`/`onChange` and sort state/callbacks as the desktop overlay above, no
+          re-derivation — so a toggle here updates the same `visible`/`sorted` lists the panes
+          already read from (R6). */}
+      {filtersOpen && (
+        <Modal onClose={() => setFiltersOpen(false)} panelClassName="max-h-[90vh] overflow-y-auto">
+          <ModalHeader title={t('filters.sheetTitle')} onClose={() => setFiltersOpen(false)} />
+          <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="stacked" />
+          <SortBar
+            criterion={effectiveSortCriterion}
+            direction={effectiveSortDirection}
+            distanceSelectable={distanceSelectable}
+            onCriterionChange={handleSortCriterionChange}
+            onDirectionToggle={handleSortDirectionToggle}
+          />
         </Modal>
       )}
 

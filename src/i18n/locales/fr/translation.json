@@ -73,7 +73,9 @@
     "cuisineGroup": "Cuisine",
     "statusVerdictGroup": "Statut & verdict",
     "collapse": "Réduire",
-    "showMore": "+{{count}} autres"
+    "showMore": "+{{count}} autres",
+    "mobilePillLabel": "Filtres · {{count}}",
+    "sheetTitle": "Filtres"
   },
   "sort": {
     "title": "Trier",
