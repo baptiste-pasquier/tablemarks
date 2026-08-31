@@ -15,10 +15,10 @@ type StyledVariant = Exclude<ButtonVariant, 'icon-dismiss'>
 // state, a brand-tinted hover instead of the neutral one, a one-off padding scale, an ad hoc
 // disabled:opacity-50). They now converge on exactly one definition per variant, including the
 // disabled treatment (KTD2), so a future style change touches this file instead of five-plus call
-// sites. `secondary`'s text size is kept out of this base string (see SECONDARY_TEXT_SIZE below).
+// sites. `secondary`'s text size is kept out of this base string (see TEXT_SIZE below).
 // `link` covers the brand-underline text-buttons duplicated across AddPlace.tsx, DecidePanel.tsx
 // and FilterBar.tsx (R1/KTD1); like `secondary`, its text size is kept out of this base string
-// (see LINK_TEXT_SIZE below) rather than baked in here.
+// (see TEXT_SIZE below) rather than baked in here.
 const VARIANT_STYLES: Record<StyledVariant, string> = {
   primary:
     'rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50',
@@ -27,21 +27,13 @@ const VARIANT_STYLES: Record<StyledVariant, string> = {
   link: 'font-medium text-brand underline',
 }
 
-// SortBar's direction toggle sits beside its text-xs segment siblings and needs to match them,
-// unlike every other secondary call site (App.tsx, RestaurantDetail), which uses the canonical
-// text-sm. Kept as a separate token rather than embedded in VARIANT_STYLES.secondary so `cn` never
-// has to override a same-property class already in the base (`cn` doesn't dedupe conflicting
+// SortBar's direction toggle sits beside its text-xs segment siblings and needs to match them
+// (secondary), and FilterBar's "clear all" link sits at a compact text-xs while AddPlace's/
+// DecidePanel's inline links sit inside an ancestor text-sm container (link) — both variants share
+// this one size token rather than baking a text-size class into their own base string, so `cn`
+// never has to override a same-property class already in the base (`cn` doesn't dedupe conflicting
 // Tailwind classes; see src/lib/cn.ts) — `size` composes onto the base instead of colliding with it.
-const SECONDARY_TEXT_SIZE: Record<ButtonSize, string> = {
-  sm: 'text-sm',
-  xs: 'text-xs',
-}
-
-// FilterBar's "clear all" link sits at a compact text-xs, while AddPlace's/DecidePanel's inline
-// links sit inside an ancestor text-sm container. Kept as a separate token from VARIANT_STYLES.link
-// for the same reason as SECONDARY_TEXT_SIZE above — `cn` doesn't dedupe conflicting Tailwind
-// classes, so a text-size class can never be baked into the base string itself.
-const LINK_TEXT_SIZE: Record<ButtonSize, string> = {
+const TEXT_SIZE: Record<ButtonSize, string> = {
   sm: 'text-sm',
   xs: 'text-xs',
 }
@@ -57,7 +49,7 @@ const ICON_ONLY_SECONDARY =
 // The three "✕" dismiss buttons (ModalHeader, RestaurantDetail's delete-visit action,
 // ReloadPrompt's toast dismiss) used to each carry their own copy of this base plus a
 // slightly-diverged hover color. `tone` is kept out of this base string for the same reason
-// SECONDARY_TEXT_SIZE/LINK_TEXT_SIZE are kept out of theirs: `cn` doesn't dedupe conflicting
+// TEXT_SIZE is kept out of secondary/link's: `cn` doesn't dedupe conflicting
 // Tailwind classes, so exactly one tone's hover class must be selected rather than baked in here.
 // No padding/border here — ModalHeader/RestaurantDetail need none, and ReloadPrompt layers its own
 // `rounded-full p-1` on via caller `className` (a property this base never sets, so it's safe).
@@ -91,15 +83,24 @@ export function Button({
   | { variant: 'icon-dismiss'; iconOnly?: false; size?: never; tone: ButtonTone }
 ) &
   ButtonHTMLAttributes<HTMLButtonElement>) {
-  const base = iconOnly
-    ? ICON_ONLY_SECONDARY
-    : variant === 'secondary'
-      ? cn(VARIANT_STYLES.secondary, SECONDARY_TEXT_SIZE[size])
-      : variant === 'link'
-        ? cn(VARIANT_STYLES.link, LINK_TEXT_SIZE[size])
-        : variant === 'icon-dismiss'
-          ? cn(ICON_DISMISS_BASE, TONE_HOVER[tone])
-          : VARIANT_STYLES.primary
+  let base: string
+  if (iconOnly) {
+    base = ICON_ONLY_SECONDARY
+  } else {
+    switch (variant) {
+      case 'secondary':
+        base = cn(VARIANT_STYLES.secondary, TEXT_SIZE[size])
+        break
+      case 'link':
+        base = cn(VARIANT_STYLES.link, TEXT_SIZE[size])
+        break
+      case 'icon-dismiss':
+        base = cn(ICON_DISMISS_BASE, TONE_HOVER[tone])
+        break
+      default:
+        base = VARIANT_STYLES.primary
+    }
+  }
 
   return <button type="button" className={cn(base, className)} {...rest} />
 }
