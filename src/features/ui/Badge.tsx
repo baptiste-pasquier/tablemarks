@@ -1,3 +1,5 @@
+import { cn } from '../../lib/cn'
+
 type BadgeProps = {
   text: string
   icon?: string
@@ -34,7 +36,7 @@ export function Badge({ text, icon, tone, color }: BadgeProps) {
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${colorClass}`}
+      className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold', colorClass)}
       style={style}
     >
       {icon && <span aria-hidden="true">{icon}</span>}
