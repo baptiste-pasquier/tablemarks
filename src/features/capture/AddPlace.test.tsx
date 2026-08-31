@@ -14,6 +14,12 @@ beforeEach(async () => {
 })
 
 describe('AddPlace', () => {
+  it('renders the submit button through the shared Button primary variant', () => {
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+    expect(screen.getByRole('button', { name: 'Add' })).toHaveClass('py-2.5', 'bg-brand')
+  })
+
   it('creates a place from a pasted full URL and closes', async () => {
     const onClose = vi.fn()
     render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)

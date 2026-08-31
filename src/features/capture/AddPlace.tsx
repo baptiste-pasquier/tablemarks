@@ -7,6 +7,7 @@ import { useRestaurants } from '../useRestaurants'
 import { cuisineOptions } from '../facets/cuisines'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
+import { Button } from '../ui/Button'
 import type { Restaurant } from '../../types/models'
 
 export function AddPlace({
@@ -113,14 +114,14 @@ export function AddPlace({
         ))}
       </datalist>
 
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        className="mt-3 w-full"
         onClick={() => void submit()}
         disabled={busy || !input.trim()}
-        className="mt-3 w-full rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50"
       >
         {busy ? t('capture.working') : t('capture.submit')}
-      </button>
+      </Button>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 

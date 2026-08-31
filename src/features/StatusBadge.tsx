@@ -1,3 +1,4 @@
+import { Badge } from './ui/Badge'
 import { badgeState } from './display'
 import { translatePending, translateStatus, translateVerdict, VERDICT_ICON, type Restaurant, type Verdict } from '../types/models'
 
@@ -8,22 +9,9 @@ const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
   never_again: 'bg-verdict-never',
 }
 
-function Badge({ text, className, icon }: { text: string; className: string; icon?: string }) {
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white ${className}`}
-    >
-      {icon && <span aria-hidden="true">{icon}</span>}
-      <span>{text}</span>
-    </span>
-  )
-}
-
 /** One visit's own verdict badge, always in "verdict" mode — used per entry in the visit history. */
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {
-  return (
-    <Badge text={translateVerdict(verdict)} className={VERDICT_BADGE_CLASS[verdict]} icon={VERDICT_ICON[verdict]} />
-  )
+  return <Badge text={translateVerdict(verdict)} tone={VERDICT_BADGE_CLASS[verdict]} icon={VERDICT_ICON[verdict]} />
 }
 
 /**
@@ -37,8 +25,8 @@ export function StatusBadge({
   restaurant: Pick<Restaurant, 'pending' | 'visitCount' | 'latestVerdict'>
 }) {
   const state = badgeState(restaurant)
-  if (state.kind === 'pending') return <Badge text={translatePending()} className="bg-verdict-neutral" />
-  if (state.kind === 'to_try') return <Badge text={translateStatus('to_try')} className="bg-verdict-neutral" />
+  if (state.kind === 'pending') return <Badge text={translatePending()} tone="bg-verdict-neutral" />
+  if (state.kind === 'to_try') return <Badge text={translateStatus('to_try')} tone="bg-verdict-neutral" />
   if (state.verdict) return <VerdictBadge verdict={state.verdict} />
-  return <Badge text={translateStatus('visited')} className="bg-verdict-neutral" />
+  return <Badge text={translateStatus('visited')} tone="bg-verdict-neutral" />
 }

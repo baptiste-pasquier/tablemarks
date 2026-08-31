@@ -5,6 +5,7 @@ import { StatusBadge } from '../StatusBadge'
 import { decideCandidates, pickForMe, type Anchor, type Candidate } from './candidates'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
+import { Button } from '../ui/Button'
 import { isHttpUrl } from '../../lib/mapsLinks'
 import { formatDistance } from '../../lib/geo'
 
@@ -76,13 +77,13 @@ export function DecidePanel({
         </div>
       ) : (
         <>
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            className="mb-3 w-full"
             onClick={() => setPickedId(pickForMe(candidates)?.restaurant.id ?? null)}
-            className="mb-3 w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
           >
             {t('decide.pickForMe')}
-          </button>
+          </Button>
           <ul className="-mx-1 divide-y divide-gray-100 overflow-y-auto">
             {candidates.map(({ restaurant, distanceM }) => (
               <li

@@ -8,6 +8,7 @@ import { updateRestaurant } from '../../data/restaurants'
 import { cuisineOptions, colorForCuisine, emojiForCuisine } from '../facets/cuisines'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
+import { Button } from '../ui/Button'
 import { StatusBadge, VerdictBadge } from '../StatusBadge'
 import { VERDICTS, translateVerdict, type Verdict } from '../../types/models'
 import type { GeoPoint } from '../../lib/geolocate'
@@ -24,15 +25,9 @@ function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; di
   return (
     <div className="flex flex-wrap gap-2">
       {VERDICTS.map((v) => (
-        <button
-          key={v}
-          type="button"
-          disabled={disabled}
-          onClick={() => onPick(v)}
-          className="rounded-full border border-gray-300 px-3 py-1 text-sm hover:bg-brand-soft disabled:opacity-50"
-        >
+        <Button key={v} variant="secondary" disabled={disabled} onClick={() => onPick(v)}>
           {translateVerdict(v)}
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -248,13 +243,9 @@ export function RestaurantDetail({
             <VerdictButtons onPick={(v) => void logNow(v)} />
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setLogging(true)}
-            className="w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
-          >
+          <Button variant="primary" className="w-full" onClick={() => setLogging(true)}>
             {t('visitDetail.hereNow')}
-          </button>
+          </Button>
         )}
       </div>
 

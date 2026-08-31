@@ -1,6 +1,9 @@
 import { ArrowUpDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { SortCriterion, SortDirection } from '../../lib/sortPreference'
+import { Button } from '../ui/Button'
+import { Eyebrow } from '../ui/Eyebrow'
+import { ToggleChip } from '../ui/ToggleChip'
 
 type TFn = ReturnType<typeof useTranslation>['t']
 
@@ -15,15 +18,6 @@ function directionLabel(t: TFn, criterion: SortCriterion, direction: SortDirecti
 /** True for the non-default direction of the active criterion (farthest / oldest). */
 function isReversed(criterion: SortCriterion, direction: SortDirection): boolean {
   return criterion === 'distance' ? direction === 'farthest' : direction === 'oldest'
-}
-
-function segmentClass(active: boolean, disabled: boolean): string {
-  if (disabled) return 'min-h-10 px-3 py-1.5 text-xs font-medium text-gray-300 cursor-not-allowed'
-  return `min-h-10 px-3 py-1.5 text-xs font-medium transition ${
-    active
-      ? 'bg-brand-soft font-semibold text-brand-strong'
-      : 'text-gray-600 hover:bg-gray-50'
-  }`
 }
 
 /**
@@ -53,35 +47,31 @@ export function SortBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 p-3">
-      <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{t('sort.title')}</span>
+      <Eyebrow>{t('sort.title')}</Eyebrow>
       <span className="inline-flex overflow-hidden rounded-full border border-gray-300">
-        <button
-          type="button"
+        <ToggleChip
+          shape="segment"
           disabled={!distanceSelectable}
-          aria-pressed={criterion === 'distance'}
+          active={criterion === 'distance'}
           onClick={() => onCriterionChange('distance')}
-          className={`border-r border-gray-300 ${segmentClass(criterion === 'distance', !distanceSelectable)}`}
+          className="border-r border-gray-300"
         >
           {t('sort.criterionDistance')}
-        </button>
-        <button
-          type="button"
-          aria-pressed={criterion === 'date'}
-          onClick={() => onCriterionChange('date')}
-          className={segmentClass(criterion === 'date', false)}
-        >
+        </ToggleChip>
+        <ToggleChip shape="segment" active={criterion === 'date'} onClick={() => onCriterionChange('date')}>
           {t('sort.criterionDate')}
-        </button>
+        </ToggleChip>
       </span>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="xs"
+        className="inline-flex min-h-10 items-center gap-1 text-gray-600"
         aria-pressed={isReversed(criterion, direction)}
         onClick={onDirectionToggle}
-        className="inline-flex min-h-10 items-center gap-1 rounded-full border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-400 hover:bg-gray-50"
       >
         <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
         {directionLabel(t, criterion, direction)}
-      </button>
+      </Button>
     </div>
   )
 }

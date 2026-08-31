@@ -16,6 +16,7 @@ import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
 import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
+import { Button } from './features/ui/Button'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
 import { geolocate, type GeoPoint } from './lib/geolocate'
@@ -158,49 +159,37 @@ export default function App() {
             <div className="flex items-center gap-3 text-sm">
               <SyncStatusIndicator />
               <span className="hidden max-w-[10rem] truncate text-gray-500 sm:block">{email}</span>
-              <button
-                type="button"
-                onClick={signOut}
-                className="rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={signOut}>
                 {t('shell.signOut')}
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => void signIn()}
-              className="rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium transition hover:bg-gray-100 active:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={() => void signIn()}>
               {t('shell.signIn')}
               <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            iconOnly
             onClick={() => setSettingsOpen(true)}
             aria-label={t('settings.openAria')}
-            className="rounded-full border border-gray-300 p-1.5 transition hover:bg-gray-100 active:bg-gray-200"
           >
             <Settings className="h-4 w-4" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside
-          className={`min-h-0 flex-1 flex-col border-gray-200 bg-white pb-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom))] md:flex md:w-80 md:flex-none md:border-r md:pb-0 ${
+          className={`min-h-0 flex-1 flex-col border-gray-200 bg-white pb-[var(--safe-area-floating-offset)] md:flex md:w-80 md:flex-none md:border-r md:pb-0 ${
             view === 'list' ? 'flex' : 'hidden'
           }`}
         >
           <div className="space-y-2 border-b border-gray-100 p-3">
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
-            >
+            <Button variant="primary" className="w-full" onClick={() => setAdding(true)}>
               {t('shell.addPlace')}
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => setDeciding(true)}
@@ -223,7 +212,7 @@ export default function App() {
         </aside>
 
         <main
-          className={`relative min-h-0 flex-1 pb-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom))] md:pb-0 ${
+          className={`relative min-h-0 flex-1 pb-[var(--safe-area-floating-offset)] md:pb-0 ${
             view === 'map' ? 'block' : 'hidden'
           } md:block`}
         >
@@ -244,7 +233,7 @@ export default function App() {
               type="button"
               onClick={() => setAdding(true)}
               aria-label={t('shell.addPlaceAria')}
-              className="absolute bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+              className="absolute bottom-[calc(var(--safe-area-floating-offset)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
               +
             </button>

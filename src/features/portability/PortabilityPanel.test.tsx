@@ -25,6 +25,19 @@ function jsonFile(obj: unknown, name = 'backup.json'): File {
 }
 
 describe('PortabilityPanel', () => {
+  it('renders the export and confirm-import buttons through the shared Button primary variant', async () => {
+    render(<PortabilityPanel onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    expect(screen.getByRole('button', { name: /export collection/i })).toHaveClass(
+      'active:bg-brand-strong',
+      'active:shadow-none',
+    )
+
+    await user.upload(screen.getByLabelText(/import a backup file/i), jsonFile(validEnvelope))
+    expect(await screen.findByRole('button', { name: /confirm import/i })).toHaveClass('py-2.5', 'mt-3')
+  })
+
   it('exports the collection as a downloadable JSON envelope and revokes the URL (AE1)', async () => {
     await createRestaurant({ name: 'Chez Marcel', lat: 48, lng: 2, cuisine: 'French' })
     let captured: Blob | null = null

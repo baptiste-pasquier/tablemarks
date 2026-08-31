@@ -20,6 +20,21 @@ describe('SortBar', () => {
     expect(screen.getByRole('button', { name: 'Nearest first' })).toBeInTheDocument()
   })
 
+  it('renders the direction chip at the same text-xs size and gray-600 color as its segment siblings', () => {
+    render(
+      <SortBar
+        criterion="distance"
+        direction="nearest"
+        distanceSelectable={true}
+        onCriterionChange={vi.fn()}
+        onDirectionToggle={vi.fn()}
+      />,
+    )
+
+    const button = screen.getByRole('button', { name: 'Nearest first' })
+    expect(button).toHaveClass('text-xs', 'text-gray-600')
+  })
+
   it('invokes the criterion-change callback with "date" when Date is clicked', async () => {
     const onCriterionChange = vi.fn()
     render(

@@ -66,7 +66,7 @@ describe('RestaurantList', () => {
     expect(card).toHaveStyle({ background: 'color-mix(in srgb, #7c3aed 16%, #fdfaf6)' })
 
     const name = screen.getByText('Baan Thaï')
-    const cuisineBadge = screen.getByText('Thai')
+    const cuisineBadge = screen.getByText('Thai').parentElement as HTMLElement
     expect(within(cuisineBadge).getByText('🍜')).toHaveAttribute('aria-hidden', 'true')
     // The cuisine badge shares the header row with the name (R10) ...
     expect(name.parentElement).toBe(cuisineBadge.parentElement)
@@ -96,7 +96,7 @@ describe('RestaurantList', () => {
   it('renders the uncategorized tint and emoji for a restaurant with no cuisine, not a blank badge', () => {
     render(<RestaurantList items={[r({ id: 'a', name: 'No cuisine place' })]} />)
 
-    const badge = screen.getByText('Uncategorized')
+    const badge = screen.getByText('Uncategorized').parentElement as HTMLElement
     expect(within(badge).getByText('🍽️')).toHaveAttribute('aria-hidden', 'true')
 
     const card = screen.getByRole('button', { name: /No cuisine place/ })

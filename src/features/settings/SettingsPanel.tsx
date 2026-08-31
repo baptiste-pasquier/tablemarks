@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { PortabilityPanel } from '../portability/PortabilityPanel'
+import { Eyebrow } from '../ui/Eyebrow'
 import { ModalHeader } from '../ui/ModalHeader'
 
 /**
@@ -15,9 +16,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       <ModalHeader title={t('settings.title')} onClose={onClose} />
 
       <div className="border-b border-gray-100 pb-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-          {t('settings.language')}
-        </h3>
+        <Eyebrow as="h3">{t('settings.language')}</Eyebrow>
         <div className="mt-2 flex gap-1.5">
           {(['fr', 'en'] as const).map((lng) => (
             <button
