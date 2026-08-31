@@ -64,7 +64,8 @@ export function SortBar({
       </span>
       <Button
         variant="secondary"
-        className="inline-flex min-h-10 items-center gap-1"
+        size="xs"
+        className="inline-flex min-h-10 items-center gap-1 text-gray-600"
         aria-pressed={isReversed(criterion, direction)}
         onClick={onDirectionToggle}
       >

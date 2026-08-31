@@ -24,6 +24,22 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('rounded-full', 'border-gray-300')
   })
 
+  it('defaults the secondary variant to text-sm', () => {
+    render(<Button variant="secondary">Go</Button>)
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('text-sm')
+  })
+
+  it('renders the secondary variant at text-xs when size="xs" is requested', () => {
+    render(
+      <Button variant="secondary" size="xs">
+        Go
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('text-xs')
+    expect(button).not.toHaveClass('text-sm')
+  })
+
   it('applies the shared disabled treatment when disabled', () => {
     render(
       <Button variant="primary" disabled>
