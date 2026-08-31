@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Button } from './Button'
 
 type ModalHeaderVariant = 'default' | 'detail'
 
@@ -32,14 +33,9 @@ export function ModalHeader({
   return (
     <div className={styles.wrapper}>
       <h2 className={styles.title}>{title}</h2>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label={t('common.close')}
-        className="text-gray-400 hover:text-gray-600"
-      >
+      <Button variant="icon-dismiss" tone="neutral" onClick={onClose} aria-label={t('common.close')}>
         ✕
-      </button>
+      </Button>
     </div>
   )
 }

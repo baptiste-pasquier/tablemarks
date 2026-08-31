@@ -278,14 +278,14 @@ export function RestaurantDetail({
                       <VerdictBadge verdict={v.verdict} />
                       <span className="text-gray-400">{v.date}</span>
                     </span>
-                    <button
-                      type="button"
+                    <Button
+                      variant="icon-dismiss"
+                      tone="destructive"
                       onClick={() => void removeVisit(v.id)}
                       aria-label={t('visitDetail.deleteVisitAria', { date: v.date })}
-                      className="text-gray-400 hover:text-red-600"
                     >
                       ✕
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </li>

@@ -130,13 +130,9 @@ export function AddPlace({
           <p>
             <strong>{duplicate.name}</strong> {t('capture.alreadySaved')}
           </p>
-          <button
-            type="button"
-            onClick={() => onOpenExisting(duplicate.id)}
-            className="mt-1 font-medium text-brand underline"
-          >
+          <Button variant="link" className="mt-1" onClick={() => onOpenExisting(duplicate.id)}>
             {t('capture.openIt')}
-          </button>
+          </Button>
         </div>
       )}
 

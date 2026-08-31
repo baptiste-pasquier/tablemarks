@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { Button } from '../ui/Button'
 
 /**
  * Registers the service worker and surfaces an unobtrusive banner when a new version is waiting
@@ -59,14 +60,15 @@ export function ReloadPrompt() {
       ) : (
         <span>{t('pwa.offlineReady')}</span>
       )}
-      <button
-        type="button"
+      <Button
+        variant="icon-dismiss"
+        tone="toast"
         onClick={dismiss}
         aria-label={t('pwa.dismiss')}
-        className="rounded-full p-1 text-gray-400 transition hover:text-white active:text-white"
+        className="rounded-full p-1"
       >
         ✕
-      </button>
+      </Button>
     </div>
   )
 }
