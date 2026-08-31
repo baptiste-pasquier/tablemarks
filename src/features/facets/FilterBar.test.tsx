@@ -190,6 +190,39 @@ describe('FilterBar', () => {
     expect(screen.queryByRole('button', { name: /more/i })).not.toBeInTheDocument()
   })
 
+  it('renders the stacked wrapper classes by default, matching today\'s sidebar/sheet shape', () => {
+    const { container } = render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+    expect(container.firstChild).toHaveClass('space-y-2', 'border-b', 'border-gray-100', 'p-3')
+    expect(container.firstChild).not.toHaveClass('flex', 'flex-wrap', 'items-start', 'gap-4')
+  })
+
+  it('renders the inline horizontal-flow wrapper classes, with cuisine and status/verdict groups side-by-side, when layout="inline"', () => {
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />)
+    const cuisineGroup = screen.getByText('Cuisine').parentElement as HTMLElement
+    const statusGroup = screen.getByText('Status & verdict').parentElement as HTMLElement
+    const wrapper = cuisineGroup.parentElement as HTMLElement
+    expect(wrapper).toHaveClass('flex', 'flex-wrap', 'items-start', 'gap-4')
+    expect(wrapper).not.toHaveClass('space-y-2')
+    // Side-by-side (row) siblings under the flex wrapper, not stacked one-per-line.
+    expect(statusGroup.parentElement).toBe(wrapper)
+  })
+
+  it('toggles a cuisine into the filter under layout="inline" the same as under the default layout', async () => {
+    const onChange = vi.fn()
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={onChange} layout="inline" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Thai' }))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['thai'])
+  })
+
+  it('marks the active selection as pressed under layout="inline"', () => {
+    const filter = { ...emptyFilter(), cuisines: new Set(['thai']) }
+    render(<FilterBar restaurants={PLACES} filter={filter} onChange={vi.fn()} layout="inline" />)
+    expect(screen.getByRole('button', { name: 'Thai' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('reflows the default row immediately when a pinned, off-top-6 active cuisine is deselected', () => {
     const restaurants = [
       ...['Thai', 'Indian', 'French', 'Italian', 'Japanese', 'Chinese'].flatMap((cuisine, i) => [
