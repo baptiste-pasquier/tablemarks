@@ -10,6 +10,7 @@ import {
 } from '../../types/models'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
+import { Eyebrow } from '../ui/Eyebrow'
 import { ToggleChip } from '../ui/ToggleChip'
 
 const DEFAULT_CUISINE_ROW_SIZE = 6
@@ -96,7 +97,7 @@ export function FilterBar({
   return (
     <div className="space-y-2 border-b border-gray-100 p-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{t('filters.title')}</span>
+        <Eyebrow>{t('filters.title')}</Eyebrow>
         {!isEmptyFilter(filter) && (
           <button type="button" onClick={() => onChange(emptyFilter())} className="text-xs text-brand hover:underline">
             {t('filters.clearAll')}

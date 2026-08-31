@@ -2,6 +2,7 @@ import { ArrowUpDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { SortCriterion, SortDirection } from '../../lib/sortPreference'
 import { Button } from '../ui/Button'
+import { Eyebrow } from '../ui/Eyebrow'
 import { ToggleChip } from '../ui/ToggleChip'
 
 type TFn = ReturnType<typeof useTranslation>['t']
@@ -46,7 +47,7 @@ export function SortBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 p-3">
-      <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{t('sort.title')}</span>
+      <Eyebrow>{t('sort.title')}</Eyebrow>
       <span className="inline-flex overflow-hidden rounded-full border border-gray-300">
         <ToggleChip
           shape="segment"
