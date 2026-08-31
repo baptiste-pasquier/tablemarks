@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { emptyFilter, isEmptyFilter, matches, withToggled, UNCATEGORIZED } from './filter'
+import { activeFilterCount, emptyFilter, isEmptyFilter, matches, withToggled, UNCATEGORIZED } from './filter'
 import type { Restaurant, Verdict } from '../../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
@@ -71,5 +71,28 @@ describe('withToggled / isEmptyFilter', () => {
   it('reports empty vs active filters', () => {
     expect(isEmptyFilter(emptyFilter())).toBe(true)
     expect(isEmptyFilter({ ...emptyFilter(), statuses: new Set(['visited' as const]) })).toBe(false)
+  })
+})
+
+describe('activeFilterCount', () => {
+  it('is 0 for an empty filter', () => {
+    expect(activeFilterCount(emptyFilter())).toBe(0)
+  })
+
+  it('counts one active cuisine as 1', () => {
+    expect(activeFilterCount({ ...emptyFilter(), cuisines: new Set(['thai']) })).toBe(1)
+  })
+
+  it('sums active selections across cuisines, statuses, and verdicts', () => {
+    const filter = {
+      cuisines: new Set(['thai', 'french']),
+      statuses: new Set(['to_try' as const]),
+      verdicts: new Set<Verdict>(['go_back', 'never_again']),
+    }
+    expect(activeFilterCount(filter)).toBe(5)
+  })
+
+  it('counts the uncategorized-cuisine sentinel once, like any other cuisine entry', () => {
+    expect(activeFilterCount({ ...emptyFilter(), cuisines: new Set([UNCATEGORIZED]) })).toBe(1)
   })
 })
