@@ -90,7 +90,11 @@ export default function App() {
   // localStorage on every change.
   function handleSortCriterionChange(criterion: SortCriterion) {
     if (criterion === 'distance' && !distanceSelectable) return
-    if (criterion === sortPreference.criterion) return
+    // Compare against what's actually displayed as active, not the raw persisted value: while
+    // Distance isn't selectable, the Date segment renders active even if the stored preference is
+    // still 'distance' (R2) — clicking that already-active-looking button must stay a no-op rather
+    // than overwriting and losing the stashed Distance preference.
+    if (criterion === effectiveSortCriterion) return
     const next = { ...sortPreference, criterion }
     writeSortPreference(next)
     setSortPreference(next)

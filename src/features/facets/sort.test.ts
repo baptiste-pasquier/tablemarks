@@ -103,6 +103,14 @@ describe('sortRestaurants — date', () => {
     expect(ids(oldestFirst)).toEqual(['undated', 'dated'])
   })
 
+  it('treats an unparsable added date the same as a fully absent one (sorts as oldest)', () => {
+    const dated = r({ id: 'dated', added: '2024-01-01' })
+    const malformed = r({ id: 'malformed', added: 'not-a-date' })
+
+    const mostRecentFirst = sortRestaurants([malformed, dated], 'date', 'newest', undefined)
+    expect(ids(mostRecentFirst)).toEqual(['dated', 'malformed'])
+  })
+
   it('keeps two undated restaurants in their original relative order across a direction reversal (stable tie-break)', () => {
     const first = r({ id: 'first' })
     const second = r({ id: 'second' })

@@ -5,6 +5,7 @@ import { freshDB } from './test/idb'
 import { createMockLeafletMap } from './test/mockLeafletMap'
 import { useAuth } from './auth/useAuth'
 import { createRestaurant } from './data/restaurants'
+import { readSortPreference, writeSortPreference } from './lib/sortPreference'
 import type { GeoPoint } from './lib/geolocate'
 
 vi.mock('./auth/useAuth', () => ({
@@ -23,7 +24,9 @@ vi.mock('./lib/geolocate', () => ({
 // (that's U4's job), so a passthrough wrapper that captures the received props is how the
 // prop-plumbing is asserted — delegating to the real component keeps every existing assertion
 // (e.g. the empty-list copy) exercised unchanged.
-const mockLastRestaurantListProps: { current: { currentPosition?: GeoPoint | null } | null } = {
+const mockLastRestaurantListProps: {
+  current: { currentPosition?: GeoPoint | null; items: { id: string }[] } | null
+} = {
   current: null,
 }
 vi.mock('./features/RestaurantList', async (importOriginal) => {
@@ -77,6 +80,7 @@ import App from './App.tsx'
 
 beforeEach(async () => {
   await freshDB()
+  window.localStorage.clear()
   mockUseAuth.mockReturnValue({ signedIn: false, email: null, signIn: vi.fn(), signOut: vi.fn() })
   mockGeolocate.mockReset().mockResolvedValue(null)
   mockLastRestaurantListProps.current = null
@@ -295,5 +299,94 @@ describe('fallbackCenter wiring (U2, R2/R5)', () => {
     await screen.findByText(/no places yet/i)
 
     expect(mockLastMapViewProps.current?.fallbackCenter).toBeNull()
+  })
+})
+
+describe('sort criterion/direction wiring (U4)', () => {
+  const HERE: GeoPoint = { lat: 0, lng: 0 }
+
+  // Distance order (nearest-first) is [near, far]; date order (most-recent-first, the default) is
+  // [far, near] since 'far' is created after 'near' — deliberately opposite, so a test can tell
+  // which rule actually produced the observed order.
+  async function createNearAndFarByDistanceAndDate() {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-08-30T10:00:00.000Z'))
+    await createRestaurant({ id: 'near', name: 'Near Place', lat: 0, lng: 0.001, cuisine: 'French' })
+    vi.setSystemTime(new Date('2026-08-30T11:00:00.000Z'))
+    await createRestaurant({ id: 'far', name: 'Far Place', lat: 0, lng: 1, cuisine: 'Thai' })
+    vi.useRealTimers()
+  }
+
+  it('shows the sort bar with Date selectable and no error when the list is empty', async () => {
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    expect(screen.getByRole('button', { name: 'Date' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Distance' })).toBeDisabled()
+  })
+
+  it('re-sorts by distance with no user action when a persisted Distance preference exists and a position resolves after mount (AE2)', async () => {
+    writeSortPreference({ criterion: 'distance', directions: { distance: 'nearest', date: 'newest' } })
+    await createNearAndFarByDistanceAndDate()
+    mockGeolocate.mockResolvedValue(HERE)
+
+    render(<App />)
+    await screen.findByText('Near Place')
+
+    await waitFor(() =>
+      expect(mockLastRestaurantListProps.current?.items.map((r) => r.id)).toEqual(['near', 'far']),
+    )
+  })
+
+  it('leaves Date active when no sort preference was persisted, even after a position resolves (AE6)', async () => {
+    await createNearAndFarByDistanceAndDate()
+    mockGeolocate.mockResolvedValue(HERE)
+
+    render(<App />)
+    await screen.findByText('Near Place')
+
+    await waitFor(() => expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(HERE))
+    // Distance became selectable, but the order is still date order (most-recent-first) — the
+    // automatic switch to Distance only fires for a returning user with a persisted preference.
+    expect(mockLastRestaurantListProps.current?.items.map((r) => r.id)).toEqual(['far', 'near'])
+    expect(screen.getByRole('button', { name: 'Date' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('keeps the active sort applied to the newly filtered set after a facet filter changes (R11)', async () => {
+    writeSortPreference({ criterion: 'distance', directions: { distance: 'nearest', date: 'newest' } })
+    await createRestaurant({ id: 'french-near', name: 'French Near', lat: 0, lng: 0.001, cuisine: 'French' })
+    await createRestaurant({ id: 'thai-mid', name: 'Thai Mid', lat: 0, lng: 0.5, cuisine: 'Thai' })
+    await createRestaurant({ id: 'french-far', name: 'French Far', lat: 0, lng: 1, cuisine: 'French' })
+    mockGeolocate.mockResolvedValue(HERE)
+
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText('French Near')
+    await waitFor(() =>
+      expect(mockLastRestaurantListProps.current?.items.map((r) => r.id)).toEqual([
+        'french-near',
+        'thai-mid',
+        'french-far',
+      ]),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'French' }))
+
+    expect(screen.queryByText('Thai Mid')).not.toBeInTheDocument()
+    expect(mockLastRestaurantListProps.current?.items.map((r) => r.id)).toEqual(['french-near', 'french-far'])
+  })
+
+  it('does not overwrite a stashed Distance preference when the visually-active Date segment is clicked while Distance is unselectable', async () => {
+    writeSortPreference({ criterion: 'distance', directions: { distance: 'nearest', date: 'newest' } })
+    // mockGeolocate resolves null (the beforeEach default) — Distance stays unselectable and Date
+    // renders as the active segment even though the persisted preference is still 'distance'.
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    const dateButton = screen.getByRole('button', { name: 'Date' })
+    expect(dateButton).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(dateButton)
+
+    expect(readSortPreference()?.criterion).toBe('distance')
   })
 })
