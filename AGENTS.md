@@ -23,3 +23,10 @@ When asked to create or update documentation, strictly adhere to the following p
 
 * `docs/solutions/` — documented solutions to past problems (bugs, best practices, architecture patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
 * `CONCEPTS.md` — shared domain vocabulary (entities, named processes, status concepts). Relevant when orienting to the codebase or discussing domain terms.
+
+### UI & Tailwind Directives
+
+1. **Use Primitives First:** Always check `src/features/ui/` before writing new Tailwind classes for buttons, badges, chips, or section headers. You must use existing primitives (`Button`, `Badge`, `ToggleChip`, `Eyebrow`) instead of hand-rolling custom HTML.
+2. **The Rule of Three:** Never copy-paste complex Tailwind class strings (e.g., hover/active states, safe-area math, complex flex alignments) across multiple files. If a specific UI pattern appears in 3 or more places, halt your feature work and extract it into a shared, tested component in `src/features/ui/`.
+3. **Extend, Don't Abandon:** If an existing primitive almost fits but needs a tweak (e.g., a new disabled state or color), extend its variant API (like the `Modal.tsx` `Record` map pattern). Do not abandon the primitive to create a one-off styling exception.
+4. **Use the Utility:** Never concatenate classes with raw template literals. Always use the `cn()` helper in `src/lib/cn.ts` for conditional Tailwind styling.
