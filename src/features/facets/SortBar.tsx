@@ -1,6 +1,7 @@
 import { ArrowUpDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { SortCriterion, SortDirection } from '../../lib/sortPreference'
+import { Button } from '../ui/Button'
 
 type TFn = ReturnType<typeof useTranslation>['t']
 
@@ -73,15 +74,15 @@ export function SortBar({
           {t('sort.criterionDate')}
         </button>
       </span>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        className="inline-flex min-h-10 items-center gap-1"
         aria-pressed={isReversed(criterion, direction)}
         onClick={onDirectionToggle}
-        className="inline-flex min-h-10 items-center gap-1 rounded-full border border-gray-300 px-3 py-1.5 text-xs text-gray-600 transition hover:border-gray-400 hover:bg-gray-50"
       >
         <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
         {directionLabel(t, criterion, direction)}
-      </button>
+      </Button>
     </div>
   )
 }

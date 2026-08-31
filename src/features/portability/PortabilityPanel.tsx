@@ -11,6 +11,7 @@ import {
   type ImportRecords,
 } from '../../data/portability'
 import { ModalHeader } from '../ui/ModalHeader'
+import { Button } from '../ui/Button'
 
 /** Local (non-parser) failures, kept as translation keys — never as already-resolved text — so
  * the error paragraph re-resolves in whatever language is active at render time. */
@@ -134,14 +135,9 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
 
       <p className="text-sm text-gray-600">{t('portability.description')}</p>
 
-      <button
-        type="button"
-        onClick={() => void exportNow()}
-        disabled={busy}
-        className="mt-3 w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong disabled:opacity-50"
-      >
+      <Button variant="primary" className="mt-3 w-full" onClick={() => void exportNow()} disabled={busy}>
         {exportBusy ? t('portability.exportBusy') : t('portability.exportAction')}
-      </button>
+      </Button>
 
       <div className="mt-4 border-t border-gray-100 pt-4">
         <label htmlFor={fileInputId} className="block text-sm text-gray-600">
@@ -171,14 +167,9 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
               visits: t('portability.confirm.visit', { count: pending.visits.length }),
             })}
           </p>
-          <button
-            type="button"
-            onClick={() => void confirmImport()}
-            disabled={busy}
-            className="mt-2 rounded-xl bg-brand px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50"
-          >
+          <Button variant="primary" className="mt-3" onClick={() => void confirmImport()} disabled={busy}>
             {importBusy ? t('portability.importBusy') : t('portability.confirmImport')}
-          </button>
+          </Button>
         </div>
       )}
 

@@ -16,6 +16,7 @@ import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
 import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
+import { Button } from './features/ui/Button'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
 import { geolocate, type GeoPoint } from './lib/geolocate'
@@ -158,32 +159,24 @@ export default function App() {
             <div className="flex items-center gap-3 text-sm">
               <SyncStatusIndicator />
               <span className="hidden max-w-[10rem] truncate text-gray-500 sm:block">{email}</span>
-              <button
-                type="button"
-                onClick={signOut}
-                className="rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={signOut}>
                 {t('shell.signOut')}
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => void signIn()}
-              className="rounded-full border border-gray-300 px-3 py-1.5 text-sm font-medium transition hover:bg-gray-100 active:bg-gray-200"
-            >
+            <Button variant="secondary" onClick={() => void signIn()}>
               {t('shell.signIn')}
               <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            iconOnly
             onClick={() => setSettingsOpen(true)}
             aria-label={t('settings.openAria')}
-            className="rounded-full border border-gray-300 p-1.5 transition hover:bg-gray-100 active:bg-gray-200"
           >
             <Settings className="h-4 w-4" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -194,13 +187,9 @@ export default function App() {
           }`}
         >
           <div className="space-y-2 border-b border-gray-100 p-3">
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="w-full rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none"
-            >
+            <Button variant="primary" className="w-full" onClick={() => setAdding(true)}>
               {t('shell.addPlace')}
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => setDeciding(true)}
