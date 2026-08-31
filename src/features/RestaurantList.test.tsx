@@ -156,7 +156,7 @@ describe('RestaurantList', () => {
     expect(screen.queryByText(/\d+(\.\d+)? km$/)).not.toBeInTheDocument()
   })
 
-  it('keeps the same row order whether or not currentPosition is set', () => {
+  it('preserves the order of its items prop as given, independent of currentPosition (sorting happens upstream in App.tsx, not here)', () => {
     const items = [
       r({ id: 'a', name: 'Alpha', lat: 48.8566, lng: 2.3522 }),
       r({ id: 'b', name: 'Bravo', lat: 48.86, lng: 2.36 }),

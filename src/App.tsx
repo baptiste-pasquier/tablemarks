@@ -8,6 +8,9 @@ import { MapView } from './features/map/MapView'
 import { toMarkers, pickMostRecentRestaurantCenter } from './features/map/markers'
 import { FilterBar } from './features/facets/FilterBar'
 import { emptyFilter, matches } from './features/facets/filter'
+import { SortBar } from './features/facets/SortBar'
+import { sortRestaurants } from './features/facets/sort'
+import { readSortPreference, writeSortPreference, type SortPreference, type SortCriterion } from './lib/sortPreference'
 import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
@@ -19,6 +22,26 @@ import { geolocate, type GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
 
 type MobileView = 'list' | 'map'
+
+// R1/R4 default: Date active, nearest-first/newest-first the first time each criterion is ever
+// chosen. `currentPosition` is always null at mount (the on-load geolocation fetch resolves
+// asynchronously after first render), so there is no reachable "position already known at mount"
+// branch to special-case here.
+const DEFAULT_SORT_PREFERENCE: SortPreference = {
+  criterion: 'date',
+  directions: { distance: 'nearest', date: 'newest' },
+}
+
+/** Direction, flipped for whichever criterion is currently active. */
+function toggledDirections(
+  criterion: SortCriterion,
+  directions: SortPreference['directions'],
+): SortPreference['directions'] {
+  if (criterion === 'distance') {
+    return { ...directions, distance: directions.distance === 'nearest' ? 'farthest' : 'nearest' }
+  }
+  return { ...directions, date: directions.date === 'newest' ? 'oldest' : 'newest' }
+}
 
 export default function App() {
   const { t } = useTranslation()
@@ -36,9 +59,52 @@ export default function App() {
   const [filter, setFilter] = useState(emptyFilter())
   // Reset on every reload/relaunch (KTD5) — no persistence beyond component state.
   const [view, setView] = useState<MobileView>('list')
+  // Persisted sort criterion + each criterion's own direction (R9, U1). Holds the user's raw
+  // preference even while Distance isn't selectable — `effectiveSortCriterion` below is what
+  // actually renders and sorts, so a returning Distance user's preference survives the gap before
+  // a position resolves and reapplies automatically the moment it does (R2), with no extra write.
+  const [sortPreference, setSortPreference] = useState<SortPreference>(
+    () => readSortPreference() ?? DEFAULT_SORT_PREFERENCE,
+  )
   // App re-renders on every map pan/zoom (anchor state); memoize so the list and markers
   // aren't recomputed against every restaurant on each move.
   const visible = useMemo(() => restaurants.filter((r) => matches(r, filter)), [restaurants, filter])
+  // Distance is selectable only once a position is known (R1). Until then, the effective
+  // criterion falls back to Date regardless of what's persisted — this is what AE1 and AE6 render
+  // as "active" and what R11's sort step actually uses.
+  const distanceSelectable = currentPosition !== null
+  const effectiveSortCriterion: SortCriterion = distanceSelectable ? sortPreference.criterion : 'date'
+  const effectiveSortDirection =
+    effectiveSortCriterion === 'distance' ? sortPreference.directions.distance : sortPreference.directions.date
+  // Only the Distance path reads `position` (KTD7's date-rule branch ignores it entirely), so
+  // don't re-run the sort every time it changes while Date is active.
+  const positionForSort = effectiveSortCriterion === 'distance' ? currentPosition : null
+  const sorted = useMemo(
+    () => sortRestaurants(visible, effectiveSortCriterion, effectiveSortDirection, positionForSort),
+    [visible, effectiveSortCriterion, effectiveSortDirection, positionForSort],
+  )
+
+  // `next` is computed from the current `sortPreference` closure value and `writeSortPreference`
+  // runs once here, rather than inside a `setSortPreference` updater — React StrictMode
+  // double-invokes updater functions in development, which would otherwise double-write to
+  // localStorage on every change.
+  function handleSortCriterionChange(criterion: SortCriterion) {
+    if (criterion === 'distance' && !distanceSelectable) return
+    // Compare against what's actually displayed as active, not the raw persisted value: while
+    // Distance isn't selectable, the Date segment renders active even if the stored preference is
+    // still 'distance' (R2) — clicking that already-active-looking button must stay a no-op rather
+    // than overwriting and losing the stashed Distance preference.
+    if (criterion === effectiveSortCriterion) return
+    const next = { ...sortPreference, criterion }
+    writeSortPreference(next)
+    setSortPreference(next)
+  }
+
+  function handleSortDirectionToggle() {
+    const next = { ...sortPreference, directions: toggledDirections(effectiveSortCriterion, sortPreference.directions) }
+    writeSortPreference(next)
+    setSortPreference(next)
+  }
   // Markers carry raw data (status, verdict, visit count, cuisine), not pre-translated text —
   // StatusBadge, translateVisitsCount, and emojiForCuisine translate at render time inside
   // MapView and react to a language switch on their own, so no `i18n.language` dependency here.
@@ -144,8 +210,15 @@ export default function App() {
             </button>
           </div>
           <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} />
+          <SortBar
+            criterion={effectiveSortCriterion}
+            direction={effectiveSortDirection}
+            distanceSelectable={distanceSelectable}
+            onCriterionChange={handleSortCriterionChange}
+            onDirectionToggle={handleSortDirectionToggle}
+          />
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <RestaurantList items={visible} onSelect={setSelectedId} currentPosition={currentPosition} />
+            <RestaurantList items={sorted} onSelect={setSelectedId} currentPosition={currentPosition} />
           </div>
         </aside>
 

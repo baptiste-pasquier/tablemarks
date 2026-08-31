@@ -75,6 +75,15 @@
     "collapse": "Réduire",
     "showMore": "+{{count}} autres"
   },
+  "sort": {
+    "title": "Trier",
+    "criterionDistance": "Distance",
+    "criterionDate": "Date",
+    "directionNearest": "Plus proche",
+    "directionFarthest": "Plus loin",
+    "directionNewest": "Plus récent",
+    "directionOldest": "Plus ancien"
+  },
   "portability": {
     "title": "Export & import",
     "description": "Téléchargez une sauvegarde complète de votre collection, ou fusionnez un fichier précédemment exporté.",
