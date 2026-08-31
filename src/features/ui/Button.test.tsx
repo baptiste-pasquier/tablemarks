@@ -112,4 +112,63 @@ describe('Button', () => {
     expect(button).toHaveClass('mt-1')
     expect(button).toHaveClass('text-brand')
   })
+
+  it('applies only the neutral hover class for the icon-dismiss variant with tone="neutral"', () => {
+    render(
+      <Button variant="icon-dismiss" tone="neutral" aria-label="Close">
+        ✕
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Close' })
+    expect(button).toHaveClass('hover:text-gray-600')
+    expect(button).not.toHaveClass('hover:text-red-600')
+    expect(button).not.toHaveClass('hover:text-white')
+  })
+
+  it('applies only the destructive hover class for the icon-dismiss variant with tone="destructive"', () => {
+    render(
+      <Button variant="icon-dismiss" tone="destructive" aria-label="Delete">
+        ✕
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Delete' })
+    expect(button).toHaveClass('hover:text-red-600')
+    expect(button).not.toHaveClass('hover:text-gray-600')
+    expect(button).not.toHaveClass('hover:text-white')
+  })
+
+  it('applies only the toast hover/active classes for the icon-dismiss variant with tone="toast"', () => {
+    render(
+      <Button variant="icon-dismiss" tone="toast" aria-label="Dismiss">
+        ✕
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Dismiss' })
+    expect(button).toHaveClass('hover:text-white', 'active:text-white')
+    expect(button).not.toHaveClass('hover:text-gray-600')
+    expect(button).not.toHaveClass('hover:text-red-600')
+  })
+
+  it('merges a caller-supplied className alongside the icon-dismiss tone base classes', () => {
+    render(
+      <Button variant="icon-dismiss" tone="toast" className="rounded-full p-1" aria-label="Dismiss">
+        ✕
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Dismiss' })
+    expect(button).toHaveClass('rounded-full', 'p-1')
+    expect(button).toHaveClass('hover:text-white')
+  })
+
+  it('forwards onClick for the icon-dismiss variant', async () => {
+    const onClick = vi.fn()
+    render(
+      <Button variant="icon-dismiss" tone="neutral" onClick={onClick} aria-label="Close">
+        ✕
+      </Button>,
+    )
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
 })
