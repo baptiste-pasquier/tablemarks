@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { PortabilityPanel } from '../portability/PortabilityPanel'
 import { Eyebrow } from '../ui/Eyebrow'
 import { ModalHeader } from '../ui/ModalHeader'
+import { ToggleChip } from '../ui/ToggleChip'
 
 /**
  * Settings panel (U4): hosts Language and Export/Import. Export/Import renders `PortabilityPanel`
@@ -19,19 +20,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <Eyebrow as="h3">{t('settings.language')}</Eyebrow>
         <div className="mt-2 flex gap-1.5">
           {(['fr', 'en'] as const).map((lng) => (
-            <button
+            <ToggleChip
               key={lng}
-              type="button"
-              aria-pressed={i18n.language === lng}
+              shape="pill"
+              active={i18n.language === lng}
               onClick={() => void i18n.changeLanguage(lng)}
-              className={`inline-flex min-h-10 items-center rounded-full border px-3 py-1.5 text-sm transition ${
-                i18n.language === lng
-                  ? 'border-brand bg-brand-soft font-semibold text-brand-strong shadow-sm'
-                  : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
-              }`}
             >
               {lng === 'fr' ? 'Français' : 'English'}
-            </button>
+            </ToggleChip>
           ))}
         </div>
       </div>

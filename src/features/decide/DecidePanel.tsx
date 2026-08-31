@@ -6,6 +6,7 @@ import { decideCandidates, pickForMe, type Anchor, type Candidate } from './cand
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { Button } from '../ui/Button'
+import { ToggleChip } from '../ui/ToggleChip'
 import { isHttpUrl } from '../../lib/mapsLinks'
 import { formatDistance } from '../../lib/geo'
 
@@ -44,19 +45,17 @@ export function DecidePanel({
       <div className="mb-3 flex items-center gap-2 text-sm">
         <span className="text-gray-500">{t('decide.within')}</span>
         {RADIUS_PRESETS_KM.map((km) => (
-          <button
+          <ToggleChip
             key={km}
-            type="button"
+            shape="pill"
+            active={km === radiusKm}
             onClick={() => {
               setRadiusKm(km)
               setPickedId(null)
             }}
-            aria-pressed={km === radiusKm}
-            className={`rounded-full border px-2.5 py-0.5 ${km === radiusKm ? 'border-brand bg-brand-soft text-brand' : 'border-gray-300'
-              }`}
           >
             {formatRadiusKm(km)}
-          </button>
+          </ToggleChip>
         ))}
       </div>
 
