@@ -43,7 +43,7 @@ export function ReloadPrompt() {
       role="region"
       aria-live="polite"
       aria-label={t('pwa.appUpdateAria')}
-      className="fixed left-4 right-[6.5rem] z-[2000] flex items-center gap-3 rounded-full bg-gray-900 px-4 py-2.5 text-sm text-white shadow-lg bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2"
+      className="fixed left-4 right-[6.5rem] z-[2000] flex items-center gap-3 rounded-full bg-gray-900 px-4 py-2.5 text-sm text-white shadow-lg bottom-[calc(var(--safe-area-floating-offset)+1rem)] md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2"
     >
       {needRefresh ? (
         <>

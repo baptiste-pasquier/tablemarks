@@ -20,6 +20,11 @@
      on top of this wherever the bar itself or clearance for it is computed. */
   --spacing-toggle-bar: 3.75rem;
 
+  /* Clearance for floating elements above the toggle bar / safe area (R8). */
+  --safe-area-floating-offset: calc(
+    var(--spacing-toggle-bar) + env(safe-area-inset-bottom)
+  );
+
   /* Carnet culinaire ramp — warm, sepia-tinted parchment neutrals replacing
      Tailwind's default cool grays, for the paper-editorial identity. */
   --color-gray-50: #fbf6ee;

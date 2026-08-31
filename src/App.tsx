@@ -182,7 +182,7 @@ export default function App() {
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside
-          className={`min-h-0 flex-1 flex-col border-gray-200 bg-white pb-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom))] md:flex md:w-80 md:flex-none md:border-r md:pb-0 ${
+          className={`min-h-0 flex-1 flex-col border-gray-200 bg-white pb-[var(--safe-area-floating-offset)] md:flex md:w-80 md:flex-none md:border-r md:pb-0 ${
             view === 'list' ? 'flex' : 'hidden'
           }`}
         >
@@ -212,7 +212,7 @@ export default function App() {
         </aside>
 
         <main
-          className={`relative min-h-0 flex-1 pb-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom))] md:pb-0 ${
+          className={`relative min-h-0 flex-1 pb-[var(--safe-area-floating-offset)] md:pb-0 ${
             view === 'map' ? 'block' : 'hidden'
           } md:block`}
         >
@@ -233,7 +233,7 @@ export default function App() {
               type="button"
               onClick={() => setAdding(true)}
               aria-label={t('shell.addPlaceAria')}
-              className="absolute bottom-[calc(var(--spacing-toggle-bar)+env(safe-area-inset-bottom)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+              className="absolute bottom-[calc(var(--safe-area-floating-offset)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
               +
             </button>
