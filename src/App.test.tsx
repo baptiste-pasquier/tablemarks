@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { freshDB } from './test/idb'
 import { createMockLeafletMap } from './test/mockLeafletMap'
 import { useAuth } from './auth/useAuth'
@@ -299,6 +299,88 @@ describe('fallbackCenter wiring (U2, R2/R5)', () => {
     await screen.findByText(/no places yet/i)
 
     expect(mockLastMapViewProps.current?.fallbackCenter).toBeNull()
+  })
+})
+
+describe('desktop filter overlay (U3)', () => {
+  it('keeps FilterBar directly after the "Where to eat" button and before RestaurantList in DOM order (R7) — tab order is unchanged even though FilterBar now renders as a floating overlay over the map on desktop', async () => {
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+
+    const whereToEat = screen.getByRole('button', { name: /where to eat/i })
+    const cuisineChip = screen.getByRole('button', { name: 'French' })
+    const restaurantRow = screen.getByText('R1 Place')
+
+    // DOCUMENT_POSITION_FOLLOWING: the argument node comes after the node compareDocumentPosition
+    // was called on, in DOM order.
+    expect(whereToEat.compareDocumentPosition(cuisineChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(cuisineChip.compareDocumentPosition(restaurantRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  describe('measured-height -> control-stack offset wiring (KTD3)', () => {
+    // A dedicated fake (rather than a generic vi.fn()-based stub) so the constructor can both
+    // capture its `callback` for the test to invoke manually (simulating a real resize, e.g. the
+    // cuisine row's "+N autres" expanding the overlay) and record which element it observed —
+    // `ResizeObserver` isn't implemented in jsdom, and App.tsx's own effect already no-ops when
+    // it's undefined, so without this stub the effect would just never call `observe` at all.
+    class FakeResizeObserver {
+      callback: ResizeObserverCallback
+      observed: Element[] = []
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback
+        instances.push(this)
+      }
+      observe(target: Element) {
+        this.observed.push(target)
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    let instances: FakeResizeObserver[]
+    let mockOverlayHeight = 120
+
+    beforeEach(() => {
+      instances = []
+      mockOverlayHeight = 120
+      vi.stubGlobal('ResizeObserver', FakeResizeObserver)
+      // jsdom's real getBoundingClientRect always reports 0 — stub it so the overlay ref's
+      // measured height is actually controllable from the test.
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+        () =>
+          ({
+            height: mockOverlayHeight,
+            width: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            x: 0,
+            y: 0,
+            toJSON() {},
+          }) as DOMRect,
+      )
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    })
+
+    it("writes the filter overlay's measured height to --filter-overlay-height, and updates it when the overlay resizes (e.g. the cuisine row's \"+N autres\" expanding it)", async () => {
+      await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+      render(<App />)
+      await screen.findByText('R1 Place')
+
+      expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('120px')
+
+      mockOverlayHeight = 260
+      instances.forEach((observer) => observer.callback([], observer as unknown as ResizeObserver))
+
+      expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('260px')
+    })
   })
 })
 

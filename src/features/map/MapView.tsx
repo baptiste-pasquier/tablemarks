@@ -284,6 +284,53 @@ export function LabelVisibility({
   return null
 }
 
+/**
+ * Zoom in/out control (KTD3) replacing Leaflet's own default zoom control — `MapView` passes
+ * `zoomControl={false}` to `MapContainer` below so Leaflet's own top-left control isn't also
+ * rendered. Mirrors `Recenter`/`CenterReporter`/`LabelVisibility`'s `useMap()`-driven pattern:
+ * each button disables at the map's current zoom limit, tracked via a `zoomend` subscription
+ * (mirroring `LabelVisibility`'s own `map.on`/`map.off` wiring) so the disabled state stays live
+ * as the map is zoomed by any means (these buttons, a scroll-wheel, a pinch), matching the
+ * disabled-at-limits affordance of the Leaflet default control it replaces.
+ */
+function ZoomControl() {
+  const { t } = useTranslation()
+  const map = useMap()
+  const [zoom, setZoom] = useState(() => map.getZoom())
+
+  useEffect(() => {
+    const update = () => setZoom(map.getZoom())
+    map.on('zoomend', update)
+    return () => {
+      map.off('zoomend', update)
+    }
+  }, [map])
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-md border border-gray-300 bg-white shadow">
+      <button
+        type="button"
+        onClick={() => map.zoomIn()}
+        disabled={zoom >= map.getMaxZoom()}
+        aria-label={t('map.zoomInAria')}
+        className="grid h-9 w-9 place-items-center text-base leading-none disabled:opacity-50"
+      >
+        +
+      </button>
+      <div aria-hidden="true" className="h-px bg-gray-200" />
+      <button
+        type="button"
+        onClick={() => map.zoomOut()}
+        disabled={zoom <= map.getMinZoom()}
+        aria-label={t('map.zoomOutAria')}
+        className="grid h-9 w-9 place-items-center text-base leading-none disabled:opacity-50"
+      >
+        −
+      </button>
+    </div>
+  )
+}
+
 export function MapView({
   markers,
   onSelect,
@@ -331,7 +378,7 @@ export function MapView({
 
   return (
     <div className="relative h-full w-full">
-      <MapContainer ref={setMap} center={center} zoom={12} className="h-full w-full">
+      <MapContainer ref={setMap} center={center} zoom={12} zoomControl={false} className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -450,16 +497,30 @@ export function MapView({
             keyboard={false}
           />
         )}
+        {/* Locate + zoom control stack (KTD2/KTD3): Locate above zoom, stacked on the map's right
+            edge. Rendered as a plain child of MapContainer (not a sibling of it) purely so
+            ZoomControl can call useMap() — react-leaflet renders children straight into the
+            Leaflet container div (no portal), so this positions identically to a sibling would.
+            `top-3` (mobile, unchanged from before this stack existed) is overridden at `md:` by
+            the measured `--filter-overlay-height` custom property (KTD3): the desktop filter
+            overlay is `position: fixed` and authored inside <aside>, not a flow-sibling of this
+            stack, so it reserves no space this stack could rely on — App.tsx measures the
+            overlay's real rendered height via a ResizeObserver and writes it to that property, so
+            this stack always clears it regardless of how tall the cuisine row's "+N autres"
+            expansion grows it. */}
+        <div className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(var(--filter-overlay-height,0px)+2rem)]">
+          <button
+            type="button"
+            onClick={() => void locate()}
+            disabled={locating}
+            aria-label={t('map.locateAria')}
+            className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm shadow disabled:opacity-50"
+          >
+            {locating ? t('map.locating') : t('map.locate')}
+          </button>
+          <ZoomControl />
+        </div>
       </MapContainer>
-      <button
-        type="button"
-        onClick={() => void locate()}
-        disabled={locating}
-        aria-label={t('map.locateAria')}
-        className="absolute right-3 top-3 z-[1000] rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm shadow disabled:opacity-50"
-      >
-        {locating ? t('map.locating') : t('map.locate')}
-      </button>
     </div>
   )
 }

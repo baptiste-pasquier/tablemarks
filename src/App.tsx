@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 import { useRestaurants } from './features/useRestaurants'
@@ -139,6 +139,31 @@ export default function App() {
     })
   }, [])
 
+  // Desktop filter overlay (U3 KTD2/KTD3): FilterBar stays authored here in <aside> (R7's tab
+  // order) but renders as a `position: fixed` floating card pinned over <main>'s map on desktop,
+  // so it reserves no flow space MapView's Locate/zoom control stack could rely on to stay below
+  // it. Measure the overlay's real rendered height and write it to a CSS custom property that
+  // stack's `top` offset reads (in MapView.tsx), so it always clears the overlay regardless of
+  // how tall the cuisine row's "+N autres" expansion grows it. Written straight to the DOM, not
+  // React state: a ResizeObserver can fire on every frame during a resize, and only MapView's CSS
+  // ever needs to read this value, so routing it through setState would re-render the whole App
+  // tree on every tick for no consumer that needs a React re-render.
+  const filterOverlayRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = filterOverlayRef.current
+    if (!el) return
+    const applyHeight = () => {
+      document.documentElement.style.setProperty('--filter-overlay-height', `${el.getBoundingClientRect().height}px`)
+    }
+    applyHeight()
+    // No-op (rather than throwing) where ResizeObserver isn't available — the initial
+    // `applyHeight()` call above still runs, it just won't track later resizes.
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(applyHeight)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div className="flex h-full flex-col bg-gray-50 text-gray-900">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/85 px-4 py-3 backdrop-blur">
@@ -198,7 +223,19 @@ export default function App() {
               {t('shell.whereToEat')}
             </button>
           </div>
-          <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} />
+          {/* Desktop (KTD2): floating card pinned atop the map, `position: fixed` since this div
+              is authored inside <aside> but must render visually over <main>. Below md, no
+              positioning classes apply, so this wrapper is inert and FilterBar renders exactly
+              where it does today, in the sidebar's normal flow (R7, U4 still owns the eventual
+              mobile pill/sheet). `layout="inline"` lays its cuisine/status/verdict groups
+              side-by-side, matching a horizontal floating card instead of a vertical sidebar
+              stack. */}
+          <div
+            ref={filterOverlayRef}
+            className="md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:w-96 md:max-h-[50vh] md:overflow-y-auto md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg"
+          >
+            <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="inline" />
+          </div>
           <SortBar
             criterion={effectiveSortCriterion}
             direction={effectiveSortDirection}

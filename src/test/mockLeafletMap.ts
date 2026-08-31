@@ -25,6 +25,11 @@ export interface MockLeafletMapOverrides {
   invalidateSize?: () => void
   on?: (event: string, handler: () => void) => void
   off?: (event: string, handler: () => void) => void
+  /** Zoom-limit accessors and imperative zoom actions backing MapView's `ZoomControl` (U3 R3). */
+  getMaxZoom?: () => number
+  getMinZoom?: () => number
+  zoomIn?: () => void
+  zoomOut?: () => void
 }
 
 export interface MockLeafletMap {
@@ -36,6 +41,10 @@ export interface MockLeafletMap {
   invalidateSize: () => void
   on: (event: string, handler: () => void) => void
   off: (event: string, handler: () => void) => void
+  getMaxZoom: () => number
+  getMinZoom: () => number
+  zoomIn: () => void
+  zoomOut: () => void
 }
 
 /** Builds a stubbed Leaflet `Map` instance for `useMap()` to return in tests. */
@@ -49,5 +58,9 @@ export function createMockLeafletMap(overrides: MockLeafletMapOverrides = {}): M
     invalidateSize: overrides.invalidateSize ?? (() => {}),
     on: overrides.on ?? (() => {}),
     off: overrides.off ?? (() => {}),
+    getMaxZoom: overrides.getMaxZoom ?? (() => 18),
+    getMinZoom: overrides.getMinZoom ?? (() => 0),
+    zoomIn: overrides.zoomIn ?? (() => {}),
+    zoomOut: overrides.zoomOut ?? (() => {}),
   }
 }

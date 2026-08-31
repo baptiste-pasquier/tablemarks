@@ -143,7 +143,9 @@
     "locateAria": "Centrer sur ma position",
     "locating": "Localisation…",
     "locate": "📍 Localiser",
-    "currentPositionAria": "Votre position actuelle"
+    "currentPositionAria": "Votre position actuelle",
+    "zoomInAria": "Zoomer",
+    "zoomOutAria": "Dézoomer"
   },
   "restaurantList": {
     "emptyTitle": "Aucun lieu pour l'instant",
