@@ -20,6 +20,8 @@ const VARIANT_STYLES: Record<ButtonVariant, string> = {
 // Icon-only secondary sites (e.g. App.tsx's Settings trigger) need square icon padding instead of
 // the text-pill's `px-3`/`text-sm` sizing. `cn` doesn't dedupe conflicting Tailwind classes (see
 // src/lib/cn.ts), so this has to be a distinct base rather than a caller `className` override.
+// `iconOnly` is typed as valid only alongside `variant: 'secondary'` (below) so a mismatched pair
+// is a compile error instead of silently discarding `variant`.
 const ICON_ONLY_SECONDARY =
   'rounded-full border border-gray-300 p-1.5 transition hover:bg-gray-100 active:bg-gray-200 disabled:opacity-50'
 
@@ -33,10 +35,11 @@ export function Button({
   iconOnly = false,
   className = '',
   ...rest
-}: {
-  variant: ButtonVariant
-  iconOnly?: boolean
-} & ButtonHTMLAttributes<HTMLButtonElement>) {
+}: (
+  | { variant: 'primary'; iconOnly?: false }
+  | { variant: 'secondary'; iconOnly?: boolean }
+) &
+  ButtonHTMLAttributes<HTMLButtonElement>) {
   const base = iconOnly ? ICON_ONLY_SECONDARY : VARIANT_STYLES[variant]
 
   return <button type="button" className={cn(base, className)} {...rest} />

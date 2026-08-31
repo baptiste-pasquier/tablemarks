@@ -48,6 +48,17 @@ describe('RestaurantDetail', () => {
     expect(screen.getByText('(1)')).toBeInTheDocument()
   })
 
+  it('renders the verdict-picker buttons through the shared Button secondary variant', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    expect(await screen.findByText('To try')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /here now/i }))
+    const button = enabled(await screen.findAllByRole('button', { name: 'Go back' }))
+    expect(button).toHaveClass('hover:bg-gray-100', 'active:bg-gray-200', 'py-1.5')
+  })
+
   it('edits and persists the cuisine', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
