@@ -10,42 +10,10 @@ import {
 } from '../../types/models'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
+import { ToggleChip } from '../ui/ToggleChip'
 
 const DEFAULT_CUISINE_ROW_SIZE = 6
 const CUISINE_GROUP_ID = 'filter-cuisine-group'
-
-function Chip({
-  label,
-  active,
-  color,
-  icon,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  color?: string
-  icon?: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
-        active
-          ? 'border-brand bg-brand-soft font-semibold text-brand-strong shadow-sm'
-          : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
-      }`}
-    >
-      {color && (
-        <span aria-hidden="true" className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-      )}
-      {icon && <span aria-hidden="true">{icon}</span>}
-      {label}
-    </button>
-  )
-}
 
 function GroupLabel({ children }: { children: string }) {
   return <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{children}</span>
@@ -141,23 +109,35 @@ export function FilterBar({
           <GroupLabel>{t('filters.cuisineGroup')}</GroupLabel>
           <div id={CUISINE_GROUP_ID} className="mt-1 flex flex-wrap gap-1.5">
             {shownCuisines.map((c) => (
-              <Chip
+              <ToggleChip
                 key={c}
-                label={c}
-                color={colorForCuisine(c)}
-                icon={emojiForCuisine(c)}
+                shape="pill"
                 active={filter.cuisines.has(c.toLowerCase())}
                 onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })}
-              />
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ background: colorForCuisine(c) }}
+                />
+                <span aria-hidden="true">{emojiForCuisine(c)}</span>
+                {c}
+              </ToggleChip>
             ))}
             {hasUncategorized && (
-              <Chip
-                label={t('common.uncategorized')}
-                color={colorForCuisine(undefined)}
-                icon={emojiForCuisine(undefined)}
+              <ToggleChip
+                shape="pill"
                 active={filter.cuisines.has(UNCATEGORIZED)}
                 onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, UNCATEGORIZED) })}
-              />
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ background: colorForCuisine(undefined) }}
+                />
+                <span aria-hidden="true">{emojiForCuisine(undefined)}</span>
+                {t('common.uncategorized')}
+              </ToggleChip>
             )}
             {overflow.length > 0 && (
               <button
@@ -178,21 +158,25 @@ export function FilterBar({
         <GroupLabel>{t('filters.statusVerdictGroup')}</GroupLabel>
         <div className="flex flex-wrap gap-1.5">
           {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => (
-            <Chip
+            <ToggleChip
               key={s}
-              label={translateStatus(s)}
+              shape="pill"
               active={filter.statuses.has(s)}
               onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
-            />
+            >
+              {translateStatus(s)}
+            </ToggleChip>
           ))}
           {VERDICTS.map((v) => (
-            <Chip
+            <ToggleChip
               key={v}
-              label={translateVerdict(v)}
-              icon={VERDICT_ICON[v]}
+              shape="pill"
               active={filter.verdicts.has(v)}
               onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}
-            />
+            >
+              <span aria-hidden="true">{VERDICT_ICON[v]}</span>
+              {translateVerdict(v)}
+            </ToggleChip>
           ))}
         </div>
       </div>
