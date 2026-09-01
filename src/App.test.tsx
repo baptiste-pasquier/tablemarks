@@ -379,10 +379,22 @@ describe('desktop filter overlay (U3)', () => {
       vi.restoreAllMocks()
     })
 
+    /** App.tsx now runs the same measurement effect (`useMeasuredHeightVar`) for both the header
+     *  and the filter overlay, so `instances` holds one FakeResizeObserver per target — find the
+     *  overlay's by which element it actually observed, rather than assuming array order. */
+    function overlayObserver(container: HTMLElement) {
+      const overlayEl = Array.from(container.querySelectorAll('div')).find((el) =>
+        el.className.includes('md:top-[var(--filter-overlay-top)]'),
+      )
+      const observer = instances.find((o) => !!overlayEl && o.observed.includes(overlayEl))
+      if (!observer) throw new Error('overlay ResizeObserver instance not found')
+      return observer
+    }
+
     it("writes the filter overlay's measured height to --filter-overlay-height, and updates it when the overlay resizes (e.g. the cuisine row's \"+N autres\" expanding it)", async () => {
       await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
 
-      render(<App />)
+      const { container } = render(<App />)
       await screen.findByText('R1 Place')
 
       expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('120px')
@@ -394,20 +406,31 @@ describe('desktop filter overlay (U3)', () => {
       const entry = {
         borderBoxSize: [{ blockSize: mockOverlayHeight, inlineSize: 0 }],
       } as unknown as ResizeObserverEntry
-      instances.forEach((observer) => observer.callback([entry], observer as unknown as ResizeObserver))
+      const observer = overlayObserver(container)
+      observer.callback([entry], observer as unknown as ResizeObserver)
 
       expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('260px')
+    })
+
+    it("also writes the header's measured height to --header-height, independently of the filter overlay (fixes the top/left gap mismatch)", async () => {
+      await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+      render(<App />)
+      await screen.findByText('R1 Place')
+
+      expect(document.documentElement.style.getPropertyValue('--header-height')).toBe('120px')
     })
 
     it('disconnects the ResizeObserver when App unmounts', async () => {
       await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
 
-      const { unmount } = render(<App />)
+      const { container, unmount } = render(<App />)
       await screen.findByText('R1 Place')
+      const observer = overlayObserver(container)
 
       unmount()
 
-      expect(instances[0]?.disconnect).toHaveBeenCalledOnce()
+      expect(observer.disconnect).toHaveBeenCalledOnce()
     })
   })
 })

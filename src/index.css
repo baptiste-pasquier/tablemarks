@@ -27,23 +27,26 @@
 
   /* Desktop-only (>=768px) fixed offsets for the floating filter overlay pinned atop the map
      (KTD2). FilterBar stays authored inside <aside> (R7's tab-order requirement) but must render
-     visually pinned over <main>'s map, so it's `position: fixed` with these offsets computed from
-     two already-constant desktop values: the sidebar's fixed Tailwind width (`md:w-80` = 20rem)
-     and the header's fixed rendered height (fixed padding plus fixed-size icon/text content that
-     never wraps at desktop widths). */
+     visually pinned over <main>'s map, so it's `position: fixed` with these offsets. The sidebar's
+     width is a genuinely fixed Tailwind value (`md:w-80` = 20rem), but the header's rendered
+     height is not reliably knowable from CSS alone (font metrics, locale text length) — it's
+     measured at runtime instead (App.tsx, via the same ResizeObserver-to-CSS-var technique as
+     --filter-overlay-height below) and written here, so `--filter-overlay-top` and
+     `--filter-overlay-left` end up with the *same* actual gap (--filter-overlay-gap) from their
+     respective reference edges (header bottom, sidebar right) rather than drifting apart. */
   --sidebar-width: 20rem;
-  --header-height: 4rem;
+  --header-height: 4rem; /* fallback until the runtime measurement effect runs; see above */
   --filter-overlay-gap: 1rem;
   --filter-overlay-top: calc(var(--header-height) + var(--filter-overlay-gap));
   --filter-overlay-left: calc(var(--sidebar-width) + var(--filter-overlay-gap));
-  /* The overlay spans the full width of the map pane (left set above, right set here), rather
-     than a fixed card width — it sets only `left`/`right`, no `width`, so the browser derives the
-     width and the overlay re-adapts on every viewport resize with no JS. This value is an
-     approximation (like --header-height above): it just needs to stay wider than the Locate/zoom
-     control stack MapView.tsx renders in the map's top-right corner, so the overlay's right edge
-     clears it with a visible gap rather than tucking underneath (the two don't collide either way
-     — the control stack's z-index is higher — this is purely so they don't visually touch). */
-  --filter-overlay-right-gap: 8rem;
+  /* The overlay spans the full width of the map pane (left set above, right set here — same gap
+     value on all three edges) rather than a fixed card width. It sets only `left`/`right`, no
+     `width`, so the browser derives the width and the overlay re-adapts on every viewport resize
+     with no JS. The Locate/zoom control stack (MapView.tsx) then simply floats on top of the
+     overlay's top-right corner — its z-index is already higher, so nothing under it is
+     unreachable; the overlay is meant to run the full width of the map, matching the prototype,
+     not stop short to avoid touching the stack. */
+  --filter-overlay-right: var(--filter-overlay-gap);
 
   /* Written at runtime (App.tsx, via a ResizeObserver on the overlay's own ref) to the overlay's
      actual rendered height, so MapView's Locate/zoom control stack (KTD3) can always clear it via

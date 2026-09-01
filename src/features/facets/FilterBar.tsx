@@ -25,11 +25,13 @@ type FilterBarLayout = 'stacked' | 'inline'
 // of a single flowing chip box that wraps *within its own box*, so an overflowing line stays
 // aligned under the first chip instead of resetting flush-left under the label — this only works
 // because the label and the chip box are two flex items in a *non-wrapping* row (`GROUP_ROW_CLASS`
-// has no `flex-wrap`); the chip box itself carries the `flex-wrap` (`CHIPS_ROW_CLASS`). Both
-// layouts stack the cuisine group above the status/verdict group with no divider between them.
+// has no `flex-wrap`); the chip box itself carries the `flex-wrap` (`CHIPS_ROW_CLASS`). `items-
+// center` vertically centers the label against the chip box's full height (its own wrapped lines
+// included), not just its first line. Both layouts stack the cuisine group above the status/
+// verdict group with no divider between them.
 const GROUP_ROW_CLASS: Record<FilterBarLayout, string> = {
   stacked: '',
-  inline: 'flex items-start gap-3',
+  inline: 'flex items-center gap-3',
 }
 const CHIPS_ROW_CLASS: Record<FilterBarLayout, string> = {
   stacked: 'mt-1 flex flex-wrap gap-1.5',
@@ -41,9 +43,8 @@ function GroupLabel({ layout, children }: { layout: FilterBarLayout; children: s
     <span
       className={cn(
         'text-[10px] font-semibold uppercase tracking-wide text-gray-400',
-        // Nudges the label down to roughly align with the first line of pills beside it — only
-        // meaningful in `inline`, where the label sits beside the chip box rather than above it.
-        layout === 'inline' && 'shrink-0 pt-1',
+        // Keeps the label from shrinking below its own text width when the flex row is tight.
+        layout === 'inline' && 'shrink-0',
       )}
     >
       {children}

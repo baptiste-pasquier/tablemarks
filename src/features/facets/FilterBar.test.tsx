@@ -201,8 +201,8 @@ describe('FilterBar', () => {
     const cuisineGroupRow = screen.getByText('Cuisine').parentElement as HTMLElement
     const statusGroupRow = screen.getByText('Status & verdict').parentElement as HTMLElement
 
-    expect(cuisineGroupRow).toHaveClass('flex', 'items-start', 'gap-3')
-    expect(statusGroupRow).toHaveClass('flex', 'items-start', 'gap-3')
+    expect(cuisineGroupRow).toHaveClass('flex', 'items-center', 'gap-3')
+    expect(statusGroupRow).toHaveClass('flex', 'items-center', 'gap-3')
     // The two groups stack vertically as siblings under a plain wrapper, not nested inside one
     // shared side-by-side row.
     expect(cuisineGroupRow.parentElement).toBe(statusGroupRow.parentElement)

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
 import { useRestaurants } from './features/useRestaurants'
@@ -43,6 +43,37 @@ function toggledDirections(
     return { ...directions, distance: directions.distance === 'nearest' ? 'farthest' : 'nearest' }
   }
   return { ...directions, date: directions.date === 'newest' ? 'oldest' : 'newest' }
+}
+
+/**
+ * Measures `ref`'s rendered height live (via ResizeObserver) and writes it to `document
+ * .documentElement`'s `varName` CSS custom property. Used for two targets that a hardcoded
+ * `index.css` constant can't reliably stand in for: the header (font metrics/locale text length
+ * make its true height unknowable from CSS alone) and the desktop filter overlay (grows with the
+ * cuisine row's "+N autres" expansion). Written straight to the DOM, not React state: a
+ * ResizeObserver can fire on every frame during a resize, and only CSS consumers elsewhere ever
+ * need to read these values, so routing them through setState would re-render the whole App tree
+ * on every tick for no consumer that needs a React re-render.
+ */
+function useMeasuredHeightVar(ref: RefObject<HTMLElement | null>, varName: string) {
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const applyHeight = (height: number) => {
+      document.documentElement.style.setProperty(varName, `${height}px`)
+    }
+    // A forced layout read is the point of useLayoutEffect here: this call has to happen
+    // synchronously before paint, before `observe()` below can report anything.
+    applyHeight(el.getBoundingClientRect().height)
+    // No-op (rather than throwing) where ResizeObserver isn't available — the initial
+    // `applyHeight()` call above still runs, it just won't track later resizes.
+    if (typeof ResizeObserver === 'undefined') return
+    // Reads the size the browser already computed for this notification, rather than forcing
+    // another layout read via getBoundingClientRect() on every resize tick.
+    const observer = new ResizeObserver(([entry]) => applyHeight(entry.borderBoxSize[0].blockSize))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ref, varName])
 }
 
 /** Mobile-only "Filtres · N" pill (U4, R4). Rendered once from each pane so exactly one is ever
@@ -163,34 +194,20 @@ export default function App() {
     })
   }, [])
 
+  // The header's real rendered height feeds --filter-overlay-top (index.css) so the overlay's top
+  // gap actually matches its left gap (both computed from --filter-overlay-gap) instead of
+  // drifting apart whenever the header's true height differs from index.css's hardcoded fallback.
+  const headerRef = useRef<HTMLElement>(null)
+  useMeasuredHeightVar(headerRef, '--header-height')
+
   // Desktop filter overlay (U3 KTD2/KTD3): FilterBar stays authored here in <aside> (R7's tab
   // order) but renders as a `position: fixed` floating card pinned over <main>'s map on desktop,
   // so it reserves no flow space MapView's Locate/zoom control stack could rely on to stay below
-  // it. Measure the overlay's real rendered height and write it to a CSS custom property that
-  // stack's `top` offset reads (in MapView.tsx), so it always clears the overlay regardless of
-  // how tall the cuisine row's "+N autres" expansion grows it. Written straight to the DOM, not
-  // React state: a ResizeObserver can fire on every frame during a resize, and only MapView's CSS
-  // ever needs to read this value, so routing it through setState would re-render the whole App
-  // tree on every tick for no consumer that needs a React re-render.
+  // it. Its measured height feeds a CSS custom property that stack's `top` offset reads (in
+  // MapView.tsx), so it always clears the overlay regardless of how tall the cuisine row's "+N
+  // autres" expansion grows it.
   const filterOverlayRef = useRef<HTMLDivElement>(null)
-  useLayoutEffect(() => {
-    const el = filterOverlayRef.current
-    if (!el) return
-    const applyHeight = (height: number) => {
-      document.documentElement.style.setProperty('--filter-overlay-height', `${height}px`)
-    }
-    // A forced layout read is the point of useLayoutEffect here: this call has to happen
-    // synchronously before paint, before `observe()` below can report anything.
-    applyHeight(el.getBoundingClientRect().height)
-    // No-op (rather than throwing) where ResizeObserver isn't available — the initial
-    // `applyHeight()` call above still runs, it just won't track later resizes.
-    if (typeof ResizeObserver === 'undefined') return
-    // Reads the size the browser already computed for this notification, rather than forcing
-    // another layout read via getBoundingClientRect() on every resize tick.
-    const observer = new ResizeObserver(([entry]) => applyHeight(entry.borderBoxSize[0].blockSize))
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+  useMeasuredHeightVar(filterOverlayRef, '--filter-overlay-height')
 
   // If the viewport crosses into desktop width while the mobile filters sheet is open, close it:
   // desktop already shows FilterBar/SortBar in the floating overlay/sidebar, so leaving the sheet
@@ -208,7 +225,10 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col bg-gray-50 text-gray-900">
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/85 px-4 py-3 backdrop-blur">
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/85 px-4 py-3 backdrop-blur"
+      >
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
@@ -270,17 +290,18 @@ export default function App() {
               no longer renders inline here at all (U4) — its mobile home is the "Filtres · N"
               pill's bottom sheet instead, so this wrapper (and SortBar just below it) is hidden
               entirely below md. Spans the full width of the map pane (`left`/`right`, no `width`
-              — see --filter-overlay-right-gap) rather than a fixed card width, matching the
-              confirmed prototype; `layout="inline"` puts each group's label to the left of its own
-              wrapping chip row instead of above it, so that width is actually put to use. The card
-              chrome (border/bg/shadow) is gated on `restaurants.length` — this div itself must
-              stay mounted unconditionally so `filterOverlayRef` never goes stale, but FilterBar
-              renders nothing when empty, so without this gate an empty app would still float a
-              blank white card over the map. */}
+              — see --filter-overlay-right in index.css) rather than a fixed card width, matching
+              the confirmed prototype; the Locate/zoom control stack simply floats on top of the
+              overlay's top-right corner (its z-index is already higher). `layout="inline"` puts
+              each group's label to the left of its own wrapping chip row instead of above it, so
+              that width is actually put to use. The card chrome (border/bg/shadow) is gated on
+              `restaurants.length` — this div itself must stay mounted unconditionally so
+              `filterOverlayRef` never goes stale, but FilterBar renders nothing when empty, so
+              without this gate an empty app would still float a blank white card over the map. */}
           <div
             ref={filterOverlayRef}
             className={cn(
-              'hidden md:block md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:right-[var(--filter-overlay-right-gap)] md:max-h-[50vh] md:overflow-y-auto',
+              'hidden md:block md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:right-[var(--filter-overlay-right)] md:max-h-[50vh] md:overflow-y-auto',
               restaurants.length > 0 && 'md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg',
             )}
           >
