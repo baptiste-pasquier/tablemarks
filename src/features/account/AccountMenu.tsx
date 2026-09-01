@@ -203,7 +203,7 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
                 dotClassName={badgeColorClassName(status.state)}
               />
             </div>
-            <p className="mt-1 px-2 text-xs text-gray-500">{syncDetail(status, t)}</p>
+            <p className="mt-2 px-2 text-xs text-gray-500">{syncDetail(status, t)}</p>
             <div className="my-2 border-t border-gray-100" />
             <Button
               variant="menu-item"
