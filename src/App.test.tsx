@@ -150,6 +150,26 @@ describe('App shell', () => {
     expect(mapButton).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByRole('button', { name: 'Add a place' })).not.toBeInTheDocument()
   })
+
+  it("gives the mobile List/Map nav a z-index above Leaflet's own panes/controls (max 1000, e.g. the attribution control), so the map — which now fills <main> fully — can never render on top of it and hide it", () => {
+    render(<App />)
+    const nav = screen.getByRole('navigation')
+    expect(nav).toHaveClass('z-[1100]')
+  })
+
+  it('aligns the "+" FAB with the "Filtres · N" pill at the same bottom offset', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: /^map$/i }))
+
+    const fab = screen.getByRole('button', { name: 'Add a place' })
+    const pill = screen.getByRole('button', { name: 'Filters · 0' })
+    expect(fab).toHaveClass('bottom-[calc(var(--safe-area-floating-offset)+0.5rem)]')
+    expect(pill).toHaveClass('bottom-[calc(var(--safe-area-floating-offset)+0.5rem)]')
+  })
 })
 
 describe('currentPosition state and fetch wiring (U2)', () => {
@@ -535,6 +555,18 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     return within(panel as HTMLElement)
   }
 
+  it('stacks above the mobile List/Map nav (z-[1100]) when open, so the sheet is never hidden underneath it', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+
+    const overlay = screen.getByRole('button', { name: /see results/i }).closest('[class*="fixed inset-0"]')
+    expect(overlay).toHaveClass('z-[1200]')
+  })
+
   it('hides FilterBar and SortBar from the mobile inline flow without unmounting them (R4) — both stay under a `hidden md:block` wrapper', async () => {
     await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
 
@@ -559,6 +591,12 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
 
     const scrollBox = restaurantRow.closest('[class*="overflow-y-auto"]')
     expect(scrollBox).toHaveClass('overflow-y-auto', 'pb-[var(--safe-area-floating-offset)]', 'md:pb-0')
+  })
+
+  it('does not put a safe-area bottom clearance on <main> either, so the map fills it fully with no dead gap above the bottom nav', () => {
+    render(<App />)
+    const mainEl = screen.getByRole('button', { name: /center on my location/i }).closest('main')
+    expect(mainEl).not.toHaveClass('pb-[var(--safe-area-floating-offset)]')
   })
 
   it('does not render the pill when the restaurant list is empty', async () => {

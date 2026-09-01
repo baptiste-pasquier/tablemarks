@@ -335,10 +335,12 @@ export default function App() {
           )}
         </aside>
 
+        {/* No pb-[safe-area-floating-offset] here (same bug/fix as <aside> above): it shrank the
+            box MapView fills, leaving a plain gap between the map and the bottom nav. The map has
+            no scrollable content to move the padding into — it just fills <main> fully, and the
+            "+" FAB/nav bar float above it via their own fixed/absolute positioning regardless. */}
         <main
-          className={`relative min-h-0 flex-1 pb-[var(--safe-area-floating-offset)] md:pb-0 ${
-            view === 'map' ? 'block' : 'hidden'
-          } md:block`}
+          className={`relative min-h-0 flex-1 ${view === 'map' ? 'block' : 'hidden'} md:block`}
         >
           <MapView
             markers={markers}
@@ -357,7 +359,7 @@ export default function App() {
               type="button"
               onClick={() => setAdding(true)}
               aria-label={t('shell.addPlaceAria')}
-              className="absolute bottom-[calc(var(--safe-area-floating-offset)+1rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+              className="absolute bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
               +
             </button>
@@ -375,7 +377,13 @@ export default function App() {
           regardless of scroll/pan position in either pane. */}
       <nav
         aria-label={t('shell.viewNav')}
-        className="fixed inset-x-0 bottom-0 z-30 flex gap-1 border-t border-gray-200 bg-white/95 p-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden"
+        // z-[1100]: now that the map fills <main> fully (no reserved bottom gap), Leaflet's own
+        // internal panes/controls (tile pane z-200, attribution/.leaflet-bottom z-1000 — see
+        // node_modules/leaflet/dist/leaflet.css) extend into this same screen region. Leaflet's
+        // container doesn't establish its own stacking context, so those z-index values compare
+        // directly against this nav — anything at or below 1000 (the old z-30 included) render
+        // underneath them and disappear entirely.
+        className="fixed inset-x-0 bottom-0 z-[1100] flex gap-1 border-t border-gray-200 bg-white/95 p-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden"
       >
         {(['list', 'map'] as const).map((v) => (
           <button

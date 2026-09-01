@@ -20,11 +20,17 @@ function getFocusables(panel: HTMLElement): HTMLElement[] {
  * and a drag indicator below the `md` breakpoint, centered at or above it. Tapping the backdrop
  * or pressing Escape closes it; focus moves into the panel on open and returns to whatever
  * triggered it on close.
+ *
+ * Default z-index sits above the mobile List/Map nav (`z-[1100]` in App.tsx) — a modal must cover
+ * that nav when open, not render underneath it. `1100` itself sits above Leaflet's own highest
+ * internal z-index (1000, its attribution control) so the map, which fills its pane fully with no
+ * reserved gap, can never draw on top of the nav either. `DecidePanel` deliberately stays 100
+ * above this default.
  */
 export function Modal({
   onClose,
   children,
-  zIndexClassName = 'z-[1000]',
+  zIndexClassName = 'z-[1200]',
   panelClassName = '',
 }: {
   onClose: () => void
