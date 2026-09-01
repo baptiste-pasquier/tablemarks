@@ -4,8 +4,20 @@ import type { SortCriterion, SortDirection } from '../../lib/sortPreference'
 import { Button } from '../ui/Button'
 import { Eyebrow } from '../ui/Eyebrow'
 import { ToggleChip } from '../ui/ToggleChip'
+import { cn } from '../../lib/cn'
 
 type TFn = ReturnType<typeof useTranslation>['t']
+
+type SortBarLayout = 'stacked' | 'inline'
+
+// Only the outer wrapper's flex classes swap per layout (KTD1) — mirrors ToggleChip's `shape`
+// prop, never touching chip/button rendering underneath. `stacked` (default) keeps today's
+// sidebar/sheet shape, wrapping onto a new line if it doesn't fit; `inline` forces a single-row
+// horizontal flow (no wrap) suited to a future desktop overlay.
+const WRAPPER_LAYOUT_CLASS: Record<SortBarLayout, string> = {
+  stacked: 'flex flex-wrap items-center gap-2',
+  inline: 'flex flex-nowrap items-center gap-2',
+}
 
 /** Direction chip label for the active criterion (R10). */
 function directionLabel(t: TFn, criterion: SortCriterion, direction: SortDirection): string {
@@ -29,6 +41,14 @@ function isReversed(criterion: SortCriterion, direction: SortDirection): boolean
  *
  * Distance renders disabled (not omitted) while no position is known (session-settled), keeping a
  * stable segment layout and reusing the codebase's existing `aria-pressed` toggle idiom (KTD3).
+ *
+ * `layout` (KTD1) swaps only the outer wrapper's flex classes: `stacked` (default) keeps today's
+ * sidebar/sheet shape; `inline` forces a single-row horizontal flow for a future desktop overlay.
+ * Chip rendering itself never changes.
+ *
+ * `divider` (default `true`) draws the bottom border that separates this bar from whatever
+ * follows it — the sidebar's `RestaurantList` today. The mobile filters sheet passes `false`:
+ * there, a "See results" button sits directly below with no list to separate from.
  */
 export function SortBar({
   criterion,
@@ -36,17 +56,21 @@ export function SortBar({
   distanceSelectable,
   onCriterionChange,
   onDirectionToggle,
+  layout = 'stacked',
+  divider = true,
 }: {
   criterion: SortCriterion
   direction: SortDirection
   distanceSelectable: boolean
   onCriterionChange: (criterion: SortCriterion) => void
   onDirectionToggle: () => void
+  layout?: SortBarLayout
+  divider?: boolean
 }) {
   const { t } = useTranslation()
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 p-3">
+    <div className={cn(WRAPPER_LAYOUT_CLASS[layout], 'p-3', divider && 'border-b border-gray-100')}>
       <Eyebrow>{t('sort.title')}</Eyebrow>
       <span className="inline-flex overflow-hidden rounded-full border border-gray-300">
         <ToggleChip

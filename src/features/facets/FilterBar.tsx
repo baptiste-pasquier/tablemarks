@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   VERDICTS,
@@ -13,12 +13,43 @@ import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilte
 import { Button } from '../ui/Button'
 import { Eyebrow } from '../ui/Eyebrow'
 import { ToggleChip } from '../ui/ToggleChip'
+import { cn } from '../../lib/cn'
 
 const DEFAULT_CUISINE_ROW_SIZE = 6
-const CUISINE_GROUP_ID = 'filter-cuisine-group'
 
-function GroupLabel({ children }: { children: string }) {
-  return <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{children}</span>
+type FilterBarLayout = 'stacked' | 'inline'
+
+// Only each group's own row classes swap per layout (KTD1) — mirrors ToggleChip's `shape` prop,
+// never touching chip/button rendering underneath. `stacked` (mobile sheet) keeps the label above
+// its own wrapping chip row, today's shape. `inline` (desktop overlay) puts the label to the left
+// of a single flowing chip box that wraps *within its own box*, so an overflowing line stays
+// aligned under the first chip instead of resetting flush-left under the label — this only works
+// because the label and the chip box are two flex items in a *non-wrapping* row (`GROUP_ROW_CLASS`
+// has no `flex-wrap`); the chip box itself carries the `flex-wrap` (`CHIPS_ROW_CLASS`). `items-
+// center` vertically centers the label against the chip box's full height (its own wrapped lines
+// included), not just its first line. Both layouts stack the cuisine group above the status/
+// verdict group with no divider between them.
+const GROUP_ROW_CLASS: Record<FilterBarLayout, string> = {
+  stacked: '',
+  inline: 'flex items-center gap-3',
+}
+const CHIPS_ROW_CLASS: Record<FilterBarLayout, string> = {
+  stacked: 'mt-1 flex flex-wrap gap-1.5',
+  inline: 'flex min-w-0 flex-1 flex-wrap gap-1.5',
+}
+
+function GroupLabel({ layout, children }: { layout: FilterBarLayout; children: string }) {
+  return (
+    <span
+      className={cn(
+        'text-[10px] font-semibold uppercase tracking-wide text-gray-400',
+        // Keeps the label from shrinking below its own text width when the flex row is tight.
+        layout === 'inline' && 'shrink-0',
+      )}
+    >
+      {children}
+    </span>
+  )
 }
 
 /** Distinct cuisines actually in use, ranked by restaurant count (desc), alphabetical tie-break. */
@@ -76,17 +107,29 @@ function splitCuisineRows(
   }
 }
 
-/** Clearable facet chips for cuisine / status / verdict. The shell owns the filter state. */
+/**
+ * Clearable facet chips for cuisine / status / verdict. The shell owns the filter state.
+ *
+ * `layout` (KTD1) swaps only each group's row classes: `stacked` (default, mobile sheet) keeps
+ * each group's label above its own wrapping chip row; `inline` (desktop overlay) puts the label to
+ * the left of a single flowing chip row instead. Chip rendering itself never changes.
+ */
 export function FilterBar({
   restaurants,
   filter,
   onChange,
+  layout = 'stacked',
 }: {
   restaurants: Restaurant[]
   filter: FacetFilter
   onChange: (filter: FacetFilter) => void
+  layout?: FilterBarLayout
 }) {
   const { t } = useTranslation()
+  // Per-instance id (not a module constant): the desktop overlay and the mobile bottom sheet can
+  // both have a FilterBar mounted at once, and a shared id would produce duplicate DOM ids plus
+  // an ambiguous aria-controls target for assistive tech.
+  const cuisineGroupId = useId()
   const [expanded, setExpanded] = useState(false)
   const ranked = useMemo(() => rankedCuisines(restaurants), [restaurants])
   const hasUncategorized = useMemo(() => restaurants.some((r) => !r.cuisine?.trim()), [restaurants])
@@ -106,80 +149,82 @@ export function FilterBar({
         )}
       </div>
 
-      {(ranked.length > 0 || hasUncategorized) && (
-        <div>
-          <GroupLabel>{t('filters.cuisineGroup')}</GroupLabel>
-          <div id={CUISINE_GROUP_ID} className="mt-1 flex flex-wrap gap-1.5">
-            {shownCuisines.map((c) => (
+      <div className="space-y-2">
+        {(ranked.length > 0 || hasUncategorized) && (
+          <div className={GROUP_ROW_CLASS[layout]}>
+            <GroupLabel layout={layout}>{t('filters.cuisineGroup')}</GroupLabel>
+            <div id={cuisineGroupId} className={CHIPS_ROW_CLASS[layout]}>
+              {shownCuisines.map((c) => (
+                <ToggleChip
+                  key={c}
+                  shape="pill"
+                  active={filter.cuisines.has(c.toLowerCase())}
+                  onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ background: colorForCuisine(c) }}
+                  />
+                  <span aria-hidden="true">{emojiForCuisine(c)}</span>
+                  {c}
+                </ToggleChip>
+              ))}
+              {hasUncategorized && (
+                <ToggleChip
+                  shape="pill"
+                  active={filter.cuisines.has(UNCATEGORIZED)}
+                  onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, UNCATEGORIZED) })}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ background: colorForCuisine(undefined) }}
+                  />
+                  <span aria-hidden="true">{emojiForCuisine(undefined)}</span>
+                  {t('common.uncategorized')}
+                </ToggleChip>
+              )}
+              {overflow.length > 0 && (
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={cuisineGroupId}
+                  onClick={() => setExpanded((e) => !e)}
+                  className="inline-flex min-h-10 items-center rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 transition hover:border-gray-400 hover:bg-gray-50"
+                >
+                  {expanded ? t('filters.collapse') : t('filters.showMore', { count: overflow.length })}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className={GROUP_ROW_CLASS[layout]}>
+          <GroupLabel layout={layout}>{t('filters.statusVerdictGroup')}</GroupLabel>
+          <div className={CHIPS_ROW_CLASS[layout]}>
+            {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => (
               <ToggleChip
-                key={c}
+                key={s}
                 shape="pill"
-                active={filter.cuisines.has(c.toLowerCase())}
-                onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })}
+                active={filter.statuses.has(s)}
+                onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
               >
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: colorForCuisine(c) }}
-                />
-                <span aria-hidden="true">{emojiForCuisine(c)}</span>
-                {c}
+                {translateStatus(s)}
               </ToggleChip>
             ))}
-            {hasUncategorized && (
+            {VERDICTS.map((v) => (
               <ToggleChip
+                key={v}
                 shape="pill"
-                active={filter.cuisines.has(UNCATEGORIZED)}
-                onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, UNCATEGORIZED) })}
+                active={filter.verdicts.has(v)}
+                onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}
               >
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: colorForCuisine(undefined) }}
-                />
-                <span aria-hidden="true">{emojiForCuisine(undefined)}</span>
-                {t('common.uncategorized')}
+                <span aria-hidden="true">{VERDICT_ICON[v]}</span>
+                {translateVerdict(v)}
               </ToggleChip>
-            )}
-            {overflow.length > 0 && (
-              <button
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={CUISINE_GROUP_ID}
-                onClick={() => setExpanded((e) => !e)}
-                className="inline-flex min-h-10 items-center rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 transition hover:border-gray-400 hover:bg-gray-50"
-              >
-                {expanded ? t('filters.collapse') : t('filters.showMore', { count: overflow.length })}
-              </button>
-            )}
+            ))}
           </div>
-        </div>
-      )}
-
-      <div className="space-y-1 border-t border-gray-100 pt-2">
-        <GroupLabel>{t('filters.statusVerdictGroup')}</GroupLabel>
-        <div className="flex flex-wrap gap-1.5">
-          {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => (
-            <ToggleChip
-              key={s}
-              shape="pill"
-              active={filter.statuses.has(s)}
-              onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
-            >
-              {translateStatus(s)}
-            </ToggleChip>
-          ))}
-          {VERDICTS.map((v) => (
-            <ToggleChip
-              key={v}
-              shape="pill"
-              active={filter.verdicts.has(v)}
-              onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}
-            >
-              <span aria-hidden="true">{VERDICT_ICON[v]}</span>
-              {translateVerdict(v)}
-            </ToggleChip>
-          ))}
         </div>
       </div>
     </div>

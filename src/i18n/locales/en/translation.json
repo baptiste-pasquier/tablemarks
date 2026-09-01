@@ -73,7 +73,9 @@
     "cuisineGroup": "Cuisine",
     "statusVerdictGroup": "Status & verdict",
     "collapse": "Collapse",
-    "showMore": "+{{count}} more"
+    "showMore": "+{{count}} more",
+    "mobilePillLabel": "Filters · {{count}}",
+    "seeResults": "See results"
   },
   "sort": {
     "title": "Sort",
@@ -143,7 +145,9 @@
     "locateAria": "Center on my location",
     "locating": "Locating…",
     "locate": "📍 Locate",
-    "currentPositionAria": "Your current location"
+    "currentPositionAria": "Your current location",
+    "zoomInAria": "Zoom in",
+    "zoomOutAria": "Zoom out"
   },
   "restaurantList": {
     "emptyTitle": "No places yet",

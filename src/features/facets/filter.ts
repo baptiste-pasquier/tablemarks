@@ -23,6 +23,11 @@ export function isEmptyFilter(f: FacetFilter): boolean {
   return f.cuisines.size === 0 && f.statuses.size === 0 && f.verdicts.size === 0
 }
 
+/** Total number of active selections across all facets — drives the mobile "Filtres · N" pill badge. */
+export function activeFilterCount(f: FacetFilter): number {
+  return f.cuisines.size + f.statuses.size + f.verdicts.size
+}
+
 /** Place's cuisine reduced to a comparison key: lowercased name, or the uncategorized sentinel. */
 function cuisineKey(r: Pick<Restaurant, 'cuisine'>): string {
   const c = r.cuisine?.trim()

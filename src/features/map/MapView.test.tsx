@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
+import { act, render, screen, waitFor, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type L from 'leaflet'
@@ -36,6 +36,9 @@ import type { GeoPoint } from '../../lib/geolocate'
 const {
   mockMapSetView,
   tileLayerProps,
+  mapContainerProps,
+  mockZoomIn,
+  mockZoomOut,
   fakeMarkerTarget,
   blurSpy,
   internalTooltipOpen,
@@ -77,6 +80,9 @@ const {
   return {
     mockMapSetView: vi.fn(),
     tileLayerProps: { current: null as Record<string, unknown> | null },
+    mapContainerProps: { current: null as Record<string, unknown> | null },
+    mockZoomIn: vi.fn(),
+    mockZoomOut: vi.fn(),
     blurSpy: blur,
     fakeMarkerTarget: {
       closeTooltip: vi.fn(() => {
@@ -108,6 +114,10 @@ vi.mock('./labelPlacement', async (importOriginal) => {
 // Mutable per-test knobs for the mocked map, plus a handler registry so tests can simulate
 // Leaflet firing `zoomend`/`moveend` by invoking the recorded handlers directly.
 let mockZoom = 12
+// Zoom-limit knobs backing the ZoomControl disabled-state tests (U3 R3) — mutable per-test like
+// `mockZoom` above, so a test can simulate the map already sitting at a limit.
+let mockMaxZoom = 18
+let mockMinZoom = 0
 // Scaled up (was *10) so the two default MARKERS project far enough apart that their label boxes
 // don't overlap under finding #1's real-footprint geometry (box left edge now starts past the
 // icon's own radius+offset, not centered on the marker point) — keeps this default projection's
@@ -151,6 +161,10 @@ vi.mock('react-leaflet', () => {
     off: (event, handler) => {
       handlers.get(event)?.delete(handler)
     },
+    getMaxZoom: () => mockMaxZoom,
+    getMinZoom: () => mockMinZoom,
+    zoomIn: mockZoomIn,
+    zoomOut: mockZoomOut,
   })
   // `createMockLeafletMap`'s override type doesn't model `dragging`/`once` (only MapView.tsx's
   // click/tooltip guard needs them, not LabelVisibility), so they're added here rather than
@@ -175,10 +189,13 @@ vi.mock('react-leaflet', () => {
     MapContainer: ({
       children,
       ref,
+      ...rest
     }: {
       children?: React.ReactNode
       ref?: (m: typeof map) => void
+      [key: string]: unknown
     }) => {
+      mapContainerProps.current = rest
       useEffect(() => {
         ref?.(map)
       }, [])
@@ -249,11 +266,16 @@ vi.mock('react-leaflet', () => {
 
 beforeEach(() => {
   mockZoom = 12
+  mockMaxZoom = 18
+  mockMinZoom = 0
   mockProject = (lat, lng) => ({ x: lng * 20, y: lat * 20 })
   mockSizeIsStale = false
   handlers.clear()
   vi.mocked(computeLabelPlacement).mockClear()
   mockInvalidateSize.mockClear()
+  mapContainerProps.current = null
+  mockZoomIn.mockClear()
+  mockZoomOut.mockClear()
 })
 
 const { mockGeolocate } = vi.hoisted(() => ({ mockGeolocate: vi.fn<() => Promise<GeoPoint | null>>() }))
@@ -568,6 +590,85 @@ describe('MapView', () => {
   it('keeps the TileLayer crossOrigin="anonymous" prop (regression guard for opaque tile caching)', () => {
     render(<MapView markers={MARKERS} />)
     expect(tileLayerProps.current?.crossOrigin).toBe('anonymous')
+  })
+
+  it('disables the default Leaflet zoom control, since a custom one replaces it (U3 R3)', () => {
+    render(<MapView markers={MARKERS} />)
+    expect(mapContainerProps.current?.zoomControl).toBe(false)
+  })
+
+  describe('zoom control (U3 R3)', () => {
+    it('calls map.zoomIn()/zoomOut() when its buttons are clicked', async () => {
+      const user = userEvent.setup()
+      render(<MapView markers={[]} />)
+
+      await user.click(screen.getByRole('button', { name: /zoom in/i }))
+      expect(mockZoomIn).toHaveBeenCalledTimes(1)
+
+      await user.click(screen.getByRole('button', { name: /zoom out/i }))
+      expect(mockZoomOut).toHaveBeenCalledTimes(1)
+    })
+
+    it('carries translated aria-labels distinct from the Locate button', () => {
+      render(<MapView markers={[]} />)
+      expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Zoom out' })).toBeInTheDocument()
+    })
+
+    it('disables zoom-in at the max zoom and zoom-out at the min zoom, tracked via zoomend (matching the Leaflet default control it replaces)', () => {
+      mockMaxZoom = 14
+      mockMinZoom = 10
+      mockZoom = 12
+      render(<MapView markers={[]} />)
+      expect(screen.getByRole('button', { name: /zoom in/i })).not.toBeDisabled()
+      expect(screen.getByRole('button', { name: /zoom out/i })).not.toBeDisabled()
+
+      mockZoom = 14
+      act(() => fire('zoomend'))
+      expect(screen.getByRole('button', { name: /zoom in/i })).toBeDisabled()
+      expect(screen.getByRole('button', { name: /zoom out/i })).not.toBeDisabled()
+
+      mockZoom = 10
+      act(() => fire('zoomend'))
+      expect(screen.getByRole('button', { name: /zoom out/i })).toBeDisabled()
+      expect(screen.getByRole('button', { name: /zoom in/i })).not.toBeDisabled()
+    })
+
+    it('unsubscribes its zoomend handler on unmount, alongside LabelVisibility', () => {
+      const { unmount } = render(<MapView markers={[]} />)
+      // ZoomControl's own `update` handler plus LabelVisibility's `recompute` handler.
+      expect(handlers.get('zoomend')?.size).toBe(2)
+
+      unmount()
+      expect(handlers.get('zoomend')?.size).toBe(0)
+    })
+  })
+
+  it("positions the Locate/zoom control stack's top offset from the measured --filter-overlay-height CSS variable (KTD3), so it always clears the filter overlay regardless of its rendered height", () => {
+    render(<MapView markers={[]} />)
+    const stack = screen.getByRole('button', { name: /center on my location/i }).parentElement
+    expect(stack?.className).toContain('--filter-overlay-height')
+  })
+
+  it('shares the same right offset (--filter-overlay-gap) as the desktop filter overlay, so the two right-align instead of drifting apart', () => {
+    render(<MapView markers={[]} />)
+    const stack = screen.getByRole('button', { name: /center on my location/i }).parentElement
+    expect(stack).toHaveClass('right-3', 'md:right-[var(--filter-overlay-gap)]')
+  })
+
+  it("stops 'dblclick' and 'wheel' from bubbling out of the Locate/zoom control stack, so interacting with these buttons can't also reach the map's own doubleClickZoom/scrollWheelZoom handling", () => {
+    const { container } = render(<MapView markers={[]} />)
+    const onDblClick = vi.fn()
+    const onWheel = vi.fn()
+    container.addEventListener('dblclick', onDblClick)
+    container.addEventListener('wheel', onWheel)
+
+    const zoomInButton = screen.getByRole('button', { name: /zoom in/i })
+    zoomInButton.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+    zoomInButton.dispatchEvent(new WheelEvent('wheel', { bubbles: true }))
+
+    expect(onDblClick).not.toHaveBeenCalled()
+    expect(onWheel).not.toHaveBeenCalled()
   })
 
   describe('tooltip content (U3 R4, R5, KTD5)', () => {

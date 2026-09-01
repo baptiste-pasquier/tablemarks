@@ -12,6 +12,14 @@ const ANCHOR: Anchor = { lat: 48.8566, lng: 2.3522 }
 beforeEach(freshDB)
 
 describe('DecidePanel', () => {
+  it('stays above Modal\'s default z-index (--z-modal-elevated), 100 above --z-modal', async () => {
+    await createRestaurant({ name: 'New Spot', lat: 48.8566, lng: 2.3522 })
+    const { container } = render(<DecidePanel anchor={ANCHOR} onClose={vi.fn()} onOpenRestaurant={vi.fn()} />)
+
+    expect(await screen.findByText('New Spot')).toBeInTheDocument()
+    expect(container.firstElementChild).toHaveClass('z-[var(--z-modal-elevated)]')
+  })
+
   it('lists to-try and Go-back candidates with verdict + distance, excludes lower verdicts', async () => {
     await createRestaurant({ name: 'New Spot', lat: 48.8566, lng: 2.3522 })
     const fav = await createRestaurant({ name: 'Old Favorite', lat: 48.8566, lng: 2.3522 })

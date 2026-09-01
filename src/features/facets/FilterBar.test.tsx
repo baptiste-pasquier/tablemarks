@@ -88,7 +88,7 @@ describe('FilterBar', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders the cuisine and status/verdict groups under separate labels with a divider', () => {
+  it('renders the cuisine and status/verdict groups under separate labels', () => {
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
     expect(screen.getByText('Cuisine')).toBeInTheDocument()
     expect(screen.getByText('Status & verdict')).toBeInTheDocument()
@@ -188,6 +188,56 @@ describe('FilterBar', () => {
       expect(screen.getByRole('button', { name: cuisine })).toHaveAttribute('aria-pressed', 'true')
     }
     expect(screen.queryByRole('button', { name: /more/i })).not.toBeInTheDocument()
+  })
+
+  it('renders the stacked wrapper classes by default, matching today\'s sidebar/sheet shape', () => {
+    const { container } = render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+    expect(container.firstChild).toHaveClass('space-y-2', 'border-b', 'border-gray-100', 'p-3')
+    expect(container.firstChild).not.toHaveClass('flex', 'flex-wrap', 'items-start', 'gap-4')
+  })
+
+  it('renders each group as a label-left row beside its own wrapping chip box, when layout="inline"', () => {
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />)
+    const cuisineGroupRow = screen.getByText('Cuisine').parentElement as HTMLElement
+    const statusGroupRow = screen.getByText('Status & verdict').parentElement as HTMLElement
+
+    expect(cuisineGroupRow).toHaveClass('flex', 'items-center', 'gap-3')
+    expect(statusGroupRow).toHaveClass('flex', 'items-center', 'gap-3')
+    // The two groups stack vertically as siblings under a plain wrapper, not nested inside one
+    // shared side-by-side row.
+    expect(cuisineGroupRow.parentElement).toBe(statusGroupRow.parentElement)
+    expect(cuisineGroupRow.parentElement).not.toHaveClass('flex')
+
+    // Each group's own chip box carries the wrapping, not the label-plus-chips row itself — so an
+    // overflowing chip line stays aligned under the first chip rather than resetting flush-left
+    // under the label.
+    const cuisineChipsBox = screen.getByRole('button', { name: 'Thai' }).parentElement as HTMLElement
+    expect(cuisineChipsBox).toHaveClass('flex', 'flex-wrap', 'min-w-0', 'flex-1')
+    expect(cuisineChipsBox.parentElement).toBe(cuisineGroupRow)
+  })
+
+  it('renders no divider between the cuisine and status/verdict groups, under either layout', () => {
+    const { rerender } = render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+    expect(screen.getByText('Status & verdict').parentElement).not.toHaveClass('border-t')
+
+    rerender(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />)
+    expect(screen.getByText('Status & verdict').parentElement).not.toHaveClass('border-t')
+  })
+
+  it('toggles a cuisine into the filter under layout="inline" the same as under the default layout', async () => {
+    const onChange = vi.fn()
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={onChange} layout="inline" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Thai' }))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['thai'])
+  })
+
+  it('marks the active selection as pressed under layout="inline"', () => {
+    const filter = { ...emptyFilter(), cuisines: new Set(['thai']) }
+    render(<FilterBar restaurants={PLACES} filter={filter} onChange={vi.fn()} layout="inline" />)
+    expect(screen.getByRole('button', { name: 'Thai' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('reflows the default row immediately when a pinned, off-top-6 active cuisine is deselected', () => {

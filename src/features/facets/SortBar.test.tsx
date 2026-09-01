@@ -112,6 +112,73 @@ describe('SortBar', () => {
     expect(screen.getByRole('button', { name: 'Distance' })).not.toBeDisabled()
   })
 
+  it('renders the stacked (default) wrapper classes when layout is omitted', () => {
+    const { container } = render(
+      <SortBar
+        criterion="distance"
+        direction="nearest"
+        distanceSelectable={true}
+        onCriterionChange={vi.fn()}
+        onDirectionToggle={vi.fn()}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass('flex', 'flex-wrap', 'items-center', 'gap-2', 'border-b')
+    expect(container.firstChild).not.toHaveClass('flex-nowrap')
+  })
+
+  it('drops the bottom border when divider={false}, e.g. the mobile filters sheet', () => {
+    const { container } = render(
+      <SortBar
+        criterion="distance"
+        direction="nearest"
+        distanceSelectable={true}
+        onCriterionChange={vi.fn()}
+        onDirectionToggle={vi.fn()}
+        divider={false}
+      />,
+    )
+
+    expect(container.firstChild).not.toHaveClass('border-b')
+  })
+
+  it('renders the inline horizontal-flow wrapper classes when layout="inline"', () => {
+    const { container } = render(
+      <SortBar
+        criterion="distance"
+        direction="nearest"
+        distanceSelectable={true}
+        onCriterionChange={vi.fn()}
+        onDirectionToggle={vi.fn()}
+        layout="inline"
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass('flex', 'flex-nowrap', 'items-center', 'gap-2')
+    expect(container.firstChild).not.toHaveClass('flex-wrap')
+  })
+
+  it('behaves identically to the default layout under layout="inline": criterion change and direction toggle callbacks fire', async () => {
+    const onCriterionChange = vi.fn()
+    const onDirectionToggle = vi.fn()
+    render(
+      <SortBar
+        criterion="distance"
+        direction="nearest"
+        distanceSelectable={true}
+        onCriterionChange={onCriterionChange}
+        onDirectionToggle={onDirectionToggle}
+        layout="inline"
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Date' }))
+    expect(onCriterionChange).toHaveBeenCalledExactlyOnceWith('date')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Nearest first' }))
+    expect(onDirectionToggle).toHaveBeenCalledOnce()
+  })
+
   it('exposes aria-pressed on both segmented buttons and the direction chip', () => {
     render(
       <SortBar

@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { freshDB } from './test/idb'
 import { createMockLeafletMap } from './test/mockLeafletMap'
 import { useAuth } from './auth/useAuth'
@@ -149,6 +149,39 @@ describe('App shell', () => {
     expect(listButton).toHaveAttribute('aria-pressed', 'true')
     expect(mapButton).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByRole('button', { name: 'Add a place' })).not.toBeInTheDocument()
+  })
+
+  it('lets the header shrink instead of overflow on a narrow viewport (bug fix): the title group can shrink/truncate, the actions group stays shrink-0', () => {
+    render(<App />)
+
+    const heading = screen.getByRole('heading', { name: 'Tablemarks' })
+    expect(heading).toHaveClass('truncate')
+    const titleGroup = heading.closest('[class*="min-w-0"]')?.parentElement
+    expect(titleGroup).toHaveClass('min-w-0', 'flex-1')
+
+    const settingsButton = screen.getByRole('button', { name: /settings|paramètres/i })
+    const actionsGroup = settingsButton.closest('[class*="shrink-0"]')
+    expect(actionsGroup).toHaveClass('shrink-0')
+  })
+
+  it("gives the mobile List/Map nav a z-index above Leaflet's own panes/controls (max 1000, e.g. the attribution control), so the map — which now fills <main> fully — can never render on top of it and hide it", () => {
+    render(<App />)
+    const nav = screen.getByRole('navigation')
+    expect(nav).toHaveClass('z-[var(--z-nav)]')
+  })
+
+  it('aligns the "+" FAB with the "Filtres · N" pill at the same bottom offset', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: /^map$/i }))
+
+    const fab = screen.getByRole('button', { name: 'Add a place' })
+    const pill = screen.getByRole('button', { name: 'Filters · 0' })
+    expect(fab).toHaveClass('bottom-[calc(var(--safe-area-floating-offset)+0.5rem)]')
+    expect(pill).toHaveClass('bottom-[calc(var(--safe-area-floating-offset)+0.5rem)]')
   })
 })
 
@@ -302,6 +335,149 @@ describe('fallbackCenter wiring (U2, R2/R5)', () => {
   })
 })
 
+describe('desktop filter overlay (U3)', () => {
+  it('keeps FilterBar directly after the "Where to eat" button and before RestaurantList in DOM order (R7) — tab order is unchanged even though FilterBar now renders as a floating overlay over the map on desktop', async () => {
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+
+    const whereToEat = screen.getByRole('button', { name: /where to eat/i })
+    const cuisineChip = screen.getByRole('button', { name: 'French' })
+    const restaurantRow = screen.getByText('R1 Place')
+
+    // DOCUMENT_POSITION_FOLLOWING: the argument node comes after the node compareDocumentPosition
+    // was called on, in DOM order.
+    expect(whereToEat.compareDocumentPosition(cuisineChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(cuisineChip.compareDocumentPosition(restaurantRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('does not float a visible white card over the map when there are no restaurants yet (FilterBar renders nothing, but the measurement wrapper must stay mounted)', () => {
+    const { container } = render(<App />)
+
+    const overlayWrapper = Array.from(container.querySelectorAll('div')).find((el) =>
+      el.className.includes('md:top-[var(--filter-overlay-top)]'),
+    )
+    expect(overlayWrapper).toBeDefined()
+    expect(overlayWrapper?.className).not.toMatch(/md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-2xl/)
+    expect(overlayWrapper?.textContent).toBe('')
+  })
+
+  it('spans the full map-pane width via md:right-[var(--filter-overlay-right)], not a fixed md:w-96 card width, so it right-aligns with the Locate/zoom control stack', () => {
+    const { container } = render(<App />)
+
+    const overlayWrapper = Array.from(container.querySelectorAll('div')).find((el) =>
+      el.className.includes('md:top-[var(--filter-overlay-top)]'),
+    )
+    expect(overlayWrapper).toHaveClass('md:right-[var(--filter-overlay-right)]')
+    expect(overlayWrapper?.className).not.toMatch(/md:w-96/)
+  })
+
+  describe('measured-height -> control-stack offset wiring (KTD3)', () => {
+    // A dedicated fake (rather than a generic vi.fn()-based stub) so the constructor can both
+    // capture its `callback` for the test to invoke manually (simulating a real resize, e.g. the
+    // cuisine row's "+N autres" expanding the overlay) and record which element it observed —
+    // `ResizeObserver` isn't implemented in jsdom, and App.tsx's own effect already no-ops when
+    // it's undefined, so without this stub the effect would just never call `observe` at all.
+    class FakeResizeObserver {
+      callback: ResizeObserverCallback
+      observed: Element[] = []
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback
+        instances.push(this)
+      }
+      observe(target: Element) {
+        this.observed.push(target)
+      }
+      unobserve() {}
+      disconnect = vi.fn()
+    }
+    let instances: FakeResizeObserver[]
+    let mockOverlayHeight = 120
+
+    beforeEach(() => {
+      instances = []
+      mockOverlayHeight = 120
+      vi.stubGlobal('ResizeObserver', FakeResizeObserver)
+      // jsdom's real getBoundingClientRect always reports 0 — stub it so the overlay ref's
+      // measured height is actually controllable from the test.
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+        () =>
+          ({
+            height: mockOverlayHeight,
+            width: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            x: 0,
+            y: 0,
+            toJSON() {},
+          }) as DOMRect,
+      )
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    })
+
+    /** App.tsx now runs the same measurement effect (`useMeasuredHeightVar`) for both the header
+     *  and the filter overlay, so `instances` holds one FakeResizeObserver per target — find the
+     *  overlay's by which element it actually observed, rather than assuming array order. */
+    function overlayObserver(container: HTMLElement) {
+      const overlayEl = Array.from(container.querySelectorAll('div')).find((el) =>
+        el.className.includes('md:top-[var(--filter-overlay-top)]'),
+      )
+      const observer = instances.find((o) => !!overlayEl && o.observed.includes(overlayEl))
+      if (!observer) throw new Error('overlay ResizeObserver instance not found')
+      return observer
+    }
+
+    it("writes the filter overlay's measured height to --filter-overlay-height, and updates it when the overlay resizes (e.g. the cuisine row's \"+N autres\" expanding it)", async () => {
+      await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+      const { container } = render(<App />)
+      await screen.findByText('R1 Place')
+
+      expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('120px')
+
+      // The real callback reads the size straight off the entry the browser already computed
+      // (`entry.borderBoxSize[0].blockSize`), rather than re-querying getBoundingClientRect — so
+      // the fake resize notification has to carry that shape too, matching the real API.
+      mockOverlayHeight = 260
+      const entry = {
+        borderBoxSize: [{ blockSize: mockOverlayHeight, inlineSize: 0 }],
+      } as unknown as ResizeObserverEntry
+      const observer = overlayObserver(container)
+      observer.callback([entry], observer as unknown as ResizeObserver)
+
+      expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('260px')
+    })
+
+    it("also writes the header's measured height to --header-height, independently of the filter overlay (fixes the top/left gap mismatch)", async () => {
+      await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+      render(<App />)
+      await screen.findByText('R1 Place')
+
+      expect(document.documentElement.style.getPropertyValue('--header-height')).toBe('120px')
+    })
+
+    it('disconnects the ResizeObserver when App unmounts', async () => {
+      await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+      const { container, unmount } = render(<App />)
+      await screen.findByText('R1 Place')
+      const observer = overlayObserver(container)
+
+      unmount()
+
+      expect(observer.disconnect).toHaveBeenCalledOnce()
+    })
+  })
+})
+
 describe('sort criterion/direction wiring (U4)', () => {
   const HERE: GeoPoint = { lat: 0, lng: 0 }
 
@@ -388,5 +564,208 @@ describe('sort criterion/direction wiring (U4)', () => {
     await user.click(dateButton)
 
     expect(readSortPreference()?.criterion).toBe('distance')
+  })
+})
+
+describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
+  /** Scopes queries to the Modal panel, found via its "See results" button (R6 — disambiguates
+   *  from the desktop overlay's own FilterBar/SortBar, which stay mounted underneath the sheet;
+   *  the sheet carries no title/heading of its own — see the design revision note in App.tsx). */
+  function sheetPanel() {
+    const seeResults = screen.getByRole('button', { name: /see results/i })
+    const panel = seeResults.closest('[class*="rounded-t-2xl"]')
+    if (!panel) throw new Error('Modal panel not found')
+    return within(panel as HTMLElement)
+  }
+
+  it('stacks above the mobile List/Map nav (z-[1100]) when open, so the sheet is never hidden underneath it', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+
+    const overlay = screen.getByRole('button', { name: /see results/i }).closest('[class*="fixed inset-0"]')
+    expect(overlay).toHaveClass('z-[var(--z-modal)]')
+  })
+
+  it('hides FilterBar and SortBar from the mobile inline flow without unmounting them (R4) — both stay under a `hidden md:block` wrapper', async () => {
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+
+    const filterWrapper = screen.getByRole('button', { name: 'French' }).closest('[class*="md:fixed"]')
+    expect(filterWrapper).toHaveClass('hidden', 'md:block')
+
+    const sortWrapper = screen.getByRole('button', { name: 'Date' }).closest('[class*="md:block"]')
+    expect(sortWrapper).toHaveClass('hidden', 'md:block')
+  })
+
+  it('puts the safe-area bottom clearance on the scrollable list box, not on <aside> itself, so the list has no dead gap above the bottom nav (the pill floats over it, fixed-positioned, needing no flow space)', async () => {
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    const restaurantRow = await screen.findByText('R1 Place')
+
+    const asideEl = restaurantRow.closest('aside')
+    expect(asideEl).not.toHaveClass('pb-[var(--safe-area-floating-offset)]')
+
+    const scrollBox = restaurantRow.closest('[class*="overflow-y-auto"]')
+    expect(scrollBox).toHaveClass('overflow-y-auto', 'pb-[var(--safe-area-floating-offset)]', 'md:pb-0')
+  })
+
+  it('does not put a safe-area bottom clearance on <main> either, so the map fills it fully with no dead gap above the bottom nav', () => {
+    render(<App />)
+    const mainEl = screen.getByRole('button', { name: /center on my location/i }).closest('main')
+    expect(mainEl).not.toHaveClass('pb-[var(--safe-area-floating-offset)]')
+  })
+
+  it('does not render the pill when the restaurant list is empty', async () => {
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(screen.queryByRole('button', { name: /^filters ·/i })).not.toBeInTheDocument()
+  })
+
+  it('renders the pill in the list pane and, independently after switching views, in the map pane — same styling both times', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+
+    const listPill = screen.getByRole('button', { name: 'Filters · 0' })
+    expect(listPill).toHaveClass('fixed', 'md:hidden', 'rounded-full', 'bg-brand')
+    const listPillClassName = listPill.className
+
+    await user.click(screen.getByRole('button', { name: /^map$/i }))
+
+    // Exactly one pill mounted at a time — the list pane's is gone, the map pane's has replaced it.
+    const mapPills = screen.getAllByRole('button', { name: 'Filters · 0' })
+    expect(mapPills).toHaveLength(1)
+    expect(mapPills[0].className).toBe(listPillClassName)
+  })
+
+  it("updates the pill's count to match activeFilterCount as a filter is toggled (KTD5)", async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    expect(screen.getByRole('button', { name: 'Filters · 0' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'French' }))
+
+    expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument()
+  })
+
+  it('opens the bottom sheet with FilterBar and SortBar when the pill is tapped, and Escape closes it back to the same (list) pane', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+
+    const sheet = sheetPanel()
+    expect(sheet.getByRole('button', { name: 'French' })).toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: 'Date' })).toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: 'Distance' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('focuses the panel itself on open, not a filter-mutating control (R6 bug fix — no ModalHeader means the first focusable descendant is otherwise "Clear all" or the first cuisine chip)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+    // Activate a filter first so "Clear all" is rendered — the more dangerous of the two
+    // possible auto-focus targets this test guards against (it would wipe the active filter).
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: 'French' }))
+
+    await user.click(screen.getByRole('button', { name: 'Filters · 1' }))
+
+    const sheet = sheetPanel()
+    expect(sheet.queryByRole('button', { name: 'French' })).not.toHaveFocus()
+    expect(sheet.queryByRole('button', { name: 'Clear all' })).not.toHaveFocus()
+    // Filter must still be active — a reflexive Enter/Space right after open must not have fired.
+    expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument()
+  })
+
+  it('keeps the "See results" button reachable outside the scrollable filter/sort content, so it cannot scroll out of view (bug fix)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+
+    const seeResults = screen.getByRole('button', { name: /see results/i })
+    const scrollBox = seeResults.closest('[class*="rounded-t-2xl"]')?.querySelector('.overflow-y-auto')
+    expect(seeResults).toHaveClass('shrink-0')
+    expect(scrollBox).not.toBeNull()
+    expect(scrollBox?.contains(seeResults)).toBe(false)
+  })
+
+  it('renders no title bar, no divider under SortBar, and a "See results" button that closes the sheet (design revision)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+
+    const sheet = sheetPanel()
+    expect(sheet.queryByRole('heading')).not.toBeInTheDocument()
+    const sortWrapper = sheet.getByRole('button', { name: 'Date' }).closest('div')
+    expect(sortWrapper).not.toHaveClass('border-b')
+
+    await user.click(sheet.getByRole('button', { name: /see results/i }))
+    expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
+  })
+
+  it('opens the bottom sheet from the map pane too, and its "See results" button returns to the same (map) pane', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: /^map$/i }))
+
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+    const sheet = sheetPanel()
+
+    await user.click(sheet.getByRole('button', { name: /see results/i }))
+
+    expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^map$/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('applies a filter toggled inside the sheet to the restaurant list behind it, once the sheet closes (R6)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'french', name: 'French Place', lat: 1, lng: 1, cuisine: 'French' })
+    await createRestaurant({ id: 'thai', name: 'Thai Place', lat: 2, lng: 2, cuisine: 'Thai' })
+
+    render(<App />)
+    await screen.findByText('French Place')
+    expect(screen.getByText('Thai Place')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+    const sheet = sheetPanel()
+    await user.click(sheet.getByRole('button', { name: 'French' }))
+    await user.click(sheet.getByRole('button', { name: /see results/i }))
+
+    expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
+    expect(screen.getByText('French Place')).toBeInTheDocument()
+    expect(screen.queryByText('Thai Place')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument()
   })
 })

@@ -25,6 +25,49 @@
     var(--spacing-toggle-bar) + env(safe-area-inset-bottom)
   );
 
+  /* Desktop-only (>=768px) fixed offsets for the floating filter overlay pinned atop the map
+     (KTD2). FilterBar stays authored inside <aside> (R7's tab-order requirement) but must render
+     visually pinned over <main>'s map, so it's `position: fixed` with these offsets. The sidebar's
+     width is a genuinely fixed Tailwind value (`md:w-80` = 20rem), but the header's rendered
+     height is not reliably knowable from CSS alone (font metrics, locale text length) — it's
+     measured at runtime instead (App.tsx, via the same ResizeObserver-to-CSS-var technique as
+     --filter-overlay-height below) and written here, so `--filter-overlay-top` and
+     `--filter-overlay-left` end up with the *same* actual gap (--filter-overlay-gap) from their
+     respective reference edges (header bottom, sidebar right) rather than drifting apart. */
+  --sidebar-width: 20rem;
+  --header-height: 4rem; /* fallback until the runtime measurement effect runs; see above */
+  --filter-overlay-gap: 1rem;
+  --filter-overlay-top: calc(var(--header-height) + var(--filter-overlay-gap));
+  --filter-overlay-left: calc(var(--sidebar-width) + var(--filter-overlay-gap));
+  /* The overlay spans the full width of the map pane (left set above, right set here — same gap
+     value on all three edges) rather than a fixed card width. It sets only `left`/`right`, no
+     `width`, so the browser derives the width and the overlay re-adapts on every viewport resize
+     with no JS. The Locate/zoom control stack (MapView.tsx) then simply floats on top of the
+     overlay's top-right corner — its z-index is already higher, so nothing under it is
+     unreachable; the overlay is meant to run the full width of the map, matching the prototype,
+     not stop short to avoid touching the stack. */
+  --filter-overlay-right: var(--filter-overlay-gap);
+
+  /* Written at runtime (App.tsx, via a ResizeObserver on the overlay's own ref) to the overlay's
+     actual rendered height, so MapView's Locate/zoom control stack (KTD3) can always clear it via
+     `top: calc(var(--filter-overlay-height) + ...)` regardless of how tall the cuisine row's
+     "+N autres" expansion grows the overlay. Stays 0px until that effect runs. */
+  --filter-overlay-height: 0px;
+
+  /* Single source of truth for the app's fixed-position stacking order, so the ordering isn't
+     coordinated only by cross-referencing comments across App.tsx/Modal.tsx/DecidePanel.tsx. Each
+     tier must clear the one below it: --z-nav sits above Leaflet's own highest internal z-index
+     (1000, its attribution control — see node_modules/leaflet/dist/leaflet.css; Leaflet's own
+     container doesn't establish a CSS stacking context, so its panes compare directly against
+     this app's own fixed-position elements) since the map now fills <main> fully with no reserved
+     gap; --z-modal sits above --z-nav so an open modal always covers it; --z-modal-elevated is
+     DecidePanel's own +100 bump above --z-modal (unchanged relative gap from before this token
+     scale existed). FiltersPill/the "+" FAB/MapView's Locate-zoom stack stay at a plain z-[1000]
+     (unchanged, no reported conflict — they don't spatially overlap the nav). */
+  --z-nav: 1100;
+  --z-modal: 1200;
+  --z-modal-elevated: 1300;
+
   /* Carnet culinaire ramp — warm, sepia-tinted parchment neutrals replacing
      Tailwind's default cool grays, for the paper-editorial identity. */
   --color-gray-50: #fbf6ee;
