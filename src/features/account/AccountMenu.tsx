@@ -7,6 +7,7 @@ import { label as syncLabel, detail as syncDetail, pillToneClassName, badgeColor
 import { trapTabFocus } from '../ui/Modal'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import { Eyebrow } from '../ui/Eyebrow'
 import { cn } from '../../lib/cn'
 
 interface AccountMenuProps {
@@ -190,8 +191,11 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             style={{ position: 'fixed', top: position.top, right: position.right }}
             className="z-[var(--z-dropdown)] w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-lg outline-none"
           >
-            <p className="truncate px-2 text-sm font-semibold text-gray-900">{email}</p>
-            <div className="mt-2 w-fit">
+            <div className="px-2">
+              <Eyebrow>{t('shell.accountMenuSignedInAs')}</Eyebrow>
+              <p className="truncate text-sm font-medium text-gray-900">{email}</p>
+            </div>
+            <div className="mt-2 w-fit px-2">
               <Badge
                 text={syncLabel(status, t)}
                 tone={pillToneClassName(status.state)}
