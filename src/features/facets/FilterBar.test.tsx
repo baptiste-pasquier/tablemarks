@@ -207,6 +207,18 @@ describe('FilterBar', () => {
     expect(statusGroup.parentElement).toBe(wrapper)
   })
 
+  it('drops the stacked-layout top border/padding from the status/verdict group under layout="inline", so it does not draw a stray line beside the cuisine group', () => {
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />)
+    const statusGroup = screen.getByText('Status & verdict').parentElement as HTMLElement
+    expect(statusGroup).not.toHaveClass('border-t', 'pt-2')
+  })
+
+  it('keeps the stacked-layout top border/padding on the status/verdict group under the default layout', () => {
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+    const statusGroup = screen.getByText('Status & verdict').parentElement as HTMLElement
+    expect(statusGroup).toHaveClass('border-t', 'border-gray-100', 'pt-2')
+  })
+
   it('toggles a cuisine into the filter under layout="inline" the same as under the default layout', async () => {
     const onChange = vi.fn()
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={onChange} layout="inline" />)

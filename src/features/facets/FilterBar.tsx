@@ -180,7 +180,10 @@ export function FilterBar({
           </div>
         )}
 
-        <div className="space-y-1 border-t border-gray-100 pt-2">
+        {/* The top border/padding is a stacked-layout separator between this group and the
+            cuisine group above it — under `layout="inline"` the two groups sit side-by-side, not
+            stacked, so keeping it there would draw a stray line across only this group's top. */}
+        <div className={cn('space-y-1', layout === 'stacked' && 'border-t border-gray-100 pt-2')}>
           <GroupLabel>{t('filters.statusVerdictGroup')}</GroupLabel>
           <div className="flex flex-wrap gap-1.5">
             {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => (
