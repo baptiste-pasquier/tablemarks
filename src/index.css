@@ -65,6 +65,10 @@
      scale existed). FiltersPill/the "+" FAB/MapView's Locate-zoom stack stay at a plain z-[1000]
      (unchanged, no reported conflict — they don't spatially overlap the nav). */
   --z-nav: 1100;
+  /* Compact anchored menu tier (KTD1, header avatar dropdown) — above --z-nav so it clears the
+     mobile List/Map nav, below --z-modal since it's a lightweight dropdown, not a full-screen
+     modal, and doesn't need that tier's stacking headroom. */
+  --z-dropdown: 1150;
   --z-modal: 1200;
   --z-modal-elevated: 1300;
 

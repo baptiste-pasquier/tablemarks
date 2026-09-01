@@ -13,6 +13,8 @@
     "signIn": "Sign in",
     "withGoogle": "with Google",
     "signOut": "Sign out",
+    "accountMenuAria": "Account menu",
+    "accountMenuSignedInAs": "Signed in as",
     "addPlace": "+ Add a place",
     "addPlaceAria": "Add a place",
     "whereToEat": "Where to eat?",
@@ -120,7 +122,6 @@
     "summary": "Imported: {{added}} added, {{updated}} updated, {{unchanged}} unchanged."
   },
   "sync": {
-    "ariaLabel": "Sync status",
     "allSynced": "All synced",
     "pendingCount": "{{count}} pending",
     "offline": "Offline",

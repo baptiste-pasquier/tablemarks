@@ -3,6 +3,14 @@ import { cn } from '../../lib/cn'
 type BadgeProps = {
   text: string
   icon?: string
+  /**
+   * Tinted-pill mode (light background/dark text + a leading color dot, e.g. the account
+   * dropdown's sync-status chip) instead of the default solid-background/white-text mode. In
+   * this mode `tone`/`color` supply the *full* background+text pairing (already tinted) rather
+   * than a solid surface color, and `dotClassName` supplies the leading dot's fill.
+   */
+  tint?: boolean
+  dotClassName?: string
 } & ({ tone: string; color?: never } | { color: string; tone?: never })
 
 function luminance(hex: string): number {
@@ -30,15 +38,20 @@ function textColorFor(bgHex: string): string {
  * text color computed internally via the same luminance rule) picks the surface; both share the
  * same size/padding/font so a future style change touches this file instead of every call site.
  */
-export function Badge({ text, icon, tone, color }: BadgeProps) {
-  const style = color ? { background: color, color: textColorFor(color) } : undefined
-  const colorClass = tone ? `${tone} text-white` : ''
+export function Badge({ text, icon, tone, color, tint, dotClassName }: BadgeProps) {
+  const style = !tint && color ? { background: color, color: textColorFor(color) } : undefined
+  const colorClass = tint ? (tone ?? '') : tone ? `${tone} text-white` : ''
 
   return (
     <span
-      className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold', colorClass)}
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded-full font-semibold',
+        tint ? 'px-2.5 py-1 text-xs shadow-sm transition' : 'px-2 py-0.5 text-[11px]',
+        colorClass,
+      )}
       style={style}
     >
+      {tint && dotClassName && <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', dotClassName)} />}
       {icon && <span aria-hidden="true">{icon}</span>}
       <span>{text}</span>
     </span>

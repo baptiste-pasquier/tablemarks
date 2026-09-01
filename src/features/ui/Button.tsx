@@ -1,13 +1,15 @@
 import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '../../lib/cn'
 
-type ButtonVariant = 'primary' | 'secondary' | 'link' | 'icon-dismiss'
+type ButtonVariant = 'primary' | 'secondary' | 'link' | 'icon-dismiss' | 'menu-item'
 type ButtonSize = 'sm' | 'xs'
 type ButtonTone = 'neutral' | 'destructive' | 'toast'
+type MenuItemTone = Exclude<ButtonTone, 'toast'>
 
-// icon-dismiss has its own base (ICON_DISMISS_BASE below) composed with a tone, so it's excluded
-// from this Record rather than given a placeholder entry here.
-type StyledVariant = Exclude<ButtonVariant, 'icon-dismiss'>
+// icon-dismiss and menu-item each have their own base (ICON_DISMISS_BASE/MENU_ITEM_BASE below)
+// composed with a tone, so they're excluded from this Record rather than given a placeholder
+// entry here.
+type StyledVariant = Exclude<ButtonVariant, 'icon-dismiss' | 'menu-item'>
 
 // Canonical brand-filled and neutral-pill styles (KD1/KTD1): every call site across App.tsx,
 // AddPlace.tsx, DecidePanel.tsx, RestaurantDetail.tsx, PortabilityPanel.tsx and SortBar.tsx used to
@@ -64,6 +66,17 @@ const TONE_HOVER: Record<ButtonTone, string> = {
   toast: 'hover:text-white active:text-white',
 }
 
+// AccountMenu's Réglages/Se déconnecter rows (KTD1/AGENTS.md primitives-first rule) -- a full-width
+// row button with an icon + label, distinct from icon-dismiss's icon-only hover-color-only shape,
+// so it gets its own base + tone Record rather than reusing ICON_DISMISS_BASE/TONE_HOVER.
+const MENU_ITEM_BASE =
+  'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition'
+
+const MENU_ITEM_TONE: Record<MenuItemTone, string> = {
+  neutral: 'text-gray-700 hover:bg-gray-100',
+  destructive: 'text-red-600 hover:bg-red-50',
+}
+
 /**
  * Shared button primitive (R1/R2, KTD1): one `variant` selects the base class set, the native
  * `disabled` attribute gets the shared disabled treatment for both variants (KTD2), and any
@@ -81,6 +94,7 @@ export function Button({
   | { variant: 'secondary'; iconOnly?: boolean; size?: ButtonSize; tone?: never }
   | { variant: 'link'; iconOnly?: false; size?: ButtonSize; tone?: never }
   | { variant: 'icon-dismiss'; iconOnly?: false; size?: never; tone: ButtonTone }
+  | { variant: 'menu-item'; iconOnly?: false; size?: never; tone: MenuItemTone }
 ) &
   ButtonHTMLAttributes<HTMLButtonElement>) {
   let base: string
@@ -96,6 +110,9 @@ export function Button({
         break
       case 'icon-dismiss':
         base = cn(ICON_DISMISS_BASE, TONE_HOVER[tone])
+        break
+      case 'menu-item':
+        base = cn(MENU_ITEM_BASE, MENU_ITEM_TONE[tone])
         break
       default:
         base = VARIANT_STYLES.primary
