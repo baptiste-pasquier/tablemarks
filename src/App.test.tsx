@@ -81,7 +81,7 @@ import App from './App.tsx'
 beforeEach(async () => {
   await freshDB()
   window.localStorage.clear()
-  mockUseAuth.mockReturnValue({ signedIn: false, email: null, signIn: vi.fn(), signOut: vi.fn() })
+  mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
   mockGeolocate.mockReset().mockResolvedValue(null)
   mockLastRestaurantListProps.current = null
   mockLastMapViewProps.current = null
@@ -117,6 +117,7 @@ describe('App shell', () => {
     mockUseAuth.mockReturnValue({
       signedIn: true,
       email: 'person@example.com',
+      avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
     })

@@ -19,6 +19,7 @@ beforeEach(() => {
   mockUseAuth.mockReturnValue({
     signedIn: true,
     email: 'person@example.com',
+    avatarUrl: null,
     signIn: vi.fn(),
     signOut: vi.fn(),
   })
@@ -83,7 +84,7 @@ describe('SyncStatusIndicator', () => {
   })
 
   it('renders nothing when signed out, regardless of sync status (R3)', () => {
-    mockUseAuth.mockReturnValue({ signedIn: false, email: null, signIn: vi.fn(), signOut: vi.fn() })
+    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
     mockUseSyncStatus.mockReturnValue({ state: 'problem', pendingCount: 5, cause: 'server-unreachable' })
     const { container } = render(<SyncStatusIndicator />)
     expect(container).toBeEmptyDOMElement()
