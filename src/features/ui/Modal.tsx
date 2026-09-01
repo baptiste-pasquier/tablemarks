@@ -11,7 +11,8 @@ function isReachable(el: HTMLElement): boolean {
   return el.tagName === 'SUMMARY' && el.parentElement === closedDetails
 }
 
-function getFocusables(panel: HTMLElement): HTMLElement[] {
+/** Exported for reuse by other focus-trapping overlays (e.g. `AccountMenu`'s dropdown, KTD3). */
+export function getFocusables(panel: HTMLElement): HTMLElement[] {
   return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(isReachable)
 }
 

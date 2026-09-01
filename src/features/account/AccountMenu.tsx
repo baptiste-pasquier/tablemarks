@@ -1,0 +1,222 @@
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
+import { Settings, LogOut } from 'lucide-react'
+import { useSyncStatus } from '../../sync/useSyncStatus'
+import { label as syncLabel, detail as syncDetail, labelClassName, badgeColorClassName } from '../sync/syncStatusPresentation'
+import { getFocusables } from '../ui/Modal'
+import { cn } from '../../lib/cn'
+
+interface AccountMenuProps {
+  email: string | null
+  avatarUrl: string | null
+  onOpenSettings: () => void
+  onSignOut: () => void
+}
+
+interface Position {
+  top: number
+  right: number
+}
+
+/**
+ * Signed-in header identity control (R1, R4, R7): an avatar (photo or initial letter) carrying a
+ * live sync-status badge dot, opening a dropdown with email, status chip + detail, Réglages, and
+ * Se déconnecter. Replaces the old sync-status pill + email label + settings button + logout
+ * button cluster (R1, R5).
+ *
+ * Portaled to `document.body` on `--z-dropdown` (KTD1) — the header is `sticky`/`z-index` and
+ * creates its own stacking context, so a nested dropdown could never clear the mobile nav or
+ * Leaflet's controls. Positioned from the trigger's `getBoundingClientRect()`, recomputed on
+ * resize (KTD7), rather than CSS anchoring, since no positioning primitive exists in this repo yet.
+ */
+export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: AccountMenuProps) {
+  const { t } = useTranslation()
+  const status = useSyncStatus()
+  const [open, setOpen] = useState(false)
+  const [imageFailed, setImageFailed] = useState(false)
+  const [position, setPosition] = useState<Position | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const hasFocusedPanelRef = useRef(false)
+
+  const initial = (email?.charAt(0) ?? '?').toUpperCase()
+  const showImage = Boolean(avatarUrl) && !imageFailed
+
+  // KTD7: anchor to the trigger's live position on open, recomputed on resize so a narrow
+  // viewport or an orientation change can't leave the panel clipped or misplaced.
+  useLayoutEffect(() => {
+    if (!open) {
+      setPosition(null)
+      return
+    }
+    function updatePosition() {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setPosition({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    return () => window.removeEventListener('resize', updatePosition)
+  }, [open])
+
+  // Focus lands on the panel itself once it mounts, not the first row — mirrors Modal's
+  // `initialFocus="panel"` escape hatch so opening the dropdown never fires Réglages/Se
+  // déconnecter unintentionally. Guarded to fire once per open (position updates again on resize).
+  useLayoutEffect(() => {
+    if (!open) {
+      hasFocusedPanelRef.current = false
+      return
+    }
+    if (position && !hasFocusedPanelRef.current) {
+      panelRef.current?.focus()
+      hasFocusedPanelRef.current = true
+    }
+  }, [open, position])
+
+  // KTD2 dismissal (mousedown outside the trigger/panel, plus Escape) and the committed Tab-trap
+  // within the panel's focusable rows, mirroring Modal.tsx's Escape-listener lifecycle and
+  // getFocusables-based wrap logic.
+  useEffect(() => {
+    if (!open) return
+
+    function close() {
+      setOpen(false)
+      // Deferred: a mousedown on a non-focusable outside target can itself blur the trigger via
+      // the browser's own default handling of *this same* mousedown event, which applies only
+      // after our listener returns — queuing the refocus for the next tick lets it win that race
+      // (KTD3). Harmless for the Escape path too, which has no such competing default action.
+      setTimeout(() => triggerRef.current?.focus(), 0)
+    }
+
+    function onMouseDown(e: MouseEvent) {
+      const target = e.target as Node
+      if (triggerRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      close()
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        close()
+        return
+      }
+      if (e.key !== 'Tab' || !panelRef.current) return
+      const focusables = getFocusables(panelRef.current)
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement as HTMLElement | null
+      const activeIndex = active ? focusables.indexOf(active) : -1
+
+      if (activeIndex === -1) {
+        e.preventDefault()
+        if (e.shiftKey) last.focus()
+        else first.focus()
+        return
+      }
+      if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  // KTD3: re-focus the trigger before Settings' Modal mounts and does its own focus capture,
+  // so Modal never captures document.body as "previously focused".
+  function handleOpenSettings() {
+    triggerRef.current?.focus()
+    setOpen(false)
+    onOpenSettings()
+  }
+
+  function handleSignOut() {
+    setOpen(false)
+    onSignOut()
+  }
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={t('shell.accountMenuAria')}
+        className="relative rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      >
+        {showImage ? (
+          <img
+            src={avatarUrl ?? undefined}
+            onError={() => setImageFailed(true)}
+            alt=""
+            className="h-9 w-9 rounded-full object-cover ring-1 ring-black/5"
+          />
+        ) : (
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-soft text-sm font-semibold text-brand-strong ring-1 ring-black/5">
+            {initial}
+          </span>
+        )}
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full ring-2 ring-white',
+            badgeColorClassName(status.state),
+          )}
+        />
+      </button>
+      {open &&
+        position &&
+        createPortal(
+          <div
+            ref={panelRef}
+            role="menu"
+            tabIndex={-1}
+            style={{ position: 'fixed', top: position.top, right: position.right }}
+            className="z-[var(--z-dropdown)] w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-lg outline-none"
+          >
+            <p className="truncate px-2 text-sm font-semibold text-gray-900">{email}</p>
+            <div className={cn('mt-1 w-fit', labelClassName(status.state))}>
+              <span
+                aria-hidden="true"
+                className={cn('h-2 w-2 rounded-full', badgeColorClassName(status.state))}
+              />
+              <span>{syncLabel(status, t)}</span>
+            </div>
+            <p className="mt-1 px-2 text-xs text-gray-500">{syncDetail(status, t)}</p>
+            <div className="my-2 border-t border-gray-100" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleOpenSettings}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+            >
+              <Settings className="h-4 w-4 text-gray-500" aria-hidden="true" />
+              {t('settings.title')}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              {t('shell.signOut')}
+            </button>
+          </div>,
+          document.body,
+        )}
+    </div>
+  )
+}
