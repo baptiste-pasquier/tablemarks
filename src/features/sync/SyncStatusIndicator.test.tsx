@@ -83,6 +83,14 @@ describe('SyncStatusIndicator', () => {
     expect(problemButton.className).not.toBe(offlineClass)
   })
 
+  it('uses the emerald "synced" color, not the previous neutral gray (R2)', () => {
+    mockUseSyncStatus.mockReturnValue({ state: 'synced', pendingCount: 0 })
+    render(<SyncStatusIndicator />)
+    const className = screen.getByRole('button').className
+    expect(className).toContain('emerald')
+    expect(className).not.toContain('gray')
+  })
+
   it('renders nothing when signed out, regardless of sync status (R3)', () => {
     mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
     mockUseSyncStatus.mockReturnValue({ state: 'problem', pendingCount: 5, cause: 'server-unreachable' })
