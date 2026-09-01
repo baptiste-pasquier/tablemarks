@@ -524,18 +524,20 @@ export function MapView({
             edge. Rendered as a plain child of MapContainer (not a sibling of it) purely so
             ZoomControl can call useMap() — react-leaflet renders children straight into the
             Leaflet container div (no portal), so this positions identically to a sibling would.
-            `top-3` (mobile, unchanged from before this stack existed) is overridden at `md:` by
-            the measured `--filter-overlay-height` custom property (KTD3): the desktop filter
-            overlay is `position: fixed` and authored inside <aside>, not a flow-sibling of this
-            stack, so it reserves no space this stack could rely on — App.tsx measures the
-            overlay's real rendered height via a ResizeObserver and writes it to that property, so
-            this stack always clears it regardless of how tall the cuisine row's "+N autres"
-            expansion grows it. Also stops 'dblclick'/'wheel' propagation (see `controlStackRef`
-            above) so interacting with these buttons doesn't also reach Leaflet's own container
-            and trigger its native doubleClickZoom/scrollWheelZoom handling. */}
+            `right-3`/`top-3` (mobile, unchanged from before this stack existed) are overridden at
+            `md:`: `right` switches to the same `--filter-overlay-gap` the desktop filter overlay
+            uses on its own right edge (index.css), so the two share one right edge instead of
+            drifting apart by a few pixels; `top` reads the measured `--filter-overlay-height`
+            custom property (KTD3) — the overlay is `position: fixed` and authored inside <aside>,
+            not a flow-sibling of this stack, so it reserves no space this stack could rely on —
+            App.tsx measures the overlay's real rendered height via a ResizeObserver and writes it
+            to that property, so this stack always clears it regardless of how tall the cuisine
+            row's "+N autres" expansion grows it. Also stops 'dblclick'/'wheel' propagation (see
+            `controlStackRef` above) so interacting with these buttons doesn't also reach Leaflet's
+            own container and trigger its native doubleClickZoom/scrollWheelZoom handling. */}
         <div
           ref={controlStackRef}
-          className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(var(--filter-overlay-height,0px)+2rem)]"
+          className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-2 md:right-[var(--filter-overlay-gap)] md:top-[calc(var(--filter-overlay-height,0px)+2rem)]"
         >
           <button
             type="button"

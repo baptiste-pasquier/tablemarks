@@ -650,6 +650,12 @@ describe('MapView', () => {
     expect(stack?.className).toContain('--filter-overlay-height')
   })
 
+  it('shares the same right offset (--filter-overlay-gap) as the desktop filter overlay, so the two right-align instead of drifting apart', () => {
+    render(<MapView markers={[]} />)
+    const stack = screen.getByRole('button', { name: /center on my location/i }).parentElement
+    expect(stack).toHaveClass('right-3', 'md:right-[var(--filter-overlay-gap)]')
+  })
+
   it("stops 'dblclick' and 'wheel' from bubbling out of the Locate/zoom control stack, so interacting with these buttons can't also reach the map's own doubleClickZoom/scrollWheelZoom handling", () => {
     const { container } = render(<MapView markers={[]} />)
     const onDblClick = vi.fn()
