@@ -28,13 +28,17 @@
   /* Desktop-only (>=768px) fixed offsets for the floating filter overlay pinned atop the map
      (KTD2). FilterBar stays authored inside <aside> (R7's tab-order requirement) but must render
      visually pinned over <main>'s map, so it's `position: fixed` with these offsets. The sidebar's
-     width is a genuinely fixed Tailwind value (`md:w-80` = 20rem), but the header's rendered
-     height is not reliably knowable from CSS alone (font metrics, locale text length) — it's
-     measured at runtime instead (App.tsx, via the same ResizeObserver-to-CSS-var technique as
-     --filter-overlay-height below) and written here, so `--filter-overlay-top` and
-     `--filter-overlay-left` end up with the *same* actual gap (--filter-overlay-gap) from their
-     respective reference edges (header bottom, sidebar right) rather than drifting apart. */
-  --sidebar-width: 20rem;
+     width is a single source of truth here: App.tsx's <aside> sets its own width via
+     `md:w-[var(--sidebar-width)]` rather than a Tailwind spacing-scale class (Tailwind v4 has no
+     `--width-*` theme namespace to name a fixed-width utility, unlike --color-* or --radius-*), so
+     changing this one value moves the sidebar and keeps the overlay's left offset in sync
+     automatically — no second place to update. The header's rendered height, by contrast, is not
+     reliably knowable from CSS alone (font metrics, locale text length) — it's measured at runtime
+     instead (App.tsx, via the same ResizeObserver-to-CSS-var technique as --filter-overlay-height
+     below) and written here, so `--filter-overlay-top` and `--filter-overlay-left` end up with the
+     *same* actual gap (--filter-overlay-gap) from their respective reference edges (header bottom,
+     sidebar right) rather than drifting apart. */
+  --sidebar-width: 21rem;
   --header-height: 4rem; /* fallback until the runtime measurement effect runs; see above */
   --filter-overlay-gap: 1rem;
   --filter-overlay-top: calc(var(--header-height) + var(--filter-overlay-gap));

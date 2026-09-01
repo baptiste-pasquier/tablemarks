@@ -288,7 +288,7 @@ export default function App() {
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside
           className={cn(
-            'min-h-0 flex-1 flex-col border-gray-200 bg-white md:flex md:w-80 md:flex-none md:border-r',
+            'min-h-0 flex-1 flex-col border-gray-200 bg-white md:flex md:w-[var(--sidebar-width)] md:flex-none md:border-r',
             view === 'list' ? 'flex' : 'hidden',
           )}
         >
@@ -408,9 +408,8 @@ export default function App() {
             type="button"
             onClick={() => setView(v)}
             aria-pressed={view === v}
-            className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition ${
-              view === v ? 'bg-brand text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition ${view === v ? 'bg-brand text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+              }`}
           >
             {t(`shell.view.${v}`)}
           </button>
