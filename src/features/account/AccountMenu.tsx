@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Settings, LogOut } from 'lucide-react'
 import { useSyncStatus } from '../../sync/useSyncStatus'
-import { label as syncLabel, detail as syncDetail, labelClassName, badgeColorClassName } from '../sync/syncStatusPresentation'
+import { label as syncLabel, detail as syncDetail, pillToneClassName, badgeColorClassName } from '../sync/syncStatusPresentation'
 import { trapTabFocus } from '../ui/Modal'
+import { Badge } from '../ui/Badge'
 import { cn } from '../../lib/cn'
 
 interface AccountMenuProps {
@@ -101,7 +102,13 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
       // the browser's own default handling of *this same* mousedown event, which applies only
       // after our listener returns — queuing the refocus for the next tick lets it win that race
       // (KTD3). Harmless for the Escape path too, which has no such competing default action.
-      setTimeout(() => triggerRef.current?.focus(), 0)
+      // Only reclaim focus if it actually fell back to nowhere (document.body) — otherwise the
+      // outside click landed on some other focusable control, and yanking focus back to the
+      // trigger would discard that real interaction.
+      const trigger = triggerRef.current
+      setTimeout(() => {
+        if (document.activeElement === document.body) trigger?.focus()
+      }, 0)
     }
 
     function onMouseDown(e: MouseEvent) {
@@ -183,12 +190,13 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             className="z-[var(--z-dropdown)] w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-lg outline-none"
           >
             <p className="truncate px-2 text-sm font-semibold text-gray-900">{email}</p>
-            <div className={cn('mt-1 w-fit', labelClassName(status.state))}>
-              <span
-                aria-hidden="true"
-                className={cn('h-2 w-2 rounded-full', badgeColorClassName(status.state))}
+            <div className="mt-1 w-fit">
+              <Badge
+                text={syncLabel(status, t)}
+                tone={pillToneClassName(status.state)}
+                tint
+                dotClassName={badgeColorClassName(status.state)}
               />
-              <span>{syncLabel(status, t)}</span>
             </div>
             <p className="mt-1 px-2 text-xs text-gray-500">{syncDetail(status, t)}</p>
             <div className="my-2 border-t border-gray-100" />

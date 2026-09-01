@@ -142,12 +142,20 @@ describe('AccountMenu (U3)', () => {
   })
 
   it('updates the badge and chip without closing when sync state changes while open', async () => {
-    await openMenu()
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={vi.fn()} onSignOut={vi.fn()} />,
+    )
+    await user.click(screen.getByRole('button', { name: /account menu/i }))
     expect(screen.getByText(/all synced/i)).toBeInTheDocument()
 
     setStatus({ state: 'pending', pendingCount: 2 })
-    render(<AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={vi.fn()} onSignOut={vi.fn()} />)
+    rerender(
+      <AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={vi.fn()} onSignOut={vi.fn()} />,
+    )
+
     expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(screen.getByText(/2 pending/i)).toBeInTheDocument()
   })
 
   it('exposes menu ARIA semantics: aria-haspopup/aria-expanded on the trigger, role=menu on the panel, role=menuitem on the rows (KTD8)', async () => {
@@ -196,8 +204,10 @@ describe('AccountMenu (U3)', () => {
       window.dispatchEvent(new Event('resize'))
     })
 
-    expect(menu.style.right).not.toBe('')
-    expect(Number.parseFloat(menu.style.right)).toBeGreaterThanOrEqual(0)
-    void rightBefore
+    // rAF-coalesced: wait for the scheduled frame to actually recompute the position.
+    await waitFor(() => expect(menu.style.right).not.toBe(rightBefore))
+    // right = window.innerWidth - rect.right; the trigger didn't move, so a wider viewport
+    // must increase `right`.
+    expect(Number.parseFloat(menu.style.right)).toBeGreaterThan(Number.parseFloat(rightBefore))
   })
 })

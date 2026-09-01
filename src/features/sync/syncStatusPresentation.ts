@@ -38,7 +38,7 @@ export function detail(status: SyncStatus, t: Translator): string {
 /**
  * Single per-state color map (KTD6): synced is emerald (R2's recolor, replacing the previous
  * neutral gray), pending is the brand orange, offline is gray, problem is red. `badgeColorClassName`
- * and `labelClassName` below are both derived from this one map so the badge dot and the tinted
+ * and `pillToneClassName` below are both derived from this one map so the badge dot and the tinted
  * status chip can never disagree on a state's color.
  */
 const STATE_COLOR = {
@@ -71,8 +71,11 @@ export function badgeColorClassName(state: SyncState): string {
   return DOT_CLASS[STATE_COLOR[state]]
 }
 
-/** Pill styling for the label, per state — `'problem'` reads visually distinct from R8. */
-export function labelClassName(state: SyncState): string {
-  const base = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm transition'
-  return `${base} ${PILL_CLASS[STATE_COLOR[state]]}`
+/**
+ * Tinted background/text pairing for the status chip, per state — `'problem'` reads visually
+ * distinct from R8. Composed through `Badge`'s `tint` mode (e.g. the account dropdown's status
+ * chip) instead of hand-rolling the pill shape.
+ */
+export function pillToneClassName(state: SyncState): string {
+  return PILL_CLASS[STATE_COLOR[state]]
 }
