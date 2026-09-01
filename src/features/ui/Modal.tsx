@@ -21,22 +21,31 @@ function getFocusables(panel: HTMLElement): HTMLElement[] {
  * or pressing Escape closes it; focus moves into the panel on open and returns to whatever
  * triggered it on close.
  *
- * Default z-index sits above the mobile List/Map nav (`z-[1100]` in App.tsx) — a modal must cover
- * that nav when open, not render underneath it. `1100` itself sits above Leaflet's own highest
- * internal z-index (1000, its attribution control) so the map, which fills its pane fully with no
- * reserved gap, can never draw on top of the nav either. `DecidePanel` deliberately stays 100
- * above this default.
+ * Default z-index (`--z-modal`, index.css) sits above the mobile List/Map nav (`--z-nav` in
+ * App.tsx) — a modal must cover that nav when open, not render underneath it. `--z-nav` itself
+ * sits above Leaflet's own highest internal z-index (1000, its attribution control) so the map,
+ * which fills its pane fully with no reserved gap, can never draw on top of the nav either.
+ * `DecidePanel` deliberately stays 100 above this default (`--z-modal-elevated`).
+ *
+ * `initialFocus` (default `'auto'`) picks what receives focus on open: `'auto'` focuses the
+ * panel's first focusable descendant, safe for every caller that renders a `ModalHeader` (its
+ * close button) first. A caller with no such safe leading control — content that starts with a
+ * state-mutating action, e.g. the mobile filters sheet's first cuisine chip — passes `'panel'`
+ * instead, which focuses the (inert, `tabIndex={-1}`) panel container itself so opening the
+ * modal never fires an unintended action.
  */
 export function Modal({
   onClose,
   children,
-  zIndexClassName = 'z-[1200]',
+  zIndexClassName = 'z-[var(--z-modal)]',
   panelClassName = '',
+  initialFocus = 'auto',
 }: {
   onClose: () => void
   children: ReactNode
   zIndexClassName?: string
   panelClassName?: string
+  initialFocus?: 'auto' | 'panel'
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
   // Keep the latest onClose in a ref so the effect depends on nothing that changes identity
@@ -45,11 +54,18 @@ export function Modal({
   // stealing focus back to the panel's first focusable element mid-interaction.
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+  // Same reasoning as onCloseRef: read the latest value without adding it to the effect's deps.
+  const initialFocusRef = useRef(initialFocus)
+  initialFocusRef.current = initialFocus
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
     if (panelRef.current) {
-      getFocusables(panelRef.current)[0]?.focus()
+      if (initialFocusRef.current === 'panel') {
+        panelRef.current.focus()
+      } else {
+        getFocusables(panelRef.current)[0]?.focus()
+      }
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -101,8 +117,9 @@ export function Modal({
     >
       <div
         ref={panelRef}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full rounded-t-2xl bg-white p-5 shadow-xl md:max-w-md md:rounded-2xl ${panelClassName}`}
+        className={`w-full rounded-t-2xl bg-white p-5 shadow-xl outline-none md:max-w-md md:rounded-2xl ${panelClassName}`}
       >
         <div aria-hidden="true" className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-gray-200 md:hidden" />
         {children}

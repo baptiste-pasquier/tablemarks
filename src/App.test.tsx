@@ -154,7 +154,7 @@ describe('App shell', () => {
   it("gives the mobile List/Map nav a z-index above Leaflet's own panes/controls (max 1000, e.g. the attribution control), so the map — which now fills <main> fully — can never render on top of it and hide it", () => {
     render(<App />)
     const nav = screen.getByRole('navigation')
-    expect(nav).toHaveClass('z-[1100]')
+    expect(nav).toHaveClass('z-[var(--z-nav)]')
   })
 
   it('aligns the "+" FAB with the "Filtres · N" pill at the same bottom offset', async () => {
@@ -348,6 +348,16 @@ describe('desktop filter overlay (U3)', () => {
     expect(overlayWrapper).toBeDefined()
     expect(overlayWrapper?.className).not.toMatch(/md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-2xl/)
     expect(overlayWrapper?.textContent).toBe('')
+  })
+
+  it('spans the full map-pane width via md:right-[var(--filter-overlay-right)], not a fixed md:w-96 card width, so it right-aligns with the Locate/zoom control stack', () => {
+    const { container } = render(<App />)
+
+    const overlayWrapper = Array.from(container.querySelectorAll('div')).find((el) =>
+      el.className.includes('md:top-[var(--filter-overlay-top)]'),
+    )
+    expect(overlayWrapper).toHaveClass('md:right-[var(--filter-overlay-right)]')
+    expect(overlayWrapper?.className).not.toMatch(/md:w-96/)
   })
 
   describe('measured-height -> control-stack offset wiring (KTD3)', () => {
@@ -564,7 +574,7 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
 
     const overlay = screen.getByRole('button', { name: /see results/i }).closest('[class*="fixed inset-0"]')
-    expect(overlay).toHaveClass('z-[1200]')
+    expect(overlay).toHaveClass('z-[var(--z-modal)]')
   })
 
   it('hides FilterBar and SortBar from the mobile inline flow without unmounting them (R4) — both stay under a `hidden md:block` wrapper', async () => {
@@ -657,6 +667,39 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
 
     expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('focuses the panel itself on open, not a filter-mutating control (R6 bug fix — no ModalHeader means the first focusable descendant is otherwise "Clear all" or the first cuisine chip)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+    // Activate a filter first so "Clear all" is rendered — the more dangerous of the two
+    // possible auto-focus targets this test guards against (it would wipe the active filter).
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: 'French' }))
+
+    await user.click(screen.getByRole('button', { name: 'Filters · 1' }))
+
+    const sheet = sheetPanel()
+    expect(sheet.queryByRole('button', { name: 'French' })).not.toHaveFocus()
+    expect(sheet.queryByRole('button', { name: 'Clear all' })).not.toHaveFocus()
+    // Filter must still be active — a reflexive Enter/Space right after open must not have fired.
+    expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument()
+  })
+
+  it('keeps the "See results" button reachable outside the scrollable filter/sort content, so it cannot scroll out of view (bug fix)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+
+    const seeResults = screen.getByRole('button', { name: /see results/i })
+    const scrollBox = seeResults.closest('[class*="rounded-t-2xl"]')?.querySelector('.overflow-y-auto')
+    expect(seeResults).toHaveClass('shrink-0')
+    expect(scrollBox).not.toBeNull()
+    expect(scrollBox?.contains(seeResults)).toBe(false)
   })
 
   it('renders no title bar, no divider under SortBar, and a "See results" button that closes the sheet (design revision)', async () => {

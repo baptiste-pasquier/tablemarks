@@ -269,9 +269,10 @@ export default function App() {
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside
-          className={`min-h-0 flex-1 flex-col border-gray-200 bg-white md:flex md:w-80 md:flex-none md:border-r ${
-            view === 'list' ? 'flex' : 'hidden'
-          }`}
+          className={cn(
+            'min-h-0 flex-1 flex-col border-gray-200 bg-white md:flex md:w-80 md:flex-none md:border-r',
+            view === 'list' ? 'flex' : 'hidden',
+          )}
         >
           <div className="space-y-2 border-b border-gray-100 p-3">
             <Button variant="primary" className="w-full" onClick={() => setAdding(true)}>
@@ -339,9 +340,7 @@ export default function App() {
             box MapView fills, leaving a plain gap between the map and the bottom nav. The map has
             no scrollable content to move the padding into — it just fills <main> fully, and the
             "+" FAB/nav bar float above it via their own fixed/absolute positioning regardless. */}
-        <main
-          className={`relative min-h-0 flex-1 ${view === 'map' ? 'block' : 'hidden'} md:block`}
-        >
+        <main className={cn('relative min-h-0 flex-1', view === 'map' ? 'block' : 'hidden', 'md:block')}>
           <MapView
             markers={markers}
             onSelect={setSelectedId}
@@ -377,13 +376,13 @@ export default function App() {
           regardless of scroll/pan position in either pane. */}
       <nav
         aria-label={t('shell.viewNav')}
-        // z-[1100]: now that the map fills <main> fully (no reserved bottom gap), Leaflet's own
-        // internal panes/controls (tile pane z-200, attribution/.leaflet-bottom z-1000 — see
-        // node_modules/leaflet/dist/leaflet.css) extend into this same screen region. Leaflet's
-        // container doesn't establish its own stacking context, so those z-index values compare
-        // directly against this nav — anything at or below 1000 (the old z-30 included) render
-        // underneath them and disappear entirely.
-        className="fixed inset-x-0 bottom-0 z-[1100] flex gap-1 border-t border-gray-200 bg-white/95 p-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden"
+        // --z-nav (index.css): now that the map fills <main> fully (no reserved bottom gap),
+        // Leaflet's own internal panes/controls (tile pane z-200, attribution/.leaflet-bottom
+        // z-1000 — see node_modules/leaflet/dist/leaflet.css) extend into this same screen
+        // region. Leaflet's container doesn't establish its own stacking context, so those
+        // z-index values compare directly against this nav — anything at or below 1000 (the old
+        // z-30 included) render underneath them and disappear entirely.
+        className="fixed inset-x-0 bottom-0 z-[var(--z-nav)] flex gap-1 border-t border-gray-200 bg-white/95 p-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden"
       >
         {(['list', 'map'] as const).map((v) => (
           <button
@@ -433,19 +432,33 @@ export default function App() {
           already read from (R6). No ModalHeader/title here (design revision): FilterBar already
           renders its own "Filters"/"Filtres" eyebrow plus a clear-all action, so an outer title
           bar was redundant. Closing still works via the backdrop, Escape, and the drag handle
-          Modal already renders — the "See results" button below is a fourth, explicit way in. */}
+          Modal already renders — the "See results" button below is a fourth, explicit way in.
+          `initialFocus="panel"` (bug fix): with no ModalHeader, FilterBar's own first focusable
+          descendant is a filter-mutating control ("Clear all" when a filter is active, else the
+          first cuisine chip) — focusing the panel itself on open instead of that first control
+          stops a reflexive Enter/Space keypress from silently changing the filter. The
+          FilterBar/SortBar pair renders inside its own scrollable box, capped below the always-
+          visible "See results" button (bug fix): FilterBar's "+N more" cuisine overflow can grow
+          past one screen, and without this split the button — the only labeled close affordance
+          left after removing ModalHeader — could scroll out of reach with it. */}
       {filtersOpen && (
-        <Modal onClose={() => setFiltersOpen(false)} panelClassName="max-h-[90vh] overflow-y-auto">
-          <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="stacked" />
-          <SortBar
-            criterion={effectiveSortCriterion}
-            direction={effectiveSortDirection}
-            distanceSelectable={distanceSelectable}
-            onCriterionChange={handleSortCriterionChange}
-            onDirectionToggle={handleSortDirectionToggle}
-            divider={false}
-          />
-          <Button variant="primary" className="mt-2 w-full" onClick={() => setFiltersOpen(false)}>
+        <Modal
+          onClose={() => setFiltersOpen(false)}
+          panelClassName="flex max-h-[90vh] flex-col overflow-hidden"
+          initialFocus="panel"
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="stacked" />
+            <SortBar
+              criterion={effectiveSortCriterion}
+              direction={effectiveSortDirection}
+              distanceSelectable={distanceSelectable}
+              onCriterionChange={handleSortCriterionChange}
+              onDirectionToggle={handleSortDirectionToggle}
+              divider={false}
+            />
+          </div>
+          <Button variant="primary" className="mt-2 w-full shrink-0" onClick={() => setFiltersOpen(false)}>
             {t('filters.seeResults')}
           </Button>
         </Modal>

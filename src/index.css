@@ -54,6 +54,20 @@
      "+N autres" expansion grows the overlay. Stays 0px until that effect runs. */
   --filter-overlay-height: 0px;
 
+  /* Single source of truth for the app's fixed-position stacking order, so the ordering isn't
+     coordinated only by cross-referencing comments across App.tsx/Modal.tsx/DecidePanel.tsx. Each
+     tier must clear the one below it: --z-nav sits above Leaflet's own highest internal z-index
+     (1000, its attribution control — see node_modules/leaflet/dist/leaflet.css; Leaflet's own
+     container doesn't establish a CSS stacking context, so its panes compare directly against
+     this app's own fixed-position elements) since the map now fills <main> fully with no reserved
+     gap; --z-modal sits above --z-nav so an open modal always covers it; --z-modal-elevated is
+     DecidePanel's own +100 bump above --z-modal (unchanged relative gap from before this token
+     scale existed). FiltersPill/the "+" FAB/MapView's Locate-zoom stack stay at a plain z-[1000]
+     (unchanged, no reported conflict — they don't spatially overlap the nav). */
+  --z-nav: 1100;
+  --z-modal: 1200;
+  --z-modal-elevated: 1300;
+
   /* Carnet culinaire ramp — warm, sepia-tinted parchment neutrals replacing
      Tailwind's default cool grays, for the paper-editorial identity. */
   --color-gray-50: #fbf6ee;

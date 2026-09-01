@@ -39,8 +39,9 @@ export function DecidePanel({
   const nextRadius = RADIUS_PRESETS_KM.find((r) => r > radiusKm)
 
   return (
-    // Stays 100 above Modal's own default z-index (see Modal.tsx) — unchanged relative gap.
-    <Modal onClose={onClose} zIndexClassName="z-[1300]" panelClassName="flex max-h-[88vh] flex-col">
+    // Stays 100 above Modal's own default z-index (--z-modal-elevated, index.css) — unchanged
+    // relative gap.
+    <Modal onClose={onClose} zIndexClassName="z-[var(--z-modal-elevated)]" panelClassName="flex max-h-[88vh] flex-col">
       <ModalHeader title={t('decide.title')} onClose={onClose} />
 
       <div className="mb-3 flex items-center gap-2 text-sm">
