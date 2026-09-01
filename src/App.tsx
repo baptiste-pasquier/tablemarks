@@ -229,19 +229,28 @@ export default function App() {
         ref={headerRef}
         className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/85 px-4 py-3 backdrop-blur"
       >
-        <div className="flex items-center gap-2.5">
+        {/* min-w-0/flex-1 + truncate (bug fix): without a shrink target, this group's natural width
+            plus the right group's (sign-in/settings) forced the header wider than a narrow phone
+            viewport (~320-375px), overflowing the whole page horizontally — visible as a
+            scrollbar/white gutter on the right with the settings button pushed toward or past the
+            edge. Letting this group shrink (and truncate its one-word title on the narrowest
+            screens) keeps the row within the viewport instead; the right group stays `shrink-0`
+            since its buttons shouldn't truncate. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-lg shadow-sm ring-1 ring-brand-strong/20"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand text-lg shadow-sm ring-1 ring-brand-strong/20"
           >
             🍴
           </span>
-          <div className="leading-none">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-gray-900">{t('app.title')}</h1>
+          <div className="min-w-0 leading-none">
+            <h1 className="truncate font-display text-2xl font-semibold tracking-tight text-gray-900">
+              {t('app.title')}
+            </h1>
             <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">{t('shell.tagline')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {signedIn ? (
             <div className="flex items-center gap-3 text-sm">
               <SyncStatusIndicator />

@@ -151,6 +151,19 @@ describe('App shell', () => {
     expect(screen.queryByRole('button', { name: 'Add a place' })).not.toBeInTheDocument()
   })
 
+  it('lets the header shrink instead of overflow on a narrow viewport (bug fix): the title group can shrink/truncate, the actions group stays shrink-0', () => {
+    render(<App />)
+
+    const heading = screen.getByRole('heading', { name: 'Tablemarks' })
+    expect(heading).toHaveClass('truncate')
+    const titleGroup = heading.closest('[class*="min-w-0"]')?.parentElement
+    expect(titleGroup).toHaveClass('min-w-0', 'flex-1')
+
+    const settingsButton = screen.getByRole('button', { name: /settings|paramètres/i })
+    const actionsGroup = settingsButton.closest('[class*="shrink-0"]')
+    expect(actionsGroup).toHaveClass('shrink-0')
+  })
+
   it("gives the mobile List/Map nav a z-index above Leaflet's own panes/controls (max 1000, e.g. the attribution control), so the map — which now fills <main> fully — can never render on top of it and hide it", () => {
     render(<App />)
     const nav = screen.getByRole('navigation')
