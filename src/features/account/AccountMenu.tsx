@@ -191,7 +191,7 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             className="z-[var(--z-dropdown)] w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-lg outline-none"
           >
             <p className="truncate px-2 text-sm font-semibold text-gray-900">{email}</p>
-            <div className="mt-1 w-fit">
+            <div className="mt-2 w-fit">
               <Badge
                 text={syncLabel(status, t)}
                 tone={pillToneClassName(status.state)}
