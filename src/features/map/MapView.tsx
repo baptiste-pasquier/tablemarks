@@ -360,6 +360,29 @@ export function MapView({
   const [map, setMap] = useState<L.Map | null>(null)
   const [locating, setLocating] = useState(false)
   const [visibleLabelIds, setVisibleLabelIds] = useState<Set<string>>(new Set())
+  // The Locate/zoom control stack renders as a JSX child of MapContainer (see the comment at its
+  // JSX below), so its DOM lives inside Leaflet's own map container: a native 'dblclick' or
+  // 'wheel' on these buttons would otherwise bubble up and also trigger the map's own
+  // doubleClickZoom/scrollWheelZoom handling. Stopped with plain native listeners rather than
+  // Leaflet's `L.DomEvent.disableClickPropagation` (what its own built-in controls use): that
+  // helper also binds 'mousedown'/'touchstart', and on a touch-capable browser (`Browser.touch`)
+  // Leaflet additionally simulates 'dblclick' from two 'click' events via its own native 'click'
+  // listener — which ends up calling `stopPropagation()` on the *real* second click event itself
+  // whenever two clicks anywhere in this stack land within 200ms, silently dropping React's
+  // onClick for that second click (e.g. tapping zoom-in then zoom-out quickly). Only 'dblclick'
+  // and 'wheel' are the events the map actually listens for here, so only those need stopping.
+  const controlStackRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = controlStackRef.current
+    if (!el) return
+    const stopPropagation = (e: Event) => e.stopPropagation()
+    el.addEventListener('dblclick', stopPropagation)
+    el.addEventListener('wheel', stopPropagation, { passive: true })
+    return () => {
+      el.removeEventListener('dblclick', stopPropagation)
+      el.removeEventListener('wheel', stopPropagation)
+    }
+  }, [])
 
   async function locate() {
     setLocating(true)
@@ -507,8 +530,13 @@ export function MapView({
             stack, so it reserves no space this stack could rely on — App.tsx measures the
             overlay's real rendered height via a ResizeObserver and writes it to that property, so
             this stack always clears it regardless of how tall the cuisine row's "+N autres"
-            expansion grows it. */}
-        <div className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(var(--filter-overlay-height,0px)+2rem)]">
+            expansion grows it. Also stops 'dblclick'/'wheel' propagation (see `controlStackRef`
+            above) so interacting with these buttons doesn't also reach Leaflet's own container
+            and trigger its native doubleClickZoom/scrollWheelZoom handling. */}
+        <div
+          ref={controlStackRef}
+          className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(var(--filter-overlay-height,0px)+2rem)]"
+        >
           <button
             type="button"
             onClick={() => void locate()}

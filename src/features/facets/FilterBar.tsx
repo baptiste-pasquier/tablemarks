@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   VERDICTS,
@@ -16,7 +16,6 @@ import { ToggleChip } from '../ui/ToggleChip'
 import { cn } from '../../lib/cn'
 
 const DEFAULT_CUISINE_ROW_SIZE = 6
-const CUISINE_GROUP_ID = 'filter-cuisine-group'
 
 type FilterBarLayout = 'stacked' | 'inline'
 
@@ -107,6 +106,10 @@ export function FilterBar({
   layout?: FilterBarLayout
 }) {
   const { t } = useTranslation()
+  // Per-instance id (not a module constant): the desktop overlay and the mobile bottom sheet can
+  // both have a FilterBar mounted at once, and a shared id would produce duplicate DOM ids plus
+  // an ambiguous aria-controls target for assistive tech.
+  const cuisineGroupId = useId()
   const [expanded, setExpanded] = useState(false)
   const ranked = useMemo(() => rankedCuisines(restaurants), [restaurants])
   const hasUncategorized = useMemo(() => restaurants.some((r) => !r.cuisine?.trim()), [restaurants])
@@ -130,7 +133,7 @@ export function FilterBar({
         {(ranked.length > 0 || hasUncategorized) && (
           <div>
             <GroupLabel>{t('filters.cuisineGroup')}</GroupLabel>
-            <div id={CUISINE_GROUP_ID} className="mt-1 flex flex-wrap gap-1.5">
+            <div id={cuisineGroupId} className="mt-1 flex flex-wrap gap-1.5">
               {shownCuisines.map((c) => (
                 <ToggleChip
                   key={c}
@@ -166,7 +169,7 @@ export function FilterBar({
                 <button
                   type="button"
                   aria-expanded={expanded}
-                  aria-controls={CUISINE_GROUP_ID}
+                  aria-controls={cuisineGroupId}
                   onClick={() => setExpanded((e) => !e)}
                   className="inline-flex min-h-10 items-center rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 transition hover:border-gray-400 hover:bg-gray-50"
                 >

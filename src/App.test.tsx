@@ -319,6 +319,17 @@ describe('desktop filter overlay (U3)', () => {
     expect(cuisineChip.compareDocumentPosition(restaurantRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  it('does not float a visible white card over the map when there are no restaurants yet (FilterBar renders nothing, but the measurement wrapper must stay mounted)', () => {
+    const { container } = render(<App />)
+
+    const overlayWrapper = Array.from(container.querySelectorAll('div')).find((el) =>
+      el.className.includes('md:top-[var(--filter-overlay-top)]'),
+    )
+    expect(overlayWrapper).toBeDefined()
+    expect(overlayWrapper?.className).not.toMatch(/md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-2xl/)
+    expect(overlayWrapper?.textContent).toBe('')
+  })
+
   describe('measured-height -> control-stack offset wiring (KTD3)', () => {
     // A dedicated fake (rather than a generic vi.fn()-based stub) so the constructor can both
     // capture its `callback` for the test to invoke manually (simulating a real resize, e.g. the
@@ -336,7 +347,7 @@ describe('desktop filter overlay (U3)', () => {
         this.observed.push(target)
       }
       unobserve() {}
-      disconnect() {}
+      disconnect = vi.fn()
     }
     let instances: FakeResizeObserver[]
     let mockOverlayHeight = 120
@@ -386,6 +397,17 @@ describe('desktop filter overlay (U3)', () => {
       instances.forEach((observer) => observer.callback([entry], observer as unknown as ResizeObserver))
 
       expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('260px')
+    })
+
+    it('disconnects the ResizeObserver when App unmounts', async () => {
+      await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+      const { unmount } = render(<App />)
+      await screen.findByText('R1 Place')
+
+      unmount()
+
+      expect(instances[0]?.disconnect).toHaveBeenCalledOnce()
     })
   })
 })

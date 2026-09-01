@@ -633,12 +633,36 @@ describe('MapView', () => {
       expect(screen.getByRole('button', { name: /zoom out/i })).toBeDisabled()
       expect(screen.getByRole('button', { name: /zoom in/i })).not.toBeDisabled()
     })
+
+    it('unsubscribes its zoomend handler on unmount, alongside LabelVisibility', () => {
+      const { unmount } = render(<MapView markers={[]} />)
+      // ZoomControl's own `update` handler plus LabelVisibility's `recompute` handler.
+      expect(handlers.get('zoomend')?.size).toBe(2)
+
+      unmount()
+      expect(handlers.get('zoomend')?.size).toBe(0)
+    })
   })
 
   it("positions the Locate/zoom control stack's top offset from the measured --filter-overlay-height CSS variable (KTD3), so it always clears the filter overlay regardless of its rendered height", () => {
     render(<MapView markers={[]} />)
     const stack = screen.getByRole('button', { name: /center on my location/i }).parentElement
     expect(stack?.className).toContain('--filter-overlay-height')
+  })
+
+  it("stops 'dblclick' and 'wheel' from bubbling out of the Locate/zoom control stack, so interacting with these buttons can't also reach the map's own doubleClickZoom/scrollWheelZoom handling", () => {
+    const { container } = render(<MapView markers={[]} />)
+    const onDblClick = vi.fn()
+    const onWheel = vi.fn()
+    container.addEventListener('dblclick', onDblClick)
+    container.addEventListener('wheel', onWheel)
+
+    const zoomInButton = screen.getByRole('button', { name: /zoom in/i })
+    zoomInButton.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+    zoomInButton.dispatchEvent(new WheelEvent('wheel', { bubbles: true }))
+
+    expect(onDblClick).not.toHaveBeenCalled()
+    expect(onWheel).not.toHaveBeenCalled()
   })
 
   describe('tooltip content (U3 R4, R5, KTD5)', () => {

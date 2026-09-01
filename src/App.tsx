@@ -22,6 +22,7 @@ import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
 import { geolocate, type GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
+import { cn } from './lib/cn'
 
 type MobileView = 'list' | 'map'
 
@@ -192,6 +193,20 @@ export default function App() {
     return () => observer.disconnect()
   }, [])
 
+  // If the viewport crosses into desktop width while the mobile filters sheet is open, close it:
+  // desktop already shows FilterBar/SortBar in the floating overlay/sidebar, so leaving the sheet
+  // open would stack a second, now-redundant copy on top of that layout. No-ops when matchMedia
+  // isn't available, same feature-detection style as the ResizeObserver guard above.
+  useEffect(() => {
+    if (!filtersOpen || typeof window.matchMedia !== 'function') return
+    const mql = window.matchMedia('(min-width: 768px)')
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setFiltersOpen(false)
+    }
+    mql.addEventListener('change', handleChange)
+    return () => mql.removeEventListener('change', handleChange)
+  }, [filtersOpen])
+
   return (
     <div className="flex h-full flex-col bg-gray-50 text-gray-900">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/85 px-4 py-3 backdrop-blur">
@@ -257,10 +272,16 @@ export default function App() {
               pill's bottom sheet instead, so this wrapper (and SortBar just below it) is hidden
               entirely below md. `layout="inline"` lays its cuisine/status/verdict groups
               side-by-side, matching a horizontal floating card instead of a vertical sidebar
-              stack. */}
+              stack. The card chrome (border/bg/shadow) is gated on `restaurants.length` — this
+              div itself must stay mounted unconditionally so `filterOverlayRef` never goes stale,
+              but FilterBar renders nothing when empty, so without this gate an empty app would
+              still float a blank white card over the map. */}
           <div
             ref={filterOverlayRef}
-            className="hidden md:block md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:w-96 md:max-h-[50vh] md:overflow-y-auto md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg"
+            className={cn(
+              'hidden md:block md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:w-96 md:max-h-[50vh] md:overflow-y-auto',
+              restaurants.length > 0 && 'md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg',
+            )}
           >
             <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="inline" />
           </div>
