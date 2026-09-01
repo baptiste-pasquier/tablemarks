@@ -45,6 +45,21 @@ function toggledDirections(
   return { ...directions, date: directions.date === 'newest' ? 'oldest' : 'newest' }
 }
 
+/** Mobile-only "Filtres · N" pill (U4, R4). Rendered once from each pane so exactly one is ever
+ *  mounted at a time (see the two call sites below); both share this one class string/label. */
+function FiltersPill({ count, onOpen }: { count: number; onOpen: () => void }) {
+  const { t } = useTranslation()
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="fixed bottom-[calc(var(--safe-area-floating-offset)+1rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+    >
+      {t('filters.mobilePillLabel', { count })}
+    </button>
+  )
+}
+
 export default function App() {
   const { t } = useTranslation()
   const restaurants = useRestaurants()
@@ -161,14 +176,18 @@ export default function App() {
   useLayoutEffect(() => {
     const el = filterOverlayRef.current
     if (!el) return
-    const applyHeight = () => {
-      document.documentElement.style.setProperty('--filter-overlay-height', `${el.getBoundingClientRect().height}px`)
+    const applyHeight = (height: number) => {
+      document.documentElement.style.setProperty('--filter-overlay-height', `${height}px`)
     }
-    applyHeight()
+    // A forced layout read is the point of useLayoutEffect here: this call has to happen
+    // synchronously before paint, before `observe()` below can report anything.
+    applyHeight(el.getBoundingClientRect().height)
     // No-op (rather than throwing) where ResizeObserver isn't available — the initial
     // `applyHeight()` call above still runs, it just won't track later resizes.
     if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(applyHeight)
+    // Reads the size the browser already computed for this notification, rather than forcing
+    // another layout read via getBoundingClientRect() on every resize tick.
+    const observer = new ResizeObserver(([entry]) => applyHeight(entry.borderBoxSize[0].blockSize))
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
@@ -262,13 +281,7 @@ export default function App() {
               a place" FAB below), and only once there's something to filter (mirrors FilterBar's
               own `restaurants.length === 0` guard) so it never floats over the empty-list state. */}
           {view === 'list' && restaurants.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(true)}
-              className="fixed bottom-[calc(var(--safe-area-floating-offset)+1rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
-            >
-              {t('filters.mobilePillLabel', { count: activeCount })}
-            </button>
+            <FiltersPill count={activeCount} onOpen={() => setFiltersOpen(true)} />
           )}
         </aside>
 
@@ -303,13 +316,7 @@ export default function App() {
               empty-list guard as the list pane's pill above; only one of the two is ever mounted
               at a time since each is gated on the currently active mobile view. */}
           {view === 'map' && restaurants.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(true)}
-              className="fixed bottom-[calc(var(--safe-area-floating-offset)+1rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
-            >
-              {t('filters.mobilePillLabel', { count: activeCount })}
-            </button>
+            <FiltersPill count={activeCount} onOpen={() => setFiltersOpen(true)} />
           )}
         </main>
       </div>

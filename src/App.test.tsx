@@ -376,8 +376,14 @@ describe('desktop filter overlay (U3)', () => {
 
       expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('120px')
 
+      // The real callback reads the size straight off the entry the browser already computed
+      // (`entry.borderBoxSize[0].blockSize`), rather than re-querying getBoundingClientRect — so
+      // the fake resize notification has to carry that shape too, matching the real API.
       mockOverlayHeight = 260
-      instances.forEach((observer) => observer.callback([], observer as unknown as ResizeObserver))
+      const entry = {
+        borderBoxSize: [{ blockSize: mockOverlayHeight, inlineSize: 0 }],
+      } as unknown as ResizeObserverEntry
+      instances.forEach((observer) => observer.callback([entry], observer as unknown as ResizeObserver))
 
       expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('260px')
     })
