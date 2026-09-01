@@ -6,6 +6,7 @@ import { useSyncStatus } from '../../sync/useSyncStatus'
 import { label as syncLabel, detail as syncDetail, pillToneClassName, badgeColorClassName } from '../sync/syncStatusPresentation'
 import { trapTabFocus } from '../ui/Modal'
 import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
 
 interface AccountMenuProps {
@@ -200,24 +201,24 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             </div>
             <p className="mt-1 px-2 text-xs text-gray-500">{syncDetail(status, t)}</p>
             <div className="my-2 border-t border-gray-100" />
-            <button
-              type="button"
+            <Button
+              variant="menu-item"
+              tone="neutral"
               role="menuitem"
               onClick={handleOpenSettings}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
             >
               <Settings className="h-4 w-4 text-gray-500" aria-hidden="true" />
               {t('settings.title')}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="menu-item"
+              tone="destructive"
               role="menuitem"
               onClick={handleSignOut}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-red-600 hover:bg-red-50"
             >
               <LogOut className="h-4 w-4" aria-hidden="true" />
               {t('shell.signOut')}
-            </button>
+            </Button>
           </div>,
           document.body,
         )}
