@@ -113,7 +113,7 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
   })
 
-  it('shows the settings button (not nested in the auth ternary) and opens Settings, when signed in', async () => {
+  it('shows the avatar/account menu instead of a standalone settings button, and opens Settings from its Réglages entry, when signed in (R1, R5)', async () => {
     mockUseAuth.mockReturnValue({
       signedIn: true,
       email: 'person@example.com',
@@ -124,10 +124,60 @@ describe('App shell', () => {
     const user = userEvent.setup()
     render(<App />)
     await screen.findByText(/no places yet/i)
-    const settingsButton = screen.getByRole('button', { name: /settings|paramètres/i })
+    expect(screen.queryByRole('button', { name: /settings|paramètres/i })).not.toBeInTheDocument()
 
-    await user.click(settingsButton)
+    await user.click(screen.getByRole('button', { name: /account menu|menu du compte/i }))
+    await user.click(screen.getByRole('menuitem', { name: /settings|paramètres/i }))
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  })
+
+  it('signing out from the account menu clears auth and unmounts the avatar subtree, mirroring the old SyncStatusIndicator gating', async () => {
+    const signOutMock = vi.fn()
+    mockUseAuth.mockReturnValue({
+      signedIn: true,
+      email: 'person@example.com',
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: signOutMock,
+    })
+    const user = userEvent.setup()
+    const { rerender } = render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    await user.click(screen.getByRole('button', { name: /account menu|menu du compte/i }))
+    await user.click(screen.getByRole('menuitem', { name: /sign out|se déconnecter/i }))
+    expect(signOutMock).toHaveBeenCalled()
+
+    // useAuth is mocked statically in this suite (its own reactivity is covered by
+    // useAuth.test.ts) — simulate the re-render the real hook triggers once signOut() clears
+    // pb.authStore, before the deferred focus-shift below fires.
+    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+    rerender(<App />)
+
+    expect(screen.queryByRole('button', { name: /account menu|menu du compte/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('moves focus to the "Se connecter" button after signing out from the account menu (KTD3)', async () => {
+    const signOutMock = vi.fn()
+    mockUseAuth.mockReturnValue({
+      signedIn: true,
+      email: 'person@example.com',
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: signOutMock,
+    })
+    const user = userEvent.setup()
+    const { rerender } = render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    await user.click(screen.getByRole('button', { name: /account menu|menu du compte/i }))
+    await user.click(screen.getByRole('menuitem', { name: /sign out|se déconnecter/i }))
+
+    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+    rerender(<App />)
+
+    await waitFor(() => expect(document.getElementById('shell-signin-button')).toHaveFocus())
   })
 
   it('switches the mobile view toggle between list and map', async () => {

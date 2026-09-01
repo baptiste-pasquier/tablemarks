@@ -121,7 +121,6 @@
     "summary": "Importé : {{added}} ajoutés, {{updated}} mis à jour, {{unchanged}} inchangés."
   },
   "sync": {
-    "ariaLabel": "État de synchronisation",
     "allSynced": "Tout est synchronisé",
     "pendingCount": "{{count}} en attente",
     "offline": "Hors ligne",

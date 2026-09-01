@@ -18,7 +18,7 @@ import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
 import { Button } from './features/ui/Button'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
-import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
+import { AccountMenu } from './features/account/AccountMenu'
 import { geolocate, type GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
 import { cn } from './lib/cn'
@@ -94,7 +94,15 @@ function FiltersPill({ count, onOpen }: { count: number; onOpen: () => void }) {
 export default function App() {
   const { t } = useTranslation()
   const restaurants = useRestaurants()
-  const { signedIn, email, signIn, signOut } = useAuth()
+  const { signedIn, email, avatarUrl, signIn, signOut } = useAuth()
+  // KTD3: after signing out from the dropdown, the avatar trigger no longer exists (the signed-out
+  // header mounts in its place), so focus moves to the "Se connecter" button once it mounts.
+  const handleSignOut = () => {
+    signOut()
+    requestAnimationFrame(() => {
+      document.getElementById('shell-signin-button')?.focus()
+    })
+  }
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
@@ -252,27 +260,28 @@ export default function App() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {signedIn ? (
-            <div className="flex items-center gap-3 text-sm">
-              <SyncStatusIndicator />
-              <span className="hidden max-w-[10rem] truncate text-gray-500 sm:block">{email}</span>
-              <Button variant="secondary" onClick={signOut}>
-                {t('shell.signOut')}
-              </Button>
-            </div>
+            <AccountMenu
+              email={email}
+              avatarUrl={avatarUrl}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onSignOut={handleSignOut}
+            />
           ) : (
-            <Button variant="secondary" onClick={() => void signIn()}>
-              {t('shell.signIn')}
-              <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
-            </Button>
+            <>
+              <Button id="shell-signin-button" variant="secondary" onClick={() => void signIn()}>
+                {t('shell.signIn')}
+                <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
+              </Button>
+              <Button
+                variant="secondary"
+                iconOnly
+                onClick={() => setSettingsOpen(true)}
+                aria-label={t('settings.openAria')}
+              >
+                <Settings className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </>
           )}
-          <Button
-            variant="secondary"
-            iconOnly
-            onClick={() => setSettingsOpen(true)}
-            aria-label={t('settings.openAria')}
-          >
-            <Settings className="h-4 w-4" aria-hidden="true" />
-          </Button>
         </div>
       </header>
 
