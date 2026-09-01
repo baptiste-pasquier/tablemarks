@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Settings, LogOut } from 'lucide-react'
 import { useSyncStatus } from '../../sync/useSyncStatus'
 import { label as syncLabel, detail as syncDetail, labelClassName, badgeColorClassName } from '../sync/syncStatusPresentation'
-import { getFocusables } from '../ui/Modal'
+import { trapTabFocus } from '../ui/Modal'
 import { cn } from '../../lib/cn'
 
 interface AccountMenuProps {
@@ -56,8 +56,23 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
       setPosition({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
     }
     updatePosition()
-    window.addEventListener('resize', updatePosition)
-    return () => window.removeEventListener('resize', updatePosition)
+
+    // Coalesced to one recompute per animation frame — a window drag-resize fires `resize`
+    // dozens of times a second, and each raw event doesn't need its own layout read + re-render.
+    let scheduledFrame: number | null = null
+    function onResize() {
+      if (scheduledFrame !== null) return
+      scheduledFrame = requestAnimationFrame(() => {
+        scheduledFrame = null
+        updatePosition()
+      })
+    }
+
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      if (scheduledFrame !== null) cancelAnimationFrame(scheduledFrame)
+    }
   }, [open])
 
   // Focus lands on the panel itself once it mounts, not the first row — mirrors Modal's
@@ -76,7 +91,7 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
 
   // KTD2 dismissal (mousedown outside the trigger/panel, plus Escape) and the committed Tab-trap
   // within the panel's focusable rows, mirroring Modal.tsx's Escape-listener lifecycle and
-  // getFocusables-based wrap logic.
+  // reusing its trapTabFocus wrap logic directly.
   useEffect(() => {
     if (!open) return
 
@@ -101,27 +116,8 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
         close()
         return
       }
-      if (e.key !== 'Tab' || !panelRef.current) return
-      const focusables = getFocusables(panelRef.current)
-      if (focusables.length === 0) return
-      const first = focusables[0]
-      const last = focusables[focusables.length - 1]
-      const active = document.activeElement as HTMLElement | null
-      const activeIndex = active ? focusables.indexOf(active) : -1
-
-      if (activeIndex === -1) {
-        e.preventDefault()
-        if (e.shiftKey) last.focus()
-        else first.focus()
-        return
-      }
-      if (e.shiftKey && active === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault()
-        first.focus()
-      }
+      if (!panelRef.current) return
+      trapTabFocus(panelRef.current, e)
     }
 
     document.addEventListener('mousedown', onMouseDown)
