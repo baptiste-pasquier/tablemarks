@@ -502,12 +502,13 @@ describe('sort criterion/direction wiring (U4)', () => {
 })
 
 describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
-  /** Scopes queries to the Modal panel whose ModalHeader carries `title` (R6 — disambiguates from
-   *  the desktop overlay's own FilterBar/SortBar, which stay mounted underneath the sheet). */
-  function sheetPanel(title: string) {
-    const heading = screen.getByRole('heading', { name: title })
-    const panel = heading.closest('[class*="rounded-t-2xl"]')
-    if (!panel) throw new Error(`Modal panel for "${title}" not found`)
+  /** Scopes queries to the Modal panel, found via its "See results" button (R6 — disambiguates
+   *  from the desktop overlay's own FilterBar/SortBar, which stay mounted underneath the sheet;
+   *  the sheet carries no title/heading of its own — see the design revision note in App.tsx). */
+  function sheetPanel() {
+    const seeResults = screen.getByRole('button', { name: /see results/i })
+    const panel = seeResults.closest('[class*="rounded-t-2xl"]')
+    if (!panel) throw new Error('Modal panel not found')
     return within(panel as HTMLElement)
   }
 
@@ -572,7 +573,7 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
 
-    const sheet = sheetPanel('Filters')
+    const sheet = sheetPanel()
     expect(sheet.getByRole('button', { name: 'French' })).toBeInTheDocument()
     expect(sheet.getByRole('button', { name: 'Date' })).toBeInTheDocument()
     expect(sheet.getByRole('button', { name: 'Distance' })).toBeInTheDocument()
@@ -580,11 +581,28 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
 
     await user.keyboard('{Escape}')
 
-    expect(screen.queryByRole('heading', { name: 'Filters' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('opens the bottom sheet from the map pane too, and its own close button returns to the same (map) pane', async () => {
+  it('renders no title bar, no divider under SortBar, and a "See results" button that closes the sheet (design revision)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    await screen.findByText('R1 Place')
+    await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
+
+    const sheet = sheetPanel()
+    expect(sheet.queryByRole('heading')).not.toBeInTheDocument()
+    const sortWrapper = sheet.getByRole('button', { name: 'Date' }).closest('div')
+    expect(sortWrapper).not.toHaveClass('border-b')
+
+    await user.click(sheet.getByRole('button', { name: /see results/i }))
+    expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
+  })
+
+  it('opens the bottom sheet from the map pane too, and its "See results" button returns to the same (map) pane', async () => {
     const user = userEvent.setup()
     await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
 
@@ -593,11 +611,11 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     await user.click(screen.getByRole('button', { name: /^map$/i }))
 
     await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
-    const sheet = sheetPanel('Filters')
+    const sheet = sheetPanel()
 
-    await user.click(sheet.getByRole('button', { name: /close/i }))
+    await user.click(sheet.getByRole('button', { name: /see results/i }))
 
-    expect(screen.queryByRole('heading', { name: 'Filters' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^map$/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
@@ -611,11 +629,11 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     expect(screen.getByText('Thai Place')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
-    const sheet = sheetPanel('Filters')
+    const sheet = sheetPanel()
     await user.click(sheet.getByRole('button', { name: 'French' }))
-    await user.keyboard('{Escape}')
+    await user.click(sheet.getByRole('button', { name: /see results/i }))
 
-    expect(screen.queryByRole('heading', { name: 'Filters' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /see results/i })).not.toBeInTheDocument()
     expect(screen.getByText('French Place')).toBeInTheDocument()
     expect(screen.queryByText('Thai Place')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument()

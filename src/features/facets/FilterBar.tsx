@@ -19,17 +19,36 @@ const DEFAULT_CUISINE_ROW_SIZE = 6
 
 type FilterBarLayout = 'stacked' | 'inline'
 
-// Only the groups-wrapper's flex classes swap per layout (KTD1) — mirrors ToggleChip's `shape`
-// prop, never touching chip/button rendering underneath. `inline` lays the cuisine group and
-// status/verdict group out side-by-side (row) for a future desktop overlay; `stacked` keeps
-// today's vertical sidebar/sheet shape.
-const GROUPS_LAYOUT_CLASS: Record<FilterBarLayout, string> = {
-  stacked: 'space-y-2',
-  inline: 'flex flex-wrap items-start gap-4',
+// Only each group's own row classes swap per layout (KTD1) — mirrors ToggleChip's `shape` prop,
+// never touching chip/button rendering underneath. `stacked` (mobile sheet) keeps the label above
+// its own wrapping chip row, today's shape. `inline` (desktop overlay) puts the label to the left
+// of a single flowing chip box that wraps *within its own box*, so an overflowing line stays
+// aligned under the first chip instead of resetting flush-left under the label — this only works
+// because the label and the chip box are two flex items in a *non-wrapping* row (`GROUP_ROW_CLASS`
+// has no `flex-wrap`); the chip box itself carries the `flex-wrap` (`CHIPS_ROW_CLASS`). Both
+// layouts stack the cuisine group above the status/verdict group with no divider between them.
+const GROUP_ROW_CLASS: Record<FilterBarLayout, string> = {
+  stacked: '',
+  inline: 'flex items-start gap-3',
+}
+const CHIPS_ROW_CLASS: Record<FilterBarLayout, string> = {
+  stacked: 'mt-1 flex flex-wrap gap-1.5',
+  inline: 'flex min-w-0 flex-1 flex-wrap gap-1.5',
 }
 
-function GroupLabel({ children }: { children: string }) {
-  return <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{children}</span>
+function GroupLabel({ layout, children }: { layout: FilterBarLayout; children: string }) {
+  return (
+    <span
+      className={cn(
+        'text-[10px] font-semibold uppercase tracking-wide text-gray-400',
+        // Nudges the label down to roughly align with the first line of pills beside it — only
+        // meaningful in `inline`, where the label sits beside the chip box rather than above it.
+        layout === 'inline' && 'shrink-0 pt-1',
+      )}
+    >
+      {children}
+    </span>
+  )
 }
 
 /** Distinct cuisines actually in use, ranked by restaurant count (desc), alphabetical tie-break. */
@@ -90,9 +109,9 @@ function splitCuisineRows(
 /**
  * Clearable facet chips for cuisine / status / verdict. The shell owns the filter state.
  *
- * `layout` (KTD1) swaps only the groups-wrapper's flex classes: `stacked` (default) keeps today's
- * vertical sidebar/sheet shape; `inline` lays the cuisine group and status/verdict group out
- * side-by-side (row) for a future desktop overlay. Chip rendering itself never changes.
+ * `layout` (KTD1) swaps only each group's row classes: `stacked` (default, mobile sheet) keeps
+ * each group's label above its own wrapping chip row; `inline` (desktop overlay) puts the label to
+ * the left of a single flowing chip row instead. Chip rendering itself never changes.
  */
 export function FilterBar({
   restaurants,
@@ -129,11 +148,11 @@ export function FilterBar({
         )}
       </div>
 
-      <div className={cn(GROUPS_LAYOUT_CLASS[layout])}>
+      <div className="space-y-2">
         {(ranked.length > 0 || hasUncategorized) && (
-          <div>
-            <GroupLabel>{t('filters.cuisineGroup')}</GroupLabel>
-            <div id={cuisineGroupId} className="mt-1 flex flex-wrap gap-1.5">
+          <div className={GROUP_ROW_CLASS[layout]}>
+            <GroupLabel layout={layout}>{t('filters.cuisineGroup')}</GroupLabel>
+            <div id={cuisineGroupId} className={CHIPS_ROW_CLASS[layout]}>
               {shownCuisines.map((c) => (
                 <ToggleChip
                   key={c}
@@ -180,12 +199,9 @@ export function FilterBar({
           </div>
         )}
 
-        {/* The top border/padding is a stacked-layout separator between this group and the
-            cuisine group above it — under `layout="inline"` the two groups sit side-by-side, not
-            stacked, so keeping it there would draw a stray line across only this group's top. */}
-        <div className={cn('space-y-1', layout === 'stacked' && 'border-t border-gray-100 pt-2')}>
-          <GroupLabel>{t('filters.statusVerdictGroup')}</GroupLabel>
-          <div className="flex flex-wrap gap-1.5">
+        <div className={GROUP_ROW_CLASS[layout]}>
+          <GroupLabel layout={layout}>{t('filters.statusVerdictGroup')}</GroupLabel>
+          <div className={CHIPS_ROW_CLASS[layout]}>
             {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => (
               <ToggleChip
                 key={s}

@@ -45,6 +45,10 @@ function isReversed(criterion: SortCriterion, direction: SortDirection): boolean
  * `layout` (KTD1) swaps only the outer wrapper's flex classes: `stacked` (default) keeps today's
  * sidebar/sheet shape; `inline` forces a single-row horizontal flow for a future desktop overlay.
  * Chip rendering itself never changes.
+ *
+ * `divider` (default `true`) draws the bottom border that separates this bar from whatever
+ * follows it — the sidebar's `RestaurantList` today. The mobile filters sheet passes `false`:
+ * there, a "See results" button sits directly below with no list to separate from.
  */
 export function SortBar({
   criterion,
@@ -53,6 +57,7 @@ export function SortBar({
   onCriterionChange,
   onDirectionToggle,
   layout = 'stacked',
+  divider = true,
 }: {
   criterion: SortCriterion
   direction: SortDirection
@@ -60,11 +65,12 @@ export function SortBar({
   onCriterionChange: (criterion: SortCriterion) => void
   onDirectionToggle: () => void
   layout?: SortBarLayout
+  divider?: boolean
 }) {
   const { t } = useTranslation()
 
   return (
-    <div className={cn(WRAPPER_LAYOUT_CLASS[layout], 'border-b border-gray-100 p-3')}>
+    <div className={cn(WRAPPER_LAYOUT_CLASS[layout], 'p-3', divider && 'border-b border-gray-100')}>
       <Eyebrow>{t('sort.title')}</Eyebrow>
       <span className="inline-flex overflow-hidden rounded-full border border-gray-300">
         <ToggleChip

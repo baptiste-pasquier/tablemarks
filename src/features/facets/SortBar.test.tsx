@@ -127,6 +127,21 @@ describe('SortBar', () => {
     expect(container.firstChild).not.toHaveClass('flex-nowrap')
   })
 
+  it('drops the bottom border when divider={false}, e.g. the mobile filters sheet', () => {
+    const { container } = render(
+      <SortBar
+        criterion="distance"
+        direction="nearest"
+        distanceSelectable={true}
+        onCriterionChange={vi.fn()}
+        onDirectionToggle={vi.fn()}
+        divider={false}
+      />,
+    )
+
+    expect(container.firstChild).not.toHaveClass('border-b')
+  })
+
   it('renders the inline horizontal-flow wrapper classes when layout="inline"', () => {
     const { container } = render(
       <SortBar

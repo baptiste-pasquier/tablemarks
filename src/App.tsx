@@ -16,7 +16,6 @@ import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
 import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
-import { ModalHeader } from './features/ui/ModalHeader'
 import { Button } from './features/ui/Button'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { SyncStatusIndicator } from './features/sync/SyncStatusIndicator'
@@ -270,16 +269,18 @@ export default function App() {
               is authored inside <aside> but must render visually over <main>. Below md, FilterBar
               no longer renders inline here at all (U4) — its mobile home is the "Filtres · N"
               pill's bottom sheet instead, so this wrapper (and SortBar just below it) is hidden
-              entirely below md. `layout="inline"` lays its cuisine/status/verdict groups
-              side-by-side, matching a horizontal floating card instead of a vertical sidebar
-              stack. The card chrome (border/bg/shadow) is gated on `restaurants.length` — this
-              div itself must stay mounted unconditionally so `filterOverlayRef` never goes stale,
-              but FilterBar renders nothing when empty, so without this gate an empty app would
-              still float a blank white card over the map. */}
+              entirely below md. Spans the full width of the map pane (`left`/`right`, no `width`
+              — see --filter-overlay-right-gap) rather than a fixed card width, matching the
+              confirmed prototype; `layout="inline"` puts each group's label to the left of its own
+              wrapping chip row instead of above it, so that width is actually put to use. The card
+              chrome (border/bg/shadow) is gated on `restaurants.length` — this div itself must
+              stay mounted unconditionally so `filterOverlayRef` never goes stale, but FilterBar
+              renders nothing when empty, so without this gate an empty app would still float a
+              blank white card over the map. */}
           <div
             ref={filterOverlayRef}
             className={cn(
-              'hidden md:block md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:w-96 md:max-h-[50vh] md:overflow-y-auto',
+              'hidden md:block md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:right-[var(--filter-overlay-right-gap)] md:max-h-[50vh] md:overflow-y-auto',
               restaurants.length > 0 && 'md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg',
             )}
           >
@@ -393,10 +394,12 @@ export default function App() {
       {/* Mobile filters/sort bottom sheet (U4, KTD4/KTD6): reuses FilterBar/SortBar as-is —
           same `filter`/`onChange` and sort state/callbacks as the desktop overlay above, no
           re-derivation — so a toggle here updates the same `visible`/`sorted` lists the panes
-          already read from (R6). */}
+          already read from (R6). No ModalHeader/title here (design revision): FilterBar already
+          renders its own "Filters"/"Filtres" eyebrow plus a clear-all action, so an outer title
+          bar was redundant. Closing still works via the backdrop, Escape, and the drag handle
+          Modal already renders — the "See results" button below is a fourth, explicit way in. */}
       {filtersOpen && (
         <Modal onClose={() => setFiltersOpen(false)} panelClassName="max-h-[90vh] overflow-y-auto">
-          <ModalHeader title={t('filters.sheetTitle')} onClose={() => setFiltersOpen(false)} />
           <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="stacked" />
           <SortBar
             criterion={effectiveSortCriterion}
@@ -404,7 +407,11 @@ export default function App() {
             distanceSelectable={distanceSelectable}
             onCriterionChange={handleSortCriterionChange}
             onDirectionToggle={handleSortDirectionToggle}
+            divider={false}
           />
+          <Button variant="primary" className="mt-2 w-full" onClick={() => setFiltersOpen(false)}>
+            {t('filters.seeResults')}
+          </Button>
         </Modal>
       )}
 

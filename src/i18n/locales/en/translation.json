@@ -75,7 +75,7 @@
     "collapse": "Collapse",
     "showMore": "+{{count}} more",
     "mobilePillLabel": "Filters · {{count}}",
-    "sheetTitle": "Filters"
+    "seeResults": "See results"
   },
   "sort": {
     "title": "Sort",
