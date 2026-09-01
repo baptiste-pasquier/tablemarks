@@ -84,7 +84,7 @@ function FiltersPill({ count, onOpen }: { count: number; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="fixed bottom-[calc(var(--safe-area-floating-offset)+1rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+      className="fixed bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-xl ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
     >
       {t('filters.mobilePillLabel', { count })}
     </button>
@@ -269,7 +269,7 @@ export default function App() {
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside
-          className={`min-h-0 flex-1 flex-col border-gray-200 bg-white pb-[var(--safe-area-floating-offset)] md:flex md:w-80 md:flex-none md:border-r md:pb-0 ${
+          className={`min-h-0 flex-1 flex-col border-gray-200 bg-white md:flex md:w-80 md:flex-none md:border-r ${
             view === 'list' ? 'flex' : 'hidden'
           }`}
         >
@@ -316,7 +316,14 @@ export default function App() {
               onDirectionToggle={handleSortDirectionToggle}
             />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* pb-[safe-area-floating-offset] lives on the scrollable box itself, not on <aside>
+              (bug fix): padding on a non-scrolling ancestor shrinks the box and leaves a plain,
+              always-visible gap between the list and the bottom nav — wrong, since the floating
+              "Filtres · N" pill below is `position: fixed` and needs no flow space reserved for
+              it either. Padding on the *scrollable* box instead becomes part of its scrollable
+              content, invisible until actually scrolled to the end, so the list — and the pill
+              floating over it — both extend the full height with no dead strip. */}
+          <div className="min-h-0 flex-1 overflow-y-auto pb-[var(--safe-area-floating-offset)] md:pb-0">
             <RestaurantList items={sorted} onSelect={setSelectedId} currentPosition={currentPosition} />
           </div>
           {/* Mobile-only "Filtres · N" pill (U4, R4): opens the filters/sort bottom sheet.

@@ -548,6 +548,19 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     expect(sortWrapper).toHaveClass('hidden', 'md:block')
   })
 
+  it('puts the safe-area bottom clearance on the scrollable list box, not on <aside> itself, so the list has no dead gap above the bottom nav (the pill floats over it, fixed-positioned, needing no flow space)', async () => {
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    const restaurantRow = await screen.findByText('R1 Place')
+
+    const asideEl = restaurantRow.closest('aside')
+    expect(asideEl).not.toHaveClass('pb-[var(--safe-area-floating-offset)]')
+
+    const scrollBox = restaurantRow.closest('[class*="overflow-y-auto"]')
+    expect(scrollBox).toHaveClass('overflow-y-auto', 'pb-[var(--safe-area-floating-offset)]', 'md:pb-0')
+  })
+
   it('does not render the pill when the restaurant list is empty', async () => {
     render(<App />)
     await screen.findByText(/no places yet/i)
