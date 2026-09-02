@@ -224,17 +224,19 @@ export function LabelVisibility({
   markers,
   active,
   selectedId,
+  hoveredId,
   onChange,
 }: {
   markers: MapMarker[]
   active?: boolean
   /**
-   * Used purely as a geometry input (which icon radius — 24 vs 30 — applies to the selected
-   * marker), never to suppress/prioritize a label: visibility eligibility is still governed
-   * solely by `visibleLabelIds`/`computeLabelPlacement`, no special-casing of `selectedId` here
-   * (KTD7 — see MapView's own guard for the enforcement point).
+   * Used purely as a geometry input (which icon radius — 24 vs 30 — applies to the selected or
+   * hovered marker), never to suppress/prioritize a label: visibility eligibility is still
+   * governed solely by `visibleLabelIds`/`computeLabelPlacement`, no special-casing of
+   * `selectedId`/`hoveredId` here (KTD7 — see MapView's own guard for the enforcement point).
    */
   selectedId?: string | null
+  hoveredId?: string | null
   onChange?: (visible: Set<string>) => void
 }) {
   const map = useMap()
@@ -253,7 +255,7 @@ export function LabelVisibility({
         y: point.y,
         name: truncateLabel(m.name),
         dimmed: m.dimmed,
-        iconRadius: (m.id === selectedId ? 30 : 24) / 2,
+        iconRadius: (m.id === selectedId || m.id === hoveredId ? 30 : 24) / 2,
       }
     })
     const next = computeLabelPlacement(candidates, viewCenter, zoomFloorMet)
@@ -263,7 +265,7 @@ export function LabelVisibility({
       lastReportedRef.current = next
       onChange?.(next)
     }
-  }, [map, markers, onChange, selectedId])
+  }, [map, markers, onChange, selectedId, hoveredId])
 
   const wasActiveRef = useRef(active)
   useEffect(() => {
@@ -425,6 +427,7 @@ export function MapView({
           markers={markers}
           active={active}
           selectedId={selectedId}
+          hoveredId={hoveredId}
           onChange={setVisibleLabelIds}
         />
         {markers.map((m) => {

@@ -885,6 +885,26 @@ describe('LabelVisibility', () => {
     expect(onChange).toHaveBeenLastCalledWith(new Set(['b']))
   })
 
+  it('feeds the hovered marker\'s larger icon radius into label placement, same as a selected marker (U2 KTD3 parity)', () => {
+    mockZoom = LABEL_ZOOM_FLOOR
+    const onChange = vi.fn()
+    const { rerender } = render(<LabelVisibility markers={MARKERS} onChange={onChange} />)
+    expect(vi.mocked(computeLabelPlacement).mock.calls[0][0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'a', iconRadius: 12 }),
+        expect.objectContaining({ id: 'b', iconRadius: 12 }),
+      ]),
+    )
+
+    rerender(<LabelVisibility markers={MARKERS} hoveredId="a" onChange={onChange} />)
+    expect(vi.mocked(computeLabelPlacement).mock.calls[1][0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'a', iconRadius: 15 }),
+        expect.objectContaining({ id: 'b', iconRadius: 12 }),
+      ]),
+    )
+  })
+
   it('nudges Leaflet via invalidateSize before recomputing when `active` flips false -> true (mobile List pane switching back to Map, KTD10)', () => {
     mockZoom = LABEL_ZOOM_FLOOR
     const onChange = vi.fn()
