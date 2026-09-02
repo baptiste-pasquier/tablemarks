@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { freshDB } from './test/idb'
@@ -42,8 +42,11 @@ vi.mock('./features/RestaurantList', async (importOriginal) => {
 
 // U2 wires `fallbackCenter` into MapView without it changing any observable behavior yet (that's
 // a later unit's job), so a passthrough wrapper that captures the received props — mirroring the
-// RestaurantList wrapper above — is how the prop-plumbing is asserted.
-const mockLastMapViewProps: { current: { fallbackCenter?: GeoPoint | null } | null } = {
+// RestaurantList wrapper above — is how the prop-plumbing is asserted. Also captures `hoveredId`
+// (U2 KTD1) — App.tsx's own hover state passed through alongside `selectedId`.
+const mockLastMapViewProps: {
+  current: { fallbackCenter?: GeoPoint | null; hoveredId?: string | null } | null
+} = {
   current: null,
 }
 vi.mock('./features/map/MapView', async (importOriginal) => {
@@ -393,6 +396,64 @@ describe('fallbackCenter wiring (U2, R2/R5)', () => {
     await screen.findByText(/no places yet/i)
 
     expect(mockLastMapViewProps.current?.fallbackCenter).toBeNull()
+  })
+})
+
+describe('hover wiring end-to-end (U2 R1-R3, KTD1)', () => {
+  it('passes the hovered restaurant id to MapView as hoveredId on mouse enter, and clears it back to null on mouse leave', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    const card = await screen.findByText('R1 Place')
+    const button = card.closest('button')
+    if (!button) throw new Error('restaurant card button not found')
+
+    expect(mockLastMapViewProps.current?.hoveredId).toBeNull()
+
+    await user.hover(button)
+    expect(mockLastMapViewProps.current?.hoveredId).toBe('r1')
+
+    await user.unhover(button)
+    expect(mockLastMapViewProps.current?.hoveredId).toBeNull()
+  })
+
+  it('also clears hoveredId on focus/blur, mirroring the mouse-enter/leave wiring (keyboard users)', async () => {
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    const card = await screen.findByText('R1 Place')
+    const button = card.closest('button')
+    if (!button) throw new Error('restaurant card button not found')
+
+    act(() => button.focus())
+    expect(mockLastMapViewProps.current?.hoveredId).toBe('r1')
+
+    act(() => button.blur())
+    expect(mockLastMapViewProps.current?.hoveredId).toBeNull()
+  })
+})
+
+describe('mobile list selection unaffected by hover wiring (U2 R3/R12, AE4)', () => {
+  it('still opens the restaurant detail full-screen sheet on tap in the default (list) mobile view, and hovering first does not open it or switch panes', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    const card = await screen.findByText('R1 Place')
+    expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
+
+    const button = card.closest('button')
+    if (!button) throw new Error('restaurant card button not found')
+
+    await user.hover(button)
+    expect(screen.queryByRole('heading', { name: 'R1 Place' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(button)
+
+    expect(await screen.findByRole('heading', { name: 'R1 Place' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^list$/i })).toHaveAttribute('aria-pressed', 'true')
   })
 })
 

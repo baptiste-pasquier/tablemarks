@@ -340,6 +340,7 @@ export function MapView({
   currentPosition,
   fallbackCenter,
   selectedId,
+  hoveredId,
   active,
 }: {
   markers: MapMarker[]
@@ -351,6 +352,15 @@ export function MapView({
   /** Fallback map center (R2/R5) — the most-recently-added-or-visited restaurant, consumed by `Recenter`'s fallback tier. */
   fallbackCenter?: GeoPoint | null
   selectedId?: string | null
+  /**
+   * The restaurant currently hovered/focused in the list (desktop only, U2 KTD1/KTD4) — gives its
+   * pin the same halo as a selected one (see the `iconForColor` call below), with no map pan/
+   * re-center of its own. No explicit desktop-only gate here: on mobile the list/map panes are
+   * mutually exclusive (only one of `view === 'list'` / `'map'` is ever visible), so a hovered
+   * pin's halo is never on-screen at the same time as the hovering list card below the desktop
+   * breakpoint (KTD4).
+   */
+  hoveredId?: string | null
   active?: boolean
 }) {
   const { t } = useTranslation()
@@ -437,7 +447,7 @@ export function MapView({
               position={[m.lat, m.lng]}
               icon={iconForColor(
                 m.color,
-                m.id === selectedId,
+                m.id === selectedId || m.id === hoveredId,
                 m.name,
                 // Labels don't special-case the tooltip/selection (KTD7): visibility follows
                 // visibleLabelIds only, never selectedId/tooltip-open state. !m.dimmed is

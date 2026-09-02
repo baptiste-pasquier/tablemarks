@@ -104,6 +104,11 @@ export default function App() {
     })
   }
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Sibling to `selectedId`, same prop-threading pattern (U2 KTD1): desktop-only hover highlight
+  // for the corresponding map pin, fed by RestaurantList's onHover and consumed by MapView's
+  // hoveredId prop. No explicit desktop-only gate is added here — see MapView.tsx's own comment
+  // on `hoveredId` for why the mobile list/map pane toggle already makes this a no-op on mobile.
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -343,7 +348,12 @@ export default function App() {
               content, invisible until actually scrolled to the end, so the list — and the pill
               floating over it — both extend the full height with no dead strip. */}
           <div className="min-h-0 flex-1 overflow-y-auto pb-[var(--safe-area-floating-offset)] md:pb-0">
-            <RestaurantList items={sorted} onSelect={setSelectedId} currentPosition={currentPosition} />
+            <RestaurantList
+              items={sorted}
+              onSelect={setSelectedId}
+              onHover={setHoveredId}
+              currentPosition={currentPosition}
+            />
           </div>
           {/* Mobile-only "Filtres · N" pill (U4, R4): opens the filters/sort bottom sheet.
               Rendered only while this pane is the active mobile view (mirrors the map pane's "Add
@@ -368,6 +378,7 @@ export default function App() {
             currentPosition={currentPosition}
             fallbackCenter={fallbackCenter}
             selectedId={selectedId}
+            hoveredId={hoveredId}
             active={view === 'map'}
           />
           {/* On mobile the add action lives in the list pane, so surface it on the map too. */}

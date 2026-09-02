@@ -353,6 +353,37 @@ describe('MapView', () => {
     expect(getByTestId('marker-2-2').dataset.size).toBe('30')
   })
 
+  describe('hovered marker halo (U2 R1-R3, KTD3)', () => {
+    it('renders the hovered marker with the same halo/size as a selected marker, and moves it when hoveredId changes', () => {
+      const { getByTestId, rerender } = render(<MapView markers={MARKERS} hoveredId="a" />)
+      expect(getByTestId('marker-1-1').dataset.size).toBe('30')
+      expect(getByTestId('marker-2-2').dataset.size).toBe('24')
+
+      rerender(<MapView markers={MARKERS} hoveredId="b" />)
+      expect(getByTestId('marker-1-1').dataset.size).toBe('24')
+      expect(getByTestId('marker-2-2').dataset.size).toBe('30')
+    })
+
+    it('never pans or re-centers the map when only hoveredId changes (R2)', () => {
+      const { rerender } = render(<MapView markers={MARKERS} hoveredId={null} />)
+      mockMapSetView.mockClear()
+
+      rerender(<MapView markers={MARKERS} hoveredId="a" />)
+      rerender(<MapView markers={MARKERS} hoveredId="b" />)
+      rerender(<MapView markers={MARKERS} hoveredId={null} />)
+
+      expect(mockMapSetView).not.toHaveBeenCalled()
+    })
+
+    it('renders one unchanged halo/size, not a "double" state, for a marker that is both selectedId and hoveredId', () => {
+      const { getByTestId } = render(
+        <MapView markers={MARKERS} selectedId="a" hoveredId="a" onSelect={vi.fn()} />,
+      )
+      expect(getByTestId('marker-1-1').dataset.size).toBe('30')
+      expect(getByTestId('marker-2-2').dataset.size).toBe('24')
+    })
+  })
+
   describe('marker click / tooltip guard (U2 R2, R3, KTD3, KTD4)', () => {
     it('still calls onSelect(m.id) when a restaurant marker is clicked (regression)', async () => {
       const onSelect = vi.fn()
