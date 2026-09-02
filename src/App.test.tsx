@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { freshDB } from './test/idb'
@@ -431,6 +431,52 @@ describe('hover wiring end-to-end (U2 R1-R3, KTD1)', () => {
 
     act(() => button.blur())
     expect(mockLastMapViewProps.current?.hoveredId).toBeNull()
+  })
+
+  it('clears hoveredId when the restaurant detail closes, so Modal restoring focus to the list card cannot relight the hover halo (code-review finding)', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    render(<App />)
+    const card = await screen.findByText('R1 Place')
+    const button = card.closest('button')
+    if (!button) throw new Error('restaurant card button not found')
+
+    await user.click(button)
+    expect(await screen.findByRole('heading', { name: 'R1 Place' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /close/i }))
+    expect(screen.queryByRole('heading', { name: 'R1 Place' })).not.toBeInTheDocument()
+    // Modal's cleanup restores focus to `button` (the element that was focused when the detail
+    // opened), which fires RestaurantList's onFocus handler -- without the App.tsx fix this sets
+    // hoveredId back to 'r1' even though nothing is actually being hovered.
+    expect(mockLastMapViewProps.current?.hoveredId).toBeNull()
+  })
+
+  it('clears a stale hoveredId once the hovered restaurant drops out of the filtered list (code-review finding)', async () => {
+    await createRestaurant({ id: 'r1', name: 'French Place', lat: 1, lng: 1, cuisine: 'French' })
+    await createRestaurant({ id: 'r2', name: 'Thai Place', lat: 2, lng: 2, cuisine: 'Thai' })
+
+    render(<App />)
+    const card = await screen.findByText('French Place')
+    const button = card.closest('button')
+    if (!button) throw new Error('restaurant card button not found')
+
+    // fireEvent, not user.hover/user.click: user-event tracks a virtual pointer position and
+    // would synthesize its own mouseleave on `button` as a side effect of "moving" to click the
+    // Thai chip elsewhere -- that would clear hoveredId via the ordinary onMouseLeave path and
+    // never exercise this fix. A real-world trigger (a background sync update reclassifying this
+    // restaurant, or any filter change while the mouse stays physically still) fires no DOM event
+    // on `button` at all, which is exactly what fireEvent.click on the chip reproduces here: the
+    // card unmounts (React fires no mouseleave/blur for that), and only App's own effect --
+    // watching whether hoveredId still appears in the filtered list -- can notice and clear it.
+    fireEvent.mouseEnter(button)
+    expect(mockLastMapViewProps.current?.hoveredId).toBe('r1')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thai' }))
+    expect(screen.queryByText('French Place')).not.toBeInTheDocument()
+
+    await waitFor(() => expect(mockLastMapViewProps.current?.hoveredId).toBeNull())
   })
 })
 
