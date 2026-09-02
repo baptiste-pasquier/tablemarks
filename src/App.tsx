@@ -104,6 +104,27 @@ export default function App() {
     })
   }
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Sibling to `selectedId`, same prop-threading pattern (U2 KTD1): desktop-only hover highlight
+  // for the corresponding map pin, fed by RestaurantList's onHover and consumed by MapView's
+  // hoveredId prop. No explicit desktop-only gate is added here — see MapView.tsx's own comment
+  // on `hoveredId` for why the mobile list/map pane toggle already makes this a no-op on mobile.
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  // Closing RestaurantDetail's Modal restores focus to the list card that opened it (Modal.tsx's
+  // `previouslyFocused?.focus()` cleanup), which fires RestaurantList's onFocus handler as if the
+  // user were newly hovering it -- even though nothing is actually under the pointer. That restore
+  // runs as a passive-effect cleanup, strictly after the onClose handler's own state updates
+  // commit, so clearing hoveredId in onClose alone can't survive it (the later, focus-triggered
+  // call always wins). Set right before closing, this flag suppresses exactly that one
+  // programmatic re-fire in handleHover below, then clears itself so every later genuine hover
+  // behaves normally (code-review finding, KTD2 phantom-halo guard).
+  const suppressNextHoverRef = useRef(false)
+  function handleHover(id: string | null) {
+    if (suppressNextHoverRef.current) {
+      suppressNextHoverRef.current = false
+      return
+    }
+    setHoveredId(id)
+  }
   const [adding, setAdding] = useState(false)
   const [deciding, setDeciding] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -147,6 +168,13 @@ export default function App() {
     () => sortRestaurants(visible, effectiveSortCriterion, effectiveSortDirection, positionForSort),
     [visible, effectiveSortCriterion, effectiveSortDirection, positionForSort],
   )
+  // A hovered restaurant that drops out of the filtered/sorted list (e.g. a filter change) unmounts
+  // its RestaurantList card with no mouseleave/blur to clear hoveredId, since React doesn't fire
+  // either on unmount — its dimmed, filtered-out map pin would otherwise keep the hover halo lit
+  // indefinitely with no card left to hover away from it.
+  useEffect(() => {
+    if (hoveredId && !sorted.some((r) => r.id === hoveredId)) setHoveredId(null)
+  }, [sorted, hoveredId])
 
   // `next` is computed from the current `sortPreference` closure value and `writeSortPreference`
   // runs once here, rather than inside a `setSortPreference` updater — React StrictMode
@@ -343,7 +371,12 @@ export default function App() {
               content, invisible until actually scrolled to the end, so the list — and the pill
               floating over it — both extend the full height with no dead strip. */}
           <div className="min-h-0 flex-1 overflow-y-auto pb-[var(--safe-area-floating-offset)] md:pb-0">
-            <RestaurantList items={sorted} onSelect={setSelectedId} currentPosition={currentPosition} />
+            <RestaurantList
+              items={sorted}
+              onSelect={setSelectedId}
+              onHover={handleHover}
+              currentPosition={currentPosition}
+            />
           </div>
           {/* Mobile-only "Filtres · N" pill (U4, R4): opens the filters/sort bottom sheet.
               Rendered only while this pane is the active mobile view (mirrors the map pane's "Add
@@ -368,6 +401,7 @@ export default function App() {
             currentPosition={currentPosition}
             fallbackCenter={fallbackCenter}
             selectedId={selectedId}
+            hoveredId={hoveredId}
             active={view === 'map'}
           />
           {/* On mobile the add action lives in the list pane, so surface it on the map too. */}
@@ -484,7 +518,15 @@ export default function App() {
       {selectedId && (
         <RestaurantDetail
           restaurantId={selectedId}
-          onClose={() => setSelectedId(null)}
+          // Also clears hoveredId defensively and arms suppressNextHoverRef (see its declaration
+          // above) so Modal's focus-restore-on-close can't relight this restaurant's hover halo —
+          // on both desktop (visible map pane) and mobile (hidden, not unmounted, so a stale
+          // hoveredId would surface the moment the user switches to Map).
+          onClose={() => {
+            suppressNextHoverRef.current = true
+            setSelectedId(null)
+            setHoveredId(null)
+          }}
           currentPosition={currentPosition}
         />
       )}

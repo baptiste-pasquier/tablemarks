@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 import { RestaurantList } from './RestaurantList'
 import { VERDICT_ICON, VERDICTS, translateVerdict, type Restaurant } from '../types/models'
 
@@ -172,5 +172,61 @@ describe('RestaurantList', () => {
     )
 
     expect(namesWithout.map((t) => t?.replace(/\d+(\.\d+)? (m|km)$/, ''))).toEqual(namesWith)
+  })
+
+  it('calls onHover with the restaurant id when its card is hovered', () => {
+    const onHover = vi.fn()
+    render(<RestaurantList items={[r({ id: 'a', name: 'Place A' })]} onHover={onHover} />)
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /Place A/ }))
+
+    expect(onHover).toHaveBeenCalledWith('a')
+  })
+
+  it('calls onHover(null) when the mouse leaves the card', () => {
+    const onHover = vi.fn()
+    render(<RestaurantList items={[r({ id: 'a', name: 'Place A' })]} onHover={onHover} />)
+
+    const card = screen.getByRole('button', { name: /Place A/ })
+    fireEvent.mouseEnter(card)
+    fireEvent.mouseLeave(card)
+
+    expect(onHover).toHaveBeenLastCalledWith(null)
+  })
+
+  it('calls onHover with the restaurant id when its card is focused, and onHover(null) when it is blurred', () => {
+    const onHover = vi.fn()
+    render(<RestaurantList items={[r({ id: 'a', name: 'Place A' })]} onHover={onHover} />)
+
+    const card = screen.getByRole('button', { name: /Place A/ })
+    fireEvent.focus(card)
+    expect(onHover).toHaveBeenLastCalledWith('a')
+
+    fireEvent.blur(card)
+    expect(onHover).toHaveBeenLastCalledWith(null)
+  })
+
+  it('calls both onSelect and onHover(null) when a card is clicked', () => {
+    const onSelect = vi.fn()
+    const onHover = vi.fn()
+    render(<RestaurantList items={[r({ id: 'a', name: 'Place A' })]} onSelect={onSelect} onHover={onHover} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Place A/ }))
+
+    expect(onSelect).toHaveBeenCalledWith('a')
+    expect(onHover).toHaveBeenCalledWith(null)
+  })
+
+  it('does not throw when onHover is omitted and a card is hovered, focused, blurred, or clicked', () => {
+    render(<RestaurantList items={[r({ id: 'a', name: 'Place A' })]} />)
+
+    const card = screen.getByRole('button', { name: /Place A/ })
+    expect(() => {
+      fireEvent.mouseEnter(card)
+      fireEvent.mouseLeave(card)
+      fireEvent.focus(card)
+      fireEvent.blur(card)
+      fireEvent.click(card)
+    }).not.toThrow()
   })
 })

@@ -13,10 +13,12 @@ const CARD_TINT_BASE = '#fdfaf6'
 export function RestaurantList({
   items,
   onSelect,
+  onHover,
   currentPosition,
 }: {
   items: Restaurant[]
   onSelect?: (id: string) => void
+  onHover?: (id: string | null) => void
   currentPosition?: GeoPoint | null
 }) {
   const { t } = useTranslation()
@@ -43,7 +45,14 @@ export function RestaurantList({
           <li key={r.id}>
             <button
               type="button"
-              onClick={() => onSelect?.(r.id)}
+              onClick={() => {
+                onSelect?.(r.id)
+                onHover?.(null)
+              }}
+              onMouseEnter={() => onHover?.(r.id)}
+              onMouseLeave={() => onHover?.(null)}
+              onFocus={() => onHover?.(r.id)}
+              onBlur={() => onHover?.(null)}
               className="block w-full rounded-2xl p-3 text-left shadow-sm transition hover:shadow-md"
               style={{
                 background: `color-mix(in srgb, ${cuisineColor} 16%, ${CARD_TINT_BASE})`,

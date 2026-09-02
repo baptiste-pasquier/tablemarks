@@ -224,17 +224,19 @@ export function LabelVisibility({
   markers,
   active,
   selectedId,
+  hoveredId,
   onChange,
 }: {
   markers: MapMarker[]
   active?: boolean
   /**
-   * Used purely as a geometry input (which icon radius — 24 vs 30 — applies to the selected
-   * marker), never to suppress/prioritize a label: visibility eligibility is still governed
-   * solely by `visibleLabelIds`/`computeLabelPlacement`, no special-casing of `selectedId` here
-   * (KTD7 — see MapView's own guard for the enforcement point).
+   * Used purely as a geometry input (which icon radius — 24 vs 30 — applies to the selected or
+   * hovered marker), never to suppress/prioritize a label: visibility eligibility is still
+   * governed solely by `visibleLabelIds`/`computeLabelPlacement`, no special-casing of
+   * `selectedId`/`hoveredId` here (KTD7 — see MapView's own guard for the enforcement point).
    */
   selectedId?: string | null
+  hoveredId?: string | null
   onChange?: (visible: Set<string>) => void
 }) {
   const map = useMap()
@@ -253,7 +255,7 @@ export function LabelVisibility({
         y: point.y,
         name: truncateLabel(m.name),
         dimmed: m.dimmed,
-        iconRadius: (m.id === selectedId ? 30 : 24) / 2,
+        iconRadius: (m.id === selectedId || m.id === hoveredId ? 30 : 24) / 2,
       }
     })
     const next = computeLabelPlacement(candidates, viewCenter, zoomFloorMet)
@@ -263,7 +265,7 @@ export function LabelVisibility({
       lastReportedRef.current = next
       onChange?.(next)
     }
-  }, [map, markers, onChange, selectedId])
+  }, [map, markers, onChange, selectedId, hoveredId])
 
   const wasActiveRef = useRef(active)
   useEffect(() => {
@@ -340,6 +342,7 @@ export function MapView({
   currentPosition,
   fallbackCenter,
   selectedId,
+  hoveredId,
   active,
 }: {
   markers: MapMarker[]
@@ -351,6 +354,15 @@ export function MapView({
   /** Fallback map center (R2/R5) — the most-recently-added-or-visited restaurant, consumed by `Recenter`'s fallback tier. */
   fallbackCenter?: GeoPoint | null
   selectedId?: string | null
+  /**
+   * The restaurant currently hovered/focused in the list (desktop only, U2 KTD1/KTD4) — gives its
+   * pin the same halo as a selected one (see the `iconForColor` call below), with no map pan/
+   * re-center of its own. No explicit desktop-only gate here: on mobile the list/map panes are
+   * mutually exclusive (only one of `view === 'list'` / `'map'` is ever visible), so a hovered
+   * pin's halo is never on-screen at the same time as the hovering list card below the desktop
+   * breakpoint (KTD4).
+   */
+  hoveredId?: string | null
   active?: boolean
 }) {
   const { t } = useTranslation()
@@ -415,6 +427,7 @@ export function MapView({
           markers={markers}
           active={active}
           selectedId={selectedId}
+          hoveredId={hoveredId}
           onChange={setVisibleLabelIds}
         />
         {markers.map((m) => {
@@ -437,7 +450,7 @@ export function MapView({
               position={[m.lat, m.lng]}
               icon={iconForColor(
                 m.color,
-                m.id === selectedId,
+                m.id === selectedId || m.id === hoveredId,
                 m.name,
                 // Labels don't special-case the tooltip/selection (KTD7): visibility follows
                 // visibleLabelIds only, never selectedId/tooltip-open state. !m.dimmed is
