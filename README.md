@@ -22,7 +22,7 @@ npm run dev
 
 Open the printed URL. You can add and browse restaurants immediately — no account needed.
 
-To enable Google sign-in and sync, run a PocketBase instance alongside the app — see [docs/development.md](docs/development.md#optional-pocketbase-backend) and [pocketbase/README.md](pocketbase/README.md).
+To enable Google sign-in and sync, run a PocketBase instance alongside the app — see [docs/how-to/development.md](docs/how-to/development.md#optional-pocketbase-backend) and [pocketbase/README.md](pocketbase/README.md).
 
 ## Usage
 
@@ -41,11 +41,13 @@ To enable Google sign-in and sync, run a PocketBase instance alongside the app �
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) — the local-first design, sync, and offline behavior
-- [Data model](docs/data-model.md) — record shapes, verdicts, the rollup, and local↔remote mapping
-- [Development](docs/development.md) — setup, project structure, testing, and PocketBase
+- [Architecture](docs/explanation/architecture.md) — the local-first design, sync, and offline behavior
+- [Data model](docs/reference/data-model.md) — record shapes, verdicts, the rollup, and local↔remote mapping
+- [Development](docs/how-to/development.md) — setup, project structure, testing, and PocketBase
 - [PocketBase backend](pocketbase/README.md) — collections, Google OAuth, and the short-link resolver
+
+See [docs/README.md](docs/README.md) for the full documentation map.
 
 ## Status
 
-The foundation is in place: local storage, sync, capture, and the visit log. The decision mode, faceted cuisine filtering, export/PWA, and the visible sync-status indicator are planned next — see [docs/plans/](docs/plans/) and [docs/brainstorms/](docs/brainstorms/).
+Local storage, sync, capture, the visit log, the decision mode, faceted cuisine filtering, data export/import, the installable PWA, and the sync-status indicator are all in place — see [docs/journal/plans/](docs/journal/plans/) and [docs/journal/ideation/](docs/journal/ideation/) for the implementation history.
