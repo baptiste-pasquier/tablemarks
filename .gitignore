@@ -3,6 +3,7 @@ dist
 dist-ssr
 *.local
 *.tsbuildinfo
+__pycache__
 
 # Editor
 .vscode/*

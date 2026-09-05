@@ -201,9 +201,29 @@ def is_allowlisted(path: Path) -> bool:
     return any(fnmatch.fnmatch(rel, pattern) for pattern in ALLOWLIST)
 
 
+def _strip_inline_comment(value: str) -> str:
+    """Strip a trailing `# comment`, honoring quotes so a quoted `#` survives.
+
+    YAML only starts a comment at a `#` preceded by whitespace (or the start
+    of the value); a quoted string keeps its `#` regardless. The skill's
+    frontmatter templates document fields with trailing `# ...` comments, so
+    this has to be handled rather than left to corrupt the value.
+    """
+    quote: str | None = None
+    for index, char in enumerate(value):
+        if quote:
+            if char == quote:
+                quote = None
+        elif char in "\"'":
+            quote = char
+        elif char == "#" and (index == 0 or value[index - 1] in " \t"):
+            return value[:index]
+    return value
+
+
 def _parse_scalar(value: str) -> object:
     """Parse one YAML-ish scalar: quoted string, flow list, date, bool, bare word."""
-    value = value.strip()
+    value = _strip_inline_comment(value.strip()).strip()
     if value == "" or value in ("~", "null", "Null", "NULL"):
         return None
     if value.startswith("[") and value.endswith("]"):
@@ -214,7 +234,10 @@ def _parse_scalar(value: str) -> object:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
         return value[1:-1]
     if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
-        return dt.date.fromisoformat(value)
+        try:
+            return dt.date.fromisoformat(value)
+        except ValueError:
+            return value  # shape-valid but calendar-invalid: report, don't crash
     if value.lower() in ("true", "yes"):
         return True
     if value.lower() in ("false", "no"):
