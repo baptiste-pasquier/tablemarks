@@ -44,16 +44,25 @@ means it is explanation. No means it is a journal entry.
 
 ### Never write a backlog
 
-No `TODO` section, no "future work", no "not yet implemented" list anywhere in `docs/`. Open
-a GitHub issue instead.
+No `TODO` section, no "future work", no "not yet implemented" list anywhere in `docs/`, and
+**link the issue** rather than describing the missing work.
+
+Unbuilt work lives in the issue tracker and nowhere else:
+
+```bash
+gh issue list --label backlog          # what is known, wanted, and not built
+gh issue create --label backlog        # add an item
+```
+
+There is deliberately no mirror under `docs/`: this repo has no CI and no branch-protection
+tier that would let a workflow refresh one automatically (checked directly — GitHub's
+ruleset/branch-protection APIs return 403 on this repo's plan), so a `docs/BACKLOG.md`
+would be a copy nobody refreshes, which is worse than no copy. Reconsider only once a
+workflow can push to the default branch — see `references/backlog.md` in the
+`docs-taxonomy` skill for the mirror and its refresh mechanism.
 
 A `TODO` comment in a source file is fine, and a doc may point at one. What is banned is a
 **list of unbuilt work** inside prose, because nothing ever prunes it.
-
-There is no generated `docs/BACKLOG.md` mirror in this repo — the tracker is the only source
-of unbuilt work. Add one only if an agent regularly needs the list without a tool call, and
-read `references/backlog.md` in the `docs-taxonomy` skill first: a mirror needs a refresh
-mechanism, and a naive one breaks on a protected branch.
 
 ### Record a lasting choice as a decision
 

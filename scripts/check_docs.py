@@ -55,8 +55,13 @@ DECISIONS_SUBFOLDER = "decisions"
 #: The name of a folder's own index file, at the root of `docs/` and inside a
 #: journal category.
 INDEX_NAME = "README.md"
-#: Files at the root of `docs/` that are not quadrant docs.
-ROOT_ALLOWED = {INDEX_NAME, "BACKLOG.md"}
+#: The backlog mirror's filename, at the root of `docs/`. Whether it is tolerated
+#: there is NOT configured separately - see `root_allowed()`.
+BACKLOG_NAME = "BACKLOG.md"
+#: Anything else the project keeps at the root of `docs/`, beyond the index and
+#: the mirror. Empty here: this repo has no backlog mirror, and no other doc
+#: without a folder has a home.
+ROOT_ALLOWED_EXTRA: frozenset[str] = frozenset()
 
 #: Extensions this gate knows how to read as a doc. `.html` is here for the
 #: one standalone ideation export under `journal/ideation/` - it carries no
@@ -84,7 +89,7 @@ INCIDENT_MARKERS = (
         r"\bused to (?:be|have|do|fire|return|inject|strip|pass|show|print|ask|"
         r"call|reorder|crash|hold|live|work|happen|contain|produce|move|wait)\b"
     ),
-    r"\bpreviously,\b",
+    r"\bpreviously,",
     r"\bwas tried\b",
     r"\bwe tried\b",
     r"\battempts? (?:failed|out of)\b",
@@ -107,6 +112,12 @@ BACKLOG_HEADING = re.compile(
     r"open questions|wishlist|ideas)[ \t]*:?[ \t]*$",
     re.IGNORECASE | re.MULTILINE,
 )
+
+#: An unreplaced template placeholder. The skill's templates ship `{{...}}`
+#: markers for an adopter to fill in or delete; one left behind means a doc is
+#: shipping instructions to its own writer as if they were content. Set to None
+#: if the project uses `{{ }}` for something legitimate in prose.
+PLACEHOLDER = re.compile(r"\{\{.{0,80}?\}\}", re.DOTALL)
 
 #: Filler openers banned by `conventions/documentation.md`.
 FILLER = (
@@ -163,6 +174,20 @@ class Problem:
             rel = self.path
         tag = "warn" if self.warning else "FAIL"
         return f"{tag}  {rel}: {self.message}"
+
+
+def root_allowed() -> set[str]:
+    """Return the filenames tolerated at the root of `docs/`.
+
+    Derived, never configured. The mirror is allowed exactly when the gate has a
+    header to hold it to: two constants describing one file could otherwise be
+    set to disagree, and the half-configured state - no header to check, but the
+    file still tolerated - accepts a hand-written mirror forever.
+    """
+    allowed = {INDEX_NAME, *ROOT_ALLOWED_EXTRA}
+    if GENERATED_BACKLOG_HEADER is not None:
+        allowed.add(BACKLOG_NAME)
+    return allowed
 
 
 def is_allowlisted(path: Path) -> bool:
@@ -255,10 +280,16 @@ def outside_fences(body: str) -> list[tuple[int, str]]:
     return lines
 
 
+#: Inline code, so a rule scanning prose does not fire on a code span's
+#: contents. Shared by every check that needs a line with code spans removed,
+#: so the definition of "inline code" cannot drift between them.
+INLINE_CODE = re.compile(r"`[^`\n]*`")
+
+
 def strip_code(body: str) -> str:
     """Return the body with fenced blocks and inline code removed."""
     plain = "\n".join(text for _, text in outside_fences(body))
-    return re.sub(r"`[^`\n]*`", "", plain)
+    return INLINE_CODE.sub("", plain)
 
 
 def prose_lines(body: str) -> int:
@@ -344,28 +375,44 @@ def check_prose(path: Path, body: str, folder: str, offset: int = 0) -> list[Pro
     plain = strip_code(body)
     return [
         *check_language(path, body, offset),
-        *check_narration(path, plain, folder),
+        *check_narration(path, body, folder, offset),
         *check_no_backlog_section(path, plain),
+        *check_placeholders(path, plain),
         *check_filler(path, plain),
         *check_size(path, body, folder),
     ]
 
 
-def check_narration(path: Path, plain: str, folder: str) -> list[Problem]:
-    """Report incident narration, failing or warning according to the folder."""
+def check_narration(path: Path, body: str, folder: str, offset: int = 0) -> list[Problem]:
+    """Report every incident narration, failing or warning according to the folder.
+
+    One `Problem` per occurrence, not per marker: a second instance of the same
+    phrase - or of a different one - must surface as its own line, or a coding
+    agent that only clears the first hit can never see there is a second. Two
+    markers overlapping the same span (e.g. "3 attempts out of 5" matching both
+    the generic "attempts... out of" marker and the "N attempts out of N"
+    marker) count as one occurrence, not two.
+    """
     if folder not in NARRATION_FAILS and folder not in NARRATION_WARNS:
         return []
     problems: list[Problem] = []
-    for marker in INCIDENT_MARKERS:
-        if hit := re.search(marker, plain, re.IGNORECASE):
-            problems.append(
-                Problem(
-                    path,
-                    f"incident narration {hit.group(0)!r} - move it to "
-                    f"{JOURNAL}/solutions/ and leave the rule with a link",
-                    warning=folder not in NARRATION_FAILS,
+    for number, raw in outside_fences(body):
+        line = INLINE_CODE.sub("", raw)
+        claimed: list[tuple[int, int]] = []
+        for marker in INCIDENT_MARKERS:
+            for hit in re.finditer(marker, line, re.IGNORECASE):
+                span = hit.span()
+                if any(span[0] < end and start < span[1] for start, end in claimed):
+                    continue
+                claimed.append(span)
+                problems.append(
+                    Problem(
+                        path,
+                        f"line {number + offset} incident narration {hit.group(0)!r} - "
+                        f"move it to {JOURNAL}/solutions/ and leave the rule with a link",
+                        warning=folder not in NARRATION_FAILS,
+                    )
                 )
-            )
     return problems
 
 
@@ -379,6 +426,16 @@ def check_no_backlog_section(path: Path, plain: str) -> list[Problem]:
                 "issue instead, and link it",
             )
         ]
+    return []
+
+
+def check_placeholders(path: Path, plain: str) -> list[Problem]:
+    """Report a template placeholder nobody filled in or deleted."""
+    if PLACEHOLDER is None:
+        return []
+    if hit := PLACEHOLDER.search(plain):
+        excerpt = " ".join(hit.group(0).split())[:60]
+        return [Problem(path, f"unresolved template placeholder {excerpt!r}")]
     return []
 
 
@@ -407,7 +464,7 @@ def check_language(path: Path, body: str, offset: int) -> list[Problem]:
     if SECOND_LANGUAGE_MARKERS is None:
         return []
     for number, raw in outside_fences(body):
-        line = re.sub(r"`[^`\n]*`", "", raw)
+        line = INLINE_CODE.sub("", raw)
         hits = {hit.lower() for hit in SECOND_LANGUAGE_MARKERS.findall(line)}
         if len(hits) >= LANGUAGE_THRESHOLD:
             message = f"line {number + offset} is {LANGUAGE_NAME}: {sorted(hits)[:6]}"
@@ -434,6 +491,7 @@ def check_journal_entry(path: Path, rel: Path) -> list[Problem]:
     meta, body = split_frontmatter(text)
     offset = len(text.splitlines()) - len(body.splitlines())
     problems.extend(check_language(path, body, offset))
+    problems.extend(check_placeholders(path, strip_code(body)))
     problems.extend(check_category(path, meta))
     return problems
 
@@ -560,7 +618,7 @@ def classify(path: Path, rel: Path) -> tuple[list[Problem], bool]:
     """Route one file to its checks, and say whether it is a maintained doc."""
     suffix = path.suffix.lower()
     if len(rel.parts) == 1:
-        if rel.name not in ROOT_ALLOWED:
+        if rel.name not in root_allowed():
             message = f"loose file at the root of {DOCS_DIRNAME}/ - it needs a folder"
             return [Problem(path, message)], False
         return [], False
@@ -625,7 +683,7 @@ def check_docs() -> list[Problem]:
         problems.extend(check_index(index.read_text(encoding="utf-8"), maintained))
         problems.extend(check_links(index))
 
-    problems.extend(check_backlog(DOCS / "BACKLOG.md"))
+    problems.extend(check_backlog(DOCS / BACKLOG_NAME))
     return [
         Problem(problem.path, problem.message, warning=True)
         if not problem.warning and is_allowlisted(problem.path)

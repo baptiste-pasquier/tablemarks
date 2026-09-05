@@ -90,7 +90,7 @@ Templates: [`solutions/README.md`](journal/solutions/README.md),
 | What | Where | Why |
 | --- | --- | --- |
 | Backend schema, OAuth setup, the short-link resolver hook | [`pocketbase/README.md`](../pocketbase/README.md) | Owned by the `pocketbase/` sub-project; linked from `reference/data-model.md` and `how-to/development.md` |
-| Unbuilt work | the GitHub issue tracker | Nothing here mirrors it — see `conventions/documentation.md` |
+| Unbuilt work | the issue tracker, `gh issue list --label backlog` | No mirror in this tree — see `conventions/documentation.md` |
 | Agent-facing conventions not about docs prose | [`AGENTS.md`](../AGENTS.md) | This tree governs the prose in `docs/` only |
 
 ## What the gate enforces
@@ -104,10 +104,11 @@ Templates: [`solutions/README.md`](journal/solutions/README.md),
 4. a maintained doc missing from the index above
 5. past-tense incident narration in `reference/`, `conventions/` or `how-to/`
 6. a banned filler phrase
-7. a section headed `TODO`, `Backlog`, `Future work`, `Roadmap` or `Open questions`
-8. a filename that is not kebab-case, or an ADR not named `NNNN-with-dashes.md`
-9. a `conventions/` file that does not open with a `Scope:` line
-10. a loose file at the root of `docs/`, an unexpected file type, or a symlinked folder
+7. an unresolved `{{template placeholder}}` left in any doc, journal included
+8. a section headed `TODO`, `Backlog`, `Future work`, `Roadmap` or `Open questions`
+9. a filename that is not kebab-case, or an ADR not named `NNNN-with-dashes.md`
+10. a `conventions/` file that does not open with a `Scope:` line
+11. a loose file at the root of `docs/`, an unexpected file type, or a symlinked folder
 
 It **warns**, without failing, on: incident narration in `explanation/`, a maintained doc
 past its folder's prose-line guideline (`reference/`: 250, others: 150), and a `stale_after`
@@ -116,8 +117,10 @@ reviewed — an expiry would otherwise redden every unrelated PR on the day it f
 Narration warns in `explanation/` because that is the one folder allowed to narrate; the
 warning only asks whether the write-up belongs in a journal entry, linked.
 
-`docs/journal/` is exempt from rules 5, 6 and 7. It is append-only: an entry records what
+`docs/journal/` is exempt from rules 5, 6 and 8. It is append-only: an entry records what
 was measured, in the words used at the time, and cannot be corrected into compliance later.
+It is not exempt from rule 7: a journal entry copied from a template still owes a filled-in
+placeholder.
 
 There is no `docs/BACKLOG.md` mirror and no `category` cross-check on journal entries in
 this repo — see `conventions/documentation.md` for why.

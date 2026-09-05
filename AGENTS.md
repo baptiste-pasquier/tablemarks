@@ -52,9 +52,11 @@ by hand — there is no CI in this repo yet). These fail:
   **warns** there rather than failing. A full write-up with symptoms and measurements still
   belongs in a journal entry, linked. `docs/journal/` is exempt: narrating what failed is
   its purpose.
-- **Never add a backlog, TODO or "future work" section under `docs/`** — open a GitHub
-  issue instead. A `TODO` comment in a source file is fine, and a doc may point at one; a
-  *list* of unbuilt work in prose is not.
+- **Never add a backlog, TODO or "future work" section under `docs/`.** Unbuilt work lives
+  in the issue tracker and nowhere else — `gh issue list --label backlog` to read it,
+  `gh issue create --label backlog` to add an item. **Link the issue** from the doc rather
+  than describing the missing work. A `TODO` comment in a source file is fine, and a doc
+  may point at one; a *list* of unbuilt work in prose is not.
 - **Every maintained doc carries frontmatter** with `title`, `type` (equal to its folder
   name), `audience`, `status`, `stale_after`, and appears in `docs/README.md`. A key present
   but empty counts as missing. A passed `stale_after` **warns** rather than fails, so a
@@ -62,6 +64,7 @@ by hand — there is no CI in this repo yet). These fail:
 - **`docs/conventions/documentation.md` opens with a `Scope:` line** naming the artifact it
   governs.
 - **Every relative link and every `#fragment` resolves.**
+- **No unresolved `{{template placeholder}}` survives in any doc, journal included.**
 - **Filenames are kebab-case**, and a `docs/journal/decisions/` entry is
   `NNNN-with-dashes.md`.
 
