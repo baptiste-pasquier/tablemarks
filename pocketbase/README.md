@@ -5,7 +5,8 @@ PocketBase is the optional cloud mirror. The app is fully usable without it (loc
 ## Run locally
 
 ```bash
-# Download the v0.26.x binary for your platform from https://pocketbase.io/docs/
+# Download the v0.39.3 binary for your platform from https://pocketbase.io/docs/
+# (the version docker/Dockerfile.pocketbase pins, so local matches the deployed image)
 # place it at pocketbase/pocketbase, then:
 cd pocketbase
 ./pocketbase serve
@@ -13,11 +14,22 @@ cd pocketbase
 
 `pb_migrations/` auto-applies on first `serve`, creating the `restaurants` and `visits` collections. `pb_hooks/` loads the short-link resolver route. Admin UI is at `http://127.0.0.1:8090/_/`.
 
-Point the app at the instance with `VITE_PB_URL` (defaults to `http://127.0.0.1:8090`).
+Point the app at the instance by editing `public/config.json`:
+
+```json
+{ "pocketbaseUrl": "http://127.0.0.1:8090" }
+```
+
+The app reads its backend location from this served file at runtime, so one build runs against any
+instance — see [ADR-0001](../docs/journal/decisions/0001-read-the-backend-location-at-runtime.md).
+The committed value is the empty string, which means "no backend": a plain `npm run dev` has no
+sign-in, no sync, and refuses short links. Keep your local edit out of your commits.
 
 ## Google OAuth2
 
 In the admin UI: **Collections → users → Settings → OAuth2 → enable Google**, paste a Client ID + Secret from Google Cloud Console. Local-dev redirect URI: `http://127.0.0.1:8090/api/oauth2-redirect`.
+
+For a public instance the console steps are ordered, and the order matters — claim the superuser over a private path before opening the public route, and set the trusted proxy header before enabling the rate limiter. The full sequence is in [`docs/how-to/deployment.md`](../docs/how-to/deployment.md).
 
 ## Collections
 
@@ -41,6 +53,13 @@ The client-generated `id` (15-char `[a-z0-9]`) is reused as the PocketBase recor
 
 ## Short-link resolver hook
 
-`pb_hooks/resolveShortLink.pb.js` adds `GET /api/tablemarks/resolve-short-link?url=...`, which follows a `maps.app.goo.gl` redirect server-side and returns `{lat, lng, name?}`. It is public (no auth) so capture works in local-only mode.
+`pb_hooks/resolveShortLink.pb.js` adds `GET /api/tablemarks/resolve-short-link?url=...`, which reads a `maps.app.goo.gl` redirect server-side and returns `{lat, lng, name?}`. It is public (no auth) so capture works in local-only mode.
 
-> The `$http` / router API is PocketBase-version-specific. Verify the hook against the running binary's generated `pb_data/types.d.ts` if your version differs from v0.26.
+Two rules govern any edit to this file, both verified against a running PocketBase 0.39.3:
+
+1. **Everything a hook handler uses is declared inside the handler.** PocketBase runs each handler in an isolated goja VM with no access to file-level scope; a constant or helper declared at the top of the file raises `ReferenceError`, which PocketBase reports to the caller as a generic `400`.
+2. **Do not use `$http.send` to inspect a redirect.** It follows redirects and exposes no final URL. The hook shells out to `curl` with `--max-redirs 0` instead, which makes `curl` a load-bearing runtime dependency of the PocketBase image — remove it and the resolver fails closed.
+
+Both, with the evidence: [`docs/journal/solutions/database-issues/pocketbase-hook-handlers-cannot-see-file-level-scope.md`](../docs/journal/solutions/database-issues/pocketbase-hook-handlers-cannot-see-file-level-scope.md).
+
+> The `$http` / router API is PocketBase-version-specific. Verify the hook against the running binary's generated `pb_data/types.d.ts` if your version differs from 0.39.3.

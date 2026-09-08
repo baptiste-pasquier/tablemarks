@@ -54,8 +54,8 @@ gh issue list --label backlog          # what is known, wanted, and not built
 gh issue create --label backlog        # add an item
 ```
 
-There is deliberately no mirror under `docs/`: this repo has no CI and no branch-protection
-tier that would let a workflow refresh one automatically (checked directly — GitHub's
+There is deliberately no mirror under `docs/`: no workflow here can push to the default
+branch (`.github/workflows/ci.yml` holds `contents: read`, and GitHub's
 ruleset/branch-protection APIs return 403 on this repo's plan), so a `docs/BACKLOG.md`
 would be a copy nobody refreshes, which is worse than no copy. Reconsider only once a
 workflow can push to the default branch — see `references/backlog.md` in the
@@ -162,6 +162,9 @@ This is an npm/TypeScript project with no other Python tooling, so the gate skip
 Python `pre-commit` framework and PyYAML: `scripts/check_docs.py` parses frontmatter with a
 small stdlib-only parser (flat `key: value` pairs are all this repo's frontmatter uses) and
 is wired through [Husky](https://typicode.github.io/husky/) — `.husky/pre-commit` runs
-`npm run check:docs` when a staged file is under `docs/`. There is no CI in this repo yet, so
-the hook is the only enforcement point; `git commit --no-verify` bypasses it. Add a CI step
-running `npm run check:docs` if that gap matters before Husky does.
+`npm run check:docs` when a staged file is under `docs/`.
+
+There are two enforcement points, and the second is the one that cannot be skipped.
+`.github/workflows/ci.yml` runs `npm run check:docs` on every push and every pull request,
+alongside the type check, the tests and both builds. The hook is the fast local copy;
+`git commit --no-verify` bypasses it and CI still fails.

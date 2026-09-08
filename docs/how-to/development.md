@@ -20,6 +20,13 @@ npm install
 npm run dev
 ```
 
+**A plain `npm run dev` starts the app with no backend.** `public/config.json` ships
+`{"pocketbaseUrl": ""}`, and the app reads its backend location from that file at runtime. With
+an empty value there is no sign-in, no sync, and a pasted `maps.app.goo.gl` short link is refused
+on the capture surface. That is a valid state, not an error — the app is local-first and every
+other feature works. To attach a local PocketBase, see
+[Optional: PocketBase backend](#optional-pocketbase-backend) below.
+
 ## Scripts
 
 | Command | What it does |
@@ -63,12 +70,25 @@ When adding a feature, follow the conventions in [AGENTS.md](../../AGENTS.md): e
 
 The app runs without PocketBase. To enable Google sign-in and cross-device sync:
 
-1. Download a PocketBase v0.26.x binary into `pocketbase/`.
+1. Download a PocketBase v0.39.3 binary into `pocketbase/` — the version
+   `docker/Dockerfile.pocketbase` pins, so local behaviour matches the deployed image.
 2. `cd pocketbase && ./pocketbase serve` — migrations and hooks load automatically.
 3. Configure Google OAuth in the admin UI.
-4. Point the app at it with `VITE_PB_URL` (defaults to `http://127.0.0.1:8090`).
+4. Point the app at it by editing `public/config.json`:
+
+   ```json
+   { "pocketbaseUrl": "http://127.0.0.1:8090" }
+   ```
+
+   The backend location is read at runtime from this served file, not from a build-time
+   variable — see
+   [ADR-0001](../journal/decisions/0001-read-the-backend-location-at-runtime.md). Keep the
+   edit out of your commits: the committed value is the empty string, which is what the public
+   demo build ships.
 
 Full backend setup — collections, OAuth steps, the short-link resolver hook, and the local↔remote field mapping — is in [pocketbase/README.md](../../pocketbase/README.md).
+
+Deploying to a real host — the PocketBase console sequence, upgrades, rollback and recovery — is in [deployment.md](deployment.md).
 
 ## Conventions
 

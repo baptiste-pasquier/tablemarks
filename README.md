@@ -7,6 +7,12 @@ Save your favorite and to-try restaurants on a map. Tablemarks is **local-first*
 - Filter by cuisine and status, all on a map
 - Your data lives in your browser; the cloud is an optional mirror
 
+## Try it
+
+**[Live demo →](https://baptiste-pasquier.github.io/tablemarks/)**
+
+The demo runs with no backend, so there is no sign-in and no sync — and short `maps.app.goo.gl` links, which need a server to resolve, are refused. Search by name or paste a full Google Maps link instead. Everything else works, and your data stays in your browser.
+
 ## Prerequisites
 
 - Node.js ≥ 20.19
@@ -22,7 +28,7 @@ npm run dev
 
 Open the printed URL. You can add and browse restaurants immediately — no account needed.
 
-To enable Google sign-in and sync, run a PocketBase instance alongside the app — see [docs/how-to/development.md](docs/how-to/development.md#optional-pocketbase-backend) and [pocketbase/README.md](pocketbase/README.md).
+This starts the app with **no backend**, the same as the demo. To enable Google sign-in and sync, run a PocketBase instance alongside the app and point `public/config.json` at it — see [docs/how-to/development.md](docs/how-to/development.md#optional-pocketbase-backend) and [pocketbase/README.md](pocketbase/README.md).
 
 ## Usage
 
@@ -44,6 +50,7 @@ To enable Google sign-in and sync, run a PocketBase instance alongside the app �
 - [Architecture](docs/explanation/architecture.md) — the local-first design, sync, and offline behavior
 - [Data model](docs/reference/data-model.md) — record shapes, verdicts, the rollup, and local↔remote mapping
 - [Development](docs/how-to/development.md) — setup, project structure, testing, and PocketBase
+- [Deployment](docs/how-to/deployment.md) — running your own instance, upgrades, and recovery
 - [PocketBase backend](pocketbase/README.md) — collections, Google OAuth, and the short-link resolver
 
 See [docs/README.md](docs/README.md) for the full documentation map.
