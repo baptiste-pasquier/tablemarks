@@ -17,8 +17,12 @@ import { DecidePanel } from './features/decide/DecidePanel'
 import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
 import { Button } from './features/ui/Button'
+import { Badge } from './features/ui/Badge'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { AccountMenu } from './features/account/AccountMenu'
+import { badgeColorClassName, pillToneClassName } from './features/sync/syncStatusPresentation'
+import { useBackendStatus } from './sync/useBackendStatus'
+import { backendAddressIsKnown, backendIsAbsent, backendIsUnreachable } from './sync/backendStatus'
 import { geolocate, type GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
 import { cn } from './lib/cn'
@@ -91,10 +95,64 @@ function FiltersPill({ count, onOpen }: { count: number; onOpen: () => void }) {
   )
 }
 
+/**
+ * Same `hidden sm:inline` gate the Sign in button's " with Google" suffix uses just below, and for
+ * the same reason: the header's right-hand group is `shrink-0` by deliberate bug fix (see the
+ * comment on the title group), so anything that widens it pushes the row past a ~320px viewport.
+ * Passed through `Badge`'s own `labelClassName` rather than reached at with a descendant selector.
+ */
+const INDICATOR_LABEL_GATE = 'hidden sm:inline'
+
+/**
+ * Header indicator for a backend that belongs to this deployment but cannot be used right now
+ * (R6, KD7) — a configured instance that is down, or a configuration that could not be read at
+ * all. Reported to signed-out visitors too: a private instance that is merely down must never read
+ * as a deliberately backend-free build.
+ *
+ * Copy lives under its own `backend` namespace rather than reusing `sync.*`: the sync wording
+ * promises the app will keep retrying in the background, which no signed-out visitor has a
+ * controller running to make true. Tone and shape come from the sync presentation helper and the
+ * `Badge` primitive so this pill can never drift from the account menu's status chip.
+ *
+ * The accessible name is explicit because the visible label is `display: none` below `sm`, which
+ * would otherwise leave a bare colored dot with no name at all.
+ */
+function BackendUnreachableIndicator() {
+  const { t } = useTranslation()
+  const label = t('backend.unreachable')
+  return (
+    <span
+      role="status"
+      aria-label={label}
+      title={t('backend.unreachableDetail')}
+      className="inline-flex shrink-0 items-center"
+    >
+      <Badge
+        text={label}
+        tint
+        tone={pillToneClassName('problem')}
+        dotClassName={badgeColorClassName('problem')}
+        labelClassName={INDICATOR_LABEL_GATE}
+      />
+    </span>
+  )
+}
+
 export default function App() {
   const { t } = useTranslation()
   const restaurants = useRestaurants()
   const { signedIn, email, avatarUrl, signIn, signOut } = useAuth()
+  // Two separate signals, resolved in that order (KD3): presence answers "is a backend part of
+  // this build?" and comes back immediately from a local file; reachability answers "did it
+  // answer?" and lands later. Read through the module-singleton store (KTD2) — no context.
+  const backend = useBackendStatus()
+  const backendAbsent = backendIsAbsent(backend)
+  // A dead control is worse than a missing one, so the *presence* signal alone decides whether
+  // Sign in exists (R4) and the *reachability* signal alone decides whether it works.
+  const signInDisabled = !backendAddressIsKnown(backend)
+  // Deliberately not `!backendAbsent`: while presence is `configured` and reachability is still
+  // `unknown`, neither claim is true, so nothing renders (the helper is already false there).
+  const showBackendProblem = backendIsUnreachable(backend)
   // KTD3: after signing out from the dropdown, the avatar trigger no longer exists (the signed-out
   // header mounts in its place), so focus moves to the "Se connecter" button once it mounts.
   const handleSignOut = () => {
@@ -103,6 +161,14 @@ export default function App() {
       document.getElementById('shell-signin-button')?.focus()
     })
   }
+  // The signed-in check is a local token check, so it can still be true on a build that ships no
+  // backend at all — and the account menu would then render a sync chip reading "all synced" while
+  // nothing syncs, the one place the app makes a false backup claim. Clearing the session removes
+  // that state rather than adding a distinct one; local data is retained by design (auth.signOut),
+  // so the only visible effect is a session that does not survive losing the backend.
+  useEffect(() => {
+    if (signedIn && backendAbsent) signOut()
+  }, [signedIn, backendAbsent, signOut])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // Sibling to `selectedId`, same prop-threading pattern (U2 KTD1): desktop-only hover highlight
   // for the corresponding map pin, fed by RestaurantList's onHover and consumed by MapView's
@@ -287,6 +353,7 @@ export default function App() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {showBackendProblem && <BackendUnreachableIndicator />}
           {signedIn ? (
             <AccountMenu
               email={email}
@@ -295,11 +362,26 @@ export default function App() {
               onSignOut={handleSignOut}
             />
           ) : (
+            /* A fragment carrying both controls, and only the Sign in half is gated: gating the
+               fragment would take Settings — and with it the language switcher — off the demo
+               entirely (R21). */
             <>
-              <Button id="shell-signin-button" variant="secondary" onClick={() => void signIn()}>
-                {t('shell.signIn')}
-                <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
-              </Button>
+              {!backendAbsent && (
+                <Button
+                  id="shell-signin-button"
+                  variant="secondary"
+                  // Present but inert when the configuration itself could not be read (KTD9): there
+                  // is no address, so an active control would open an authentication window against
+                  // the visitor's own machine. A known address that is merely down keeps working —
+                  // retrying can succeed there.
+                  disabled={signInDisabled}
+                  title={signInDisabled ? t('backend.signInUnavailable') : undefined}
+                  onClick={() => void signIn()}
+                >
+                  {t('shell.signIn')}
+                  <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 iconOnly

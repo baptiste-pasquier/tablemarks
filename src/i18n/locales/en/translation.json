@@ -135,6 +135,11 @@
     "detailProblemSignIn": "Your sign-in expired. Sign in again from the header to resume backing up.",
     "detailProblemUnreachable": "We can't reach the server right now. We'll keep trying in the background."
   },
+  "backend": {
+    "unreachable": "Server unreachable",
+    "unreachableDetail": "This app has a server, but it isn't answering. Your places stay saved on this device.",
+    "signInUnavailable": "Sign in is unavailable: this app's server address could not be read."
+  },
   "pwa": {
     "appUpdateAria": "App update",
     "newVersion": "A new version is available.",

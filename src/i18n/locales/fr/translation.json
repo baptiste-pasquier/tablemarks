@@ -135,6 +135,11 @@
     "detailProblemSignIn": "Votre session a expiré. Reconnectez-vous depuis l'en-tête pour reprendre la sauvegarde.",
     "detailProblemUnreachable": "Impossible de joindre le serveur pour l'instant. Nous continuons d'essayer en arrière-plan."
   },
+  "backend": {
+    "unreachable": "Serveur injoignable",
+    "unreachableDetail": "Cette application a un serveur, mais il ne répond pas. Vos adresses restent enregistrées sur cet appareil.",
+    "signInUnavailable": "Connexion indisponible : l'adresse du serveur de cette application n'a pas pu être lue."
+  },
   "pwa": {
     "appUpdateAria": "Mise à jour de l'application",
     "newVersion": "Une nouvelle version est disponible.",
