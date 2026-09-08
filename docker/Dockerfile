@@ -15,8 +15,17 @@
 # The major is named explicitly: package.json declares no `engines` field and the repo has no
 # .nvmrc, so there is no floor to align with and CI and this image would otherwise be free to
 # land on different majors.
+#
+# Pinned to the *build* platform, not the target. The multi-arch publish builds this Dockerfile
+# once per target architecture, and without this the whole Node build -- `npm ci` plus the
+# bundler -- would be replayed under QEMU emulation for arm64 to produce byte-identical output:
+# the bundle is static JS/CSS with no native dependency. Only the nginx stage below, which is a
+# COPY and a chmod, is worth emulating. Same reasoning as GrooveMark's app image.
+#
+# This requires BuildKit, which predefines BUILDPLATFORM. The legacy builder does not, and
+# fails here with an empty-platform error -- install the buildx component to build locally.
 # ---------------------------------------------------------------------------
-FROM node:22-alpine AS build
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 
 WORKDIR /app
 

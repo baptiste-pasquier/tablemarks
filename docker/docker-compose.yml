@@ -2,6 +2,11 @@
 #
 #   docker compose -f docker/docker-compose.yml up -d --build
 #
+# Requires BuildKit: docker/Dockerfile pins its Node stage to $BUILDPLATFORM so the multi-arch
+# publish does not replay the whole bundle build under emulation, and only BuildKit defines that
+# variable. The legacy builder fails with an empty-platform error -- install the buildx
+# component (`brew install docker-buildx` on macOS) if you hit it.
+#
 # Use docker-compose.prod.yml on the host that runs the published images; this file is for
 # building and smoke-testing locally. Both files describe the same two-service topology.
 #
