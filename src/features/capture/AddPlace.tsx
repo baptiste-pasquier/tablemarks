@@ -22,23 +22,41 @@ export function AddPlace({
   const [cuisine, setCuisine] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Held apart from `error` on purpose: this deployment will never resolve a short link, so the
+  // message is guidance, not a fault to retry, and it must not wear the red error styling (R5).
+  const [shortLinkRefused, setShortLinkRefused] = useState(false)
   const [candidates, setCandidates] = useState<GeoCandidate[] | null>(null)
   const [duplicate, setDuplicate] = useState<Restaurant | null>(null)
   const restaurants = useRestaurants()
   const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
   const cuisineListId = useId()
 
+  // Exhaustive over CaptureResult: the `never` assignment makes a future variant a type error
+  // here instead of silently falling through to the search branch.
   async function handle(result: CaptureResult) {
-    if (result.status === 'created' || result.status === 'provisional') {
-      const c = cuisine.trim()
-      // The place is already saved; the cuisine is a best-effort follow-up write. A failure here
-      // must not surface as "couldn't add the place" or block closing — the place exists.
-      if (c) await updateRestaurant(result.restaurant.id, { cuisine: c }).catch(() => {})
-      onClose()
-    } else if (result.status === 'duplicate') {
-      setDuplicate(result.match)
-    } else {
-      void runSearch(result.query)
+    switch (result.status) {
+      case 'created':
+      case 'provisional': {
+        const c = cuisine.trim()
+        // The place is already saved; the cuisine is a best-effort follow-up write. A failure here
+        // must not surface as "couldn't add the place" or block closing — the place exists.
+        if (c) await updateRestaurant(result.restaurant.id, { cuisine: c }).catch(() => {})
+        onClose()
+        return
+      }
+      case 'duplicate':
+        setDuplicate(result.match)
+        return
+      case 'needs-search':
+        await runSearch(result.query)
+        return
+      case 'needs-backend':
+        setShortLinkRefused(true)
+        return
+      default: {
+        const unhandled: never = result
+        throw new Error(`Unhandled capture result: ${JSON.stringify(unhandled)}`)
+      }
     }
   }
 
@@ -61,6 +79,7 @@ export function AddPlace({
     setBusy(true)
     setError(null)
     setDuplicate(null)
+    setShortLinkRefused(false)
     try {
       await handle(await capturePaste(input))
     } catch {
@@ -124,6 +143,19 @@ export function AddPlace({
       </Button>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+
+      {shortLinkRefused && (
+        <div
+          role="note"
+          className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          <p>{t('capture.shortLinkNeedsBackend')}</p>
+          <ul className="mt-1 list-disc pl-5">
+            <li>{t('capture.shortLinkTrySearch')}</li>
+            <li>{t('capture.shortLinkTryFullUrl')}</li>
+          </ul>
+        </div>
+      )}
 
       {duplicate && (
         <div className="mt-3 rounded-md bg-brand-soft p-3 text-sm">

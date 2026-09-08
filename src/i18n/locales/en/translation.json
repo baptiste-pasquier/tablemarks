@@ -39,8 +39,11 @@
     "working": "Working…",
     "submit": "Add",
     "errorNoMatches": "No matching places found.",
-    "errorSearchFailed": "Search failed. Try again.",
+    "errorSearchFailed": "Search failed. Try again, or paste the full Google Maps link with coordinates in it.",
     "errorAdd": "Could not add that place.",
+    "shortLinkNeedsBackend": "Short Google Maps links (maps.app.goo.gl) can only be opened by a server, and this app runs without one. Two other ways work here:",
+    "shortLinkTrySearch": "Type the place name instead, then pick it from the search results.",
+    "shortLinkTryFullUrl": "Or paste the full Google Maps link from your browser address bar — the long one with coordinates in it.",
     "alreadySaved": "is already saved.",
     "openIt": "Open it"
   },
