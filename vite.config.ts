@@ -6,8 +6,12 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // Two build targets, one source tree. The target discriminator is the Vite **mode**:
 //
-//   private (default) — `npm run build`                            → full PWA, served at the site root
-//   demo              — `npm run build -- --mode demo --base=/tablemarks/` → no service worker, no manifest
+//   private (default) — `npm run build`                              → full PWA, served at the site root
+//   demo              — `npx vite build --mode demo --base=/tablemarks/` → no service worker, no manifest
+//
+// The demo form is `npx vite build`, not `npm run build -- …`: the npm script prefixes
+// `tsc --noEmit`, and CI already type-checks once before building both targets. Building the
+// demo through the script would type-check a second time for nothing.
 //
 // `--base` is deliberately NOT hardcoded here: the GitHub Pages workflow passes it on the
 // command line so the container build stays at the root and needs no edit-and-revert.
