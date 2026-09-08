@@ -65,6 +65,25 @@ logs
 npm-debug.log*
 
 # ---------------------------------------------------------------------------
+# PocketBase runtime state, second pass (added for the PocketBase image build).
+#
+# `pocketbase/pb_data` above does not match the sibling snapshot directories a
+# manual backup leaves behind (`pocketbase/pb_data_backup_<timestamp>/`), and a
+# pb_data is a secret archive rather than just settings: it holds the OAuth
+# client secret and the token signing keys as well as every uploaded file. Both
+# images are published publicly, so every pb_data-shaped path is excluded by
+# prefix, and any stray SQLite file by extension.
+#
+# pb_hooks and pb_migrations deliberately stay in the context — the PocketBase
+# image COPYs them (R9).
+# ---------------------------------------------------------------------------
+pocketbase/pb_data*
+pocketbase/pb_public
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# ---------------------------------------------------------------------------
 # Keep these (last match wins)
 # ---------------------------------------------------------------------------
 !**/.env.example

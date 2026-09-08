@@ -1,0 +1,108 @@
+# syntax=docker/dockerfile:1
+
+# Tablemarks — PocketBase, the private deployment's backend.
+#
+# The image carries this repository's migrations and hooks (R9), so a fresh instance has the
+# collections and the short-link resolver route without a manual copy step.
+#
+# Build from the repository root:
+#   docker build -f docker/Dockerfile.pocketbase -t tablemarks-pocketbase .
+#
+# Nothing deployment-specific is baked in. The public origin, the trusted proxy header, the rate
+# limiter and the OAuth client secret are operator console steps (KD5): they describe the host, not
+# the collections. What describes the collections — including who may create a user record — is
+# schema, and lives in pb_migrations/.
+
+# The PocketBase version is pinned, not floating. The repository's one PocketBase-internals
+# learning (docs/journal/solutions/database-issues/) is empirically scoped to 0.39.3, and a moving
+# tag would silently invalidate it. `$http` / router / migration API shapes move between minors.
+ARG POCKETBASE_VERSION=0.39.3
+
+# ---------------------------------------------------------------------------
+# Fetch stage — the release archive, not the developer machine's binary.
+#
+# pocketbase/pocketbase on the build host is excluded from the build context by .dockerignore
+# (R22): a 29 MB host-built artifact of unknown provenance must never end up in a published image.
+# ---------------------------------------------------------------------------
+FROM alpine:3.22 AS fetch
+
+ARG POCKETBASE_VERSION
+# Supplied by BuildKit; empty on the legacy builder, which the app image is also written to
+# support. Defaulted rather than required so the build does not fail on a host without buildx —
+# `uname -m` inside the stage names the same architecture whenever there is no cross-build.
+ARG TARGETARCH=""
+
+RUN apk add --no-cache ca-certificates unzip wget
+
+WORKDIR /out
+RUN set -eu; \
+    arch="${TARGETARCH:-}"; \
+    if [ -z "$arch" ]; then \
+      case "$(uname -m)" in \
+        x86_64)  arch=amd64 ;; \
+        aarch64) arch=arm64 ;; \
+        armv7l)  arch=arm ;; \
+      esac; \
+    fi; \
+    case "$arch" in \
+      amd64) pb_arch=amd64 ;; \
+      arm64) pb_arch=arm64 ;; \
+      arm)   pb_arch=armv7 ;; \
+      *) echo "unsupported architecture: '${arch}' (uname -m: $(uname -m))" >&2; exit 1 ;; \
+    esac; \
+    wget -q -O pb.zip \
+      "https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_${pb_arch}.zip"; \
+    unzip -q pb.zip pocketbase; \
+    rm pb.zip; \
+    chmod 0755 pocketbase
+
+# ---------------------------------------------------------------------------
+# Runtime stage
+# ---------------------------------------------------------------------------
+FROM alpine:3.22 AS runtime
+
+ARG POCKETBASE_VERSION
+LABEL org.opencontainers.image.title="tablemarks-pocketbase" \
+      org.opencontainers.image.source="https://github.com/baptiste-pasquier/tablemarks" \
+      org.opencontainers.image.description="PocketBase ${POCKETBASE_VERSION} with the Tablemarks migrations and hooks"
+
+# ca-certificates: PocketBase talks TLS to Google (OAuth2 token exchange, short-link resolution).
+# curl: the health check, and the short-link hook's fetch — see pb_hooks/resolveShortLink.pb.js,
+#       which needs an HTTP client that does *not* follow redirects. PocketBase's $http.send uses
+#       Go's http.DefaultClient, which always does. This is a load-bearing dependency, not a
+#       convenience; removing it disables the resolver route.
+# tzdata: PocketBase renders dates and runs the backup cron in the configured timezone.
+RUN apk add --no-cache ca-certificates curl tzdata
+
+COPY --from=fetch /out/pocketbase /usr/local/bin/pocketbase
+
+# Only the tracked schema and hooks. .dockerignore keeps pb_data and every pb_data_backup_* out of
+# the context, so a naive directory copy cannot pull the developer's database in behind these.
+COPY pocketbase/pb_migrations /pb/pb_migrations
+COPY pocketbase/pb_hooks /pb/pb_hooks
+
+# The data directory is the only mount point (R8). pb_migrations stays *inside the image* on
+# purpose: PocketBase writes auto-generated migrations into that directory when collections are
+# edited through the admin UI, and a volume there would let a host-side snapshot of generated files
+# shadow the image's tracked ones on the next upgrade.
+RUN mkdir -p /pb/pb_data
+VOLUME ["/pb/pb_data"]
+
+WORKDIR /pb
+EXPOSE 8090
+
+# PocketBase's own liveness endpoint. Compose gates the app container on this (KTD7).
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
+    CMD curl -fsS http://127.0.0.1:8090/api/health || exit 1
+
+# --http=0.0.0.0:8090 — the default binds to loopback, which is unreachable from outside the
+#   container. The container is not the trust boundary; the operator's reverse proxy is.
+# --hooksWatch=false — the hooks are baked into a read-only-by-convention image layer, so the
+#   fsnotify watcher only costs a file descriptor and a restart risk.
+ENTRYPOINT ["pocketbase"]
+CMD ["serve", \
+     "--http=0.0.0.0:8090", \
+     "--dir=/pb/pb_data", \
+     "--migrationsDir=/pb/pb_migrations", \
+     "--hooksDir=/pb/pb_hooks", \
+     "--hooksWatch=false"]
