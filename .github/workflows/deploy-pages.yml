@@ -1,0 +1,114 @@
+# Public demo — the GitHub Pages target.
+#
+# A push to `main` rebuilds and republishes the demo (R18). The demo runs with no backend
+# reachable from the visitor's browser (R12): nothing here supplies a PocketBase URL, and the
+# app falls back to local-only when it cannot read one.
+#
+# ---------------------------------------------------------------------------------------------
+# Why the guard below exists
+# ---------------------------------------------------------------------------------------------
+# `vite.config.ts` disables the service worker and the web manifest in `--mode demo` with a plain
+# `disable`, not `selfDestroying`. That is only safe while nothing has ever registered a worker on
+# the Pages origin: a single deploy from a tree without the demo-mode handling would install one
+# permanently, on an origin that has no way to reach back and unregister it. Ordering is not a
+# guarantee, so the invariant is asserted twice — before the build, against the config, and after
+# it, against the bytes that are about to be uploaded.
+name: Deploy demo to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # A redeploy without a commit — after the Pages source is first switched to GitHub Actions,
+  # for instance.
+  workflow_dispatch:
+
+# Read-only by default. Only the deploy job below widens this, and only for itself.
+permissions:
+  contents: read
+
+# The single fixed group GitHub documents for Pages: an in-flight deployment is allowed to finish
+# rather than being cancelled, so two overlapping pushes cannot race to write the same origin.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the demo
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Fails before anything is built, and says exactly what is missing.
+      - name: Guard — the tree must carry the demo build target
+        run: |
+          set -eu
+          fail() {
+            echo "::error file=vite.config.ts::$1" >&2
+            exit 1
+          }
+          grep -q "mode === 'demo'" vite.config.ts \
+            || fail "vite.config.ts does not discriminate the demo mode. Publishing this tree would put a service worker on the Pages origin, which cannot then be unregistered from here. Refusing to deploy."
+          grep -q 'disable: isDemo' vite.config.ts \
+            || fail "vite.config.ts does not disable the PWA in demo mode. Publishing this tree would put a service worker and a web manifest on the Pages origin. Refusing to deploy."
+
+      # Pinned to 22 for the same reason as CI: nothing else in the repository states a major.
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Not used for its outputs — the base is derived below exactly as CI derives it. This runs
+      # for its preflight: it fails with a clear message when the repository's Pages source is not
+      # set to GitHub Actions, instead of letting the deploy job fail at the last step.
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      # `npx vite build`, not `npm run build`: the script prefixes `tsc --noEmit`, and CI already
+      # type-checks. The base is derived from the repository name rather than hardcoded, so a
+      # rename or a fork needs no edit — the same derivation ci.yml uses.
+      - name: Build the demo
+        run: npx vite build --mode demo --base="/${GITHUB_REPOSITORY#*/}/"
+
+      # The assertion that actually matters: no service worker, no manifest, in the bytes being
+      # uploaded. The pre-build guard reads intent; this reads the artifact.
+      - name: Guard — the artifact must carry no service worker and no manifest
+        run: |
+          set -eu
+          offenders=$(find dist -maxdepth 1 \
+            \( -name 'sw.js' -o -name 'workbox-*.js' -o -name '*.webmanifest' -o -name 'registerSW.js' \) \
+            -print)
+          if [ -n "$offenders" ]; then
+            echo "::error::The demo build produced service worker or manifest files, which must never reach the Pages origin:" >&2
+            echo "$offenders" >&2
+            exit 1
+          fi
+
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    # The only job that may write the Pages origin, and it does nothing else: it neither checks
+    # out the repository nor runs any of its code.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,169 @@
+# Container images — the private deployment target.
+#
+# A pull request builds both images for both architectures and publishes nothing (R17). A push to
+# `main` builds the same two images and publishes them to GHCR (R16).
+#
+# ---------------------------------------------------------------------------------------------
+# One tag, both images (KTD7)
+# ---------------------------------------------------------------------------------------------
+# The split-rollout hazard lives on the private host, where the operator pulls by hand and can
+# advance one image without the other. Both images are therefore tagged with the *same* value —
+# `github.sha`, resolved once per run by GitHub for the whole workflow — alongside the moving
+# `latest` tag (R28). `docker/docker-compose.prod.yml` reads one `TABLEMARKS_IMAGE_TAG` for both
+# services, so pasting that SHA can only move them together.
+#
+# The SHA tag is the FULL 40-character commit SHA, not a short prefix: it is what an operator
+# copies out of the run summary and pastes into `TABLEMARKS_IMAGE_TAG`, and what `git show` takes
+# back without ambiguity.
+#
+# ---------------------------------------------------------------------------------------------
+# No backend URL is passed here, on purpose
+# ---------------------------------------------------------------------------------------------
+# `docker/Dockerfile` declares no build argument for the PocketBase location (KD2/R3): a
+# build-time value would bake the private hostname into the image and into this public build log.
+# The operator supplies TABLEMARKS_POCKETBASE_URL when the container starts. If a build arg for it
+# ever appears in this file, that decision has been broken.
+name: Docker images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only by default. Only the publish job below widens this, and only for itself.
+permissions:
+  contents: read
+
+# A new push supersedes an in-flight run for the same ref. Multi-architecture builds are slow
+# (linux/arm64 is emulated), so a superseded run is worth cancelling.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # -------------------------------------------------------------------------------------------
+  # Pull requests: prove both images still build, for both architectures. Nothing is published,
+  # and this job holds no credential that could publish — no `packages: write`, no registry login.
+  # -------------------------------------------------------------------------------------------
+  build:
+    name: Build ${{ matrix.image }} (no publish)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: tablemarks-app
+            dockerfile: docker/Dockerfile
+          - image: tablemarks-pocketbase
+            dockerfile: docker/Dockerfile.pocketbase
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # linux/arm64 is built under emulation: the runners are amd64 only.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+
+      # The default builder cannot do multi-platform; buildx can.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      # `context: .` is the repository root — both Dockerfiles COPY paths relative to it
+      # (docker/nginx.conf, pocketbase/pb_migrations, …), exactly as docker-compose.yml builds
+      # them. `.dockerignore` at the root keeps pb_data and the host-built binary out.
+      - name: Build ${{ matrix.image }}
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # -------------------------------------------------------------------------------------------
+  # Pushes to main: the same build, published.
+  # -------------------------------------------------------------------------------------------
+  publish:
+    name: Publish ${{ matrix.image }}
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: tablemarks-app
+            dockerfile: docker/Dockerfile
+          - image: tablemarks-pocketbase
+            dockerfile: docker/Dockerfile.pocketbase
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to ${{ env.REGISTRY }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The name is derived, not hardcoded, so a fork publishes under its own owner — and is
+      # lower-cased because GHCR rejects an uppercase path even though GitHub allows the owner.
+      # For this repository it resolves to ghcr.io/baptiste-pasquier/tablemarks-app and
+      # ghcr.io/baptiste-pasquier/tablemarks-pocketbase, which is character-for-character what
+      # docker/docker-compose.prod.yml pulls by default.
+      - name: Resolve the image reference
+        id: image
+        run: |
+          set -eu
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "ref=${REGISTRY}/${owner}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and publish ${{ matrix.image }}
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          # Both matrix legs read the same `github.sha`, so the two images always carry the same
+          # immutable tag for a given run (KTD7/R28). `latest` is the moving tag; the SHA is the
+          # one an operator can roll back to.
+          tags: |
+            ${{ steps.image.outputs.ref }}:${{ github.sha }}
+            ${{ steps.image.outputs.ref }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      # The operator needs the exact string to paste into TABLEMARKS_IMAGE_TAG. Printing it in the
+      # run summary saves a trip to the package page, where the two images are listed separately
+      # and nothing states that they must move together.
+      - name: Record the deployable tag
+        run: |
+          {
+            echo "### ${{ steps.image.outputs.ref }}"
+            echo
+            echo '```'
+            echo "TABLEMARKS_IMAGE_TAG=${{ github.sha }}"
+            echo '```'
+            echo
+            echo 'Both images in this run carry this tag. Upgrade them together.'
+          } >> "$GITHUB_STEP_SUMMARY"
