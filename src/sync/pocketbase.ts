@@ -1,9 +1,16 @@
 import PocketBase from 'pocketbase'
 
-const PB_URL = (import.meta.env.VITE_PB_URL as string | undefined) ?? 'http://127.0.0.1:8090'
-
-/** Shared PocketBase client. Auth state persists in localStorage via the SDK's default store. */
-export const pb = new PocketBase(PB_URL)
+/**
+ * Shared PocketBase client. Auth state persists in localStorage via the SDK's default store.
+ *
+ * Constructed with an **empty** base URL on purpose (KD2/R3): the backend location is read at
+ * runtime from `config.json` and assigned by the bootstrap (`src/sync/bootstrap.ts`), so the built
+ * bundle carries no deployment hostname. Constructing the client does no network I/O and `baseURL`
+ * is a public mutable field, so the client stays at module scope and every importer keeps a stable
+ * reference. Until the bootstrap assigns it, an empty base URL resolves against the app's own
+ * origin — which is why the bootstrap starts no backend-touching controller before it does.
+ */
+export const pb = new PocketBase('')
 
 export interface ResolvedLink {
   lat: number

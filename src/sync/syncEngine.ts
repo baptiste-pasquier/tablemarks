@@ -199,11 +199,25 @@ export class SyncController {
       if (this.stopped) void unsub()
       else this.unsubscribers.push(unsub)
     }
-    void pb.collection('restaurants').subscribe('*', () => this.scheduleSync()).then(track)
-    void pb.collection('visits').subscribe('*', () => this.scheduleSync()).then(track)
+    this.subscribeRealtime('restaurants', track)
+    this.subscribeRealtime('visits', track)
     // Best-effort initial reconcile — a failure here (e.g. PocketBase down on sign-in) must not
     // prevent the controller from starting; subscriptions are registered so a later trigger recovers.
     this.runSync()
+  }
+
+  /**
+   * Opens one realtime subscription. The rejection path is not exceptional: a configured backend
+   * that is unreachable fails the realtime connect on every `start()`, and an unhandled rejection
+   * there would be a process-level error, not a degraded feature. Failing to subscribe only costs
+   * remote-change triggers — the local-write and reconnect triggers still drive sync.
+   */
+  private subscribeRealtime(collection: string, track: (unsub: () => void) => void): void {
+    void pb
+      .collection(collection)
+      .subscribe('*', () => this.scheduleSync())
+      .then(track)
+      .catch((err) => console.error(`[sync] realtime subscribe to ${collection} failed`, err))
   }
 
   /**
