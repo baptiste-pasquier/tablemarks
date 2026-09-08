@@ -1,0 +1,68 @@
+# Continuous integration: every push and every pull request runs the whole gate.
+#
+# Both build targets are built here on purpose. A regression that only breaks the public demo
+# — a root-absolute asset path, a manifest `start_url` that ignores the subpath — passes the
+# type check, the tests and the private build, and would otherwise only be discovered after
+# merge, with the demo already broken.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A CI job only reads the code.
+permissions:
+  contents: read
+
+# A new push supersedes an in-flight run for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Type check, tests, docs, both builds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Pinned to 22 deliberately: the repository declares no `engines` and carries no `.nvmrc`,
+      # so nothing else keeps CI aligned with the container image's Node 22 build stage, and a
+      # green run on another major would prove nothing about the image.
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      # scripts/check_docs.py is standard library only, so any modern CPython will do.
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      # Needs no node_modules, so it runs before the install and fails fast.
+      - name: Documentation gate
+        run: npm run check:docs
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `npm run build` is `tsc --noEmit && vite build`. CI runs those two halves as separate
+      # steps so the type check has its own named result and so it runs once, not once per
+      # target: the composition below is exactly what the container image's `npm run build`
+      # executes, plus the second target.
+      - name: Type check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build the private target
+        run: npx vite build
+
+      # The public demo is served from the GitHub Pages repository subpath. The base is derived
+      # from the repository name rather than hardcoded, so a rename or a fork needs no edit.
+      - name: Build the public demo target
+        run: npx vite build --mode demo --base="/${GITHUB_REPOSITORY#*/}/"
