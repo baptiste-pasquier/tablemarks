@@ -62,5 +62,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Scope collection to src/. Agent worktrees under .claude/worktrees/ are full checkouts of
+    // this repo, so the default glob collected their src/ copies too — tripling the suite and
+    // reporting failures from other branches' code as if they were this tree's.
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })
