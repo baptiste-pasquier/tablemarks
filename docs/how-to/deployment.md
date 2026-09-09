@@ -20,7 +20,7 @@ any deployment** — see [ADR-0001](../journal/decisions/0001-read-the-backend-l
 
 ## Bring up a new private instance
 
-The steps below are an **ordered sequence**. Two of the orderings are load-bearing and are called
+The steps below are an **ordered sequence**. Three of the orderings are load-bearing and are called
 out where they apply.
 
 1. **Start the stack with PocketBase reachable only over loopback or an SSH tunnel.** Do not point
@@ -56,12 +56,36 @@ out where they apply.
    `https://<your-pocketbase-origin>/api/oauth2-redirect`. Google rejects any callback to an
    origin not listed here, so this is the step that makes sign-in work rather than a formality.
 
-7. **Open the public route** to the stack.
+7. **Sign in once yourself**, over that same private path, before the route is public.
+
+   Read [First sign-in on a private instance](#first-sign-in-on-a-private-instance) first — it is
+   a reconciliation event, and the export it asks for is the only copy of the pre-merge state.
+
+   This step comes before step 8 and cannot be skipped: step 8 closes the door that creates your
+   account, so your record has to exist before it shuts.
+
+8. **Close account creation.** Console → **Collections → users → API Rules → Create rule**, set to
+   **superusers only** (the lock).
+
+   `pb_migrations/1788897820_users_close_anonymous_create.js` already closed *anonymous* creation,
+   but the rule it installs gates on the sign-in *mechanism*, not on identity: every Google account
+   on the internet satisfies `@request.context = "oauth2"`. Without this step, opening the route in
+   step 9 lets any stranger click **Sign in with Google** and get an account on your instance, with
+   write access to their own records.
+
+   Locking the rule does not affect *your* sign-in: signing in to an account that already exists is
+   an authentication, not a create. It blocks only new accounts — so if you ever need to add one,
+   unlock the rule, sign in with that account, and lock it again.
+
+   Step 8 comes after step 7 for the same reason, from the other side: on an instance where no user
+   record exists yet, a locked create rule leaves no way in at all.
+
+9. **Open the public route** to the stack.
 
 ### All of this lives in `pb_data`
 
-Every setting in steps 2 to 5 is stored in the `pb_data` volume, not in the image and not in an
-environment variable. Three consequences follow.
+Every setting in steps 2 to 5, and the locked create rule from step 8, is stored in the `pb_data`
+volume — not in the image and not in an environment variable. Three consequences follow.
 
 | Consequence | What it means |
 |---|---|
@@ -120,10 +144,19 @@ restore-from-backup**, and nothing else.
 
 ## After a restore
 
-**Re-verify the console settings in steps 2 to 5, do not assume them.** A restore returns the
-instance to whatever hardening the backup captured — which may be a state from before the proxy
-header, the limiter or the OAuth credentials were set. Walk the sequence again and confirm each
-value.
+**Re-verify the console settings in steps 2 to 5 and step 8, do not assume them.** A restore
+returns the instance to whatever hardening the backup captured — which may be a state from before
+the proxy header, the limiter, the OAuth credentials or the locked create rule were set. Walk the
+sequence again and confirm each value.
+
+**Step 8 is the one whose absence is silent.** A missing proxy header or limiter degrades something
+you can observe; a create rule restored to its unlocked state changes nothing you can see from the
+app, and simply lets the next stranger sign up. Check it explicitly rather than by symptom.
+
+The same applies to reverting the migration. Its `down` restores the PocketBase default, an empty
+create rule open to unauthenticated callers — so `migrate down` past it on a public instance
+reopens more than step 8 closed. There is no reason to run it on a live instance; recovery is
+restore-from-backup.
 
 ## First sign-in on a private instance
 
