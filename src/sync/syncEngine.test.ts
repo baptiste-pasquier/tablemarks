@@ -2,6 +2,7 @@ import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../test/idb'
 import { fullSync, SyncController, type RemoteStore } from './syncEngine'
 import { getSyncStatus } from './syncStatus'
+import { getBackendStatus, setBackendPresence } from './backendStatus'
 import { pb } from './pocketbase'
 import {
   createRestaurant,
@@ -485,5 +486,107 @@ describe('SyncController', () => {
     await flush()
 
     expect(remote.attempts).toBe(1) // no extra attempt ran early
+  })
+})
+
+/**
+ * The second reachability writer (code review #2). `backendStatus.ts` documents the sync engine as
+ * writing reachability from every attempt it makes; before this it wrote none, so a backend that
+ * died or recovered mid-session was never reported unless a browser online/offline event happened
+ * to coincide.
+ */
+describe('SyncController -> backendStatus reachability', () => {
+  let controller: SyncController | undefined
+
+  beforeEach(() => {
+    // The setter is a no-op unless an address is known, so presence has to be configured first.
+    setBackendPresence({ status: 'configured', pocketbaseUrl: 'https://pb.example.com' })
+  })
+
+  afterEach(() => {
+    controller?.stop()
+    controller = undefined
+    // Back through `absent`, which also resets reachability to `unknown` (no reset export by design).
+    setBackendPresence({ status: 'absent' })
+    vi.restoreAllMocks()
+  })
+
+  function stubRealtime(): void {
+    vi.spyOn(pb, 'collection').mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue(() => {}),
+    } as unknown as ReturnType<typeof pb.collection>)
+  }
+
+  const flush = (ms = 30) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  it('reports reachable after a successful sync', async () => {
+    await createRestaurant({ name: 'A', lat: 1, lng: 1 })
+    stubRealtime()
+
+    controller = new SyncController()
+    await controller.start(new FakeRemote())
+    await flush()
+
+    expect(getBackendStatus().reachability).toBe('reachable')
+  })
+
+  it('reports unreachable on the first transport failure, without waiting for escalation', async () => {
+    await createRestaurant({ name: 'A', lat: 1, lng: 1 })
+    stubRealtime()
+
+    controller = new SyncController()
+    await controller.start(new FailingRemote()) // failure #1, below ESCALATION_THRESHOLD
+    await flush()
+
+    // The sync *status* deliberately stays quiet until the third failure; reachability is an
+    // observation and must not wait for it.
+    expect(getSyncStatus().state).toBe('pending')
+    expect(getBackendStatus().reachability).toBe('unreachable')
+  })
+
+  it('reports reachable on a 401: a rejected credential proves the server answered', async () => {
+    await createRestaurant({ name: 'A', lat: 1, lng: 1 })
+    stubRealtime()
+    const remote = new FailingRemote()
+    remote.err = Object.assign(new Error('unauthorized'), { status: 401 })
+
+    controller = new SyncController()
+    await controller.start(remote)
+    await flush()
+
+    expect(getBackendStatus().reachability).toBe('reachable')
+  })
+
+  it('clears a stale unreachable once the backend answers again', async () => {
+    await createRestaurant({ name: 'A', lat: 1, lng: 1 })
+    stubRealtime()
+
+    controller = new SyncController()
+    await controller.start(new FailingRemote())
+    await flush()
+    expect(getBackendStatus().reachability).toBe('unreachable')
+
+    // Recovery mid-session, with no online/offline transition to piggyback on -- the case that was
+    // unreportable before.
+    controller.stop()
+    controller = new SyncController()
+    await controller.start(new FakeRemote())
+    await flush()
+
+    expect(getBackendStatus().reachability).toBe('reachable')
+  })
+
+  it('writes nothing when the attempt short-circuits offline', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    await createRestaurant({ name: 'A', lat: 1, lng: 1 })
+    stubRealtime()
+
+    controller = new SyncController()
+    await controller.start(new FakeRemote())
+    await flush()
+
+    // No request was sent, so nothing was learned about the server.
+    expect(getSyncStatus().state).toBe('offline')
+    expect(getBackendStatus().reachability).toBe('unknown')
   })
 })

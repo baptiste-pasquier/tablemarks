@@ -11,9 +11,15 @@
  * indistinguishable from a deliberately backend-free build, which is exactly what the public demo
  * and the private container must never look like to each other.
  *
- * Writers: the bootstrap writes presence once from the resolved configuration; the sync engine
- * writes reachability on every attempt, failures *and* successes — a store with one writer and no
- * clearer strands the header in a stale "unreachable" forever.
+ * Writers: the bootstrap writes presence once from the resolved configuration, and seeds
+ * reachability from a startup health check and on every browser online/offline transition. The
+ * sync engine writes reachability from every attempt it actually makes, failures *and* successes —
+ * a store with one writer and no clearer strands the header in a stale "unreachable" forever.
+ *
+ * "Actually makes" is the whole qualification. `SyncController` writes nothing when it
+ * short-circuits offline, because it has sent no request and so learned nothing about the server.
+ * And it classifies rather than blankets: a rejected credential proves the server answered, so
+ * that failure reports *reachable*.
  */
 import type { RuntimeConfig } from './runtimeConfig'
 
