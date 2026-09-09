@@ -9,6 +9,26 @@
 # on pull requests too. The caller declares permissions per invocation, so the pull-request path
 # keeps holding no credential that could publish. That property is the point; the deduplication is
 # what this shape buys on top of it.
+#
+# ---------------------------------------------------------------------------------------------
+# Three jobs, and why the tag is only advertised by the last one
+# ---------------------------------------------------------------------------------------------
+# Two pushes to a registry cannot be one transaction, and no later job can un-push an image. So
+# atomicity is not achievable and is not attempted. What is achievable is never *advertising* a tag
+# that is not complete: `verify` runs under `needs: image`, which on a matrix job means every leg
+# succeeded, and it re-reads both manifests from the registry before writing the operator's
+# copy-paste block. A half-published run now prints nothing rather than printing a tag that one of
+# the two images does not carry.
+#
+# The image list lives in `plan` as JSON, not in `strategy.matrix` directly, so `image` and
+# `verify` iterate the same source. A second hardcoded list in `verify` would be the same
+# duplication this file was created to remove.
+#
+# No `latest` tag is published. The deployment never reads one — `docker-compose.prod.yml` makes
+# `TABLEMARKS_IMAGE_TAG` mandatory precisely so an unset tag stops the deploy rather than
+# resurrecting whatever `latest` points at — and a moving tag is the one thing here that can
+# silently desynchronise, because it is the only tag a half-failed run leaves pointing at two
+# different commits.
 name: Container image
 
 on:
@@ -23,17 +43,38 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # The single source of truth for what this workflow builds, and for the registry namespace both
+  # of the jobs below address. Cheap: no checkout, one shell step.
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.set.outputs.images }}
+      ref-prefix: ${{ steps.set.outputs.ref-prefix }}
+    steps:
+      # The owner is derived, not hardcoded, so a fork publishes under its own — and is lower-cased
+      # because GHCR rejects an uppercase path even though GitHub allows the owner. For this
+      # repository the prefix resolves to ghcr.io/baptiste-pasquier, so the refs below are
+      # character-for-character what docker/docker-compose.prod.yml pulls by default.
+      - name: Resolve the image list and the registry namespace
+        id: set
+        run: |
+          set -eu
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "ref-prefix=${REGISTRY}/${owner}" >> "$GITHUB_OUTPUT"
+          echo 'images=[{"image":"tablemarks-app","dockerfile":"docker/Dockerfile"},{"image":"tablemarks-pocketbase","dockerfile":"docker/Dockerfile.pocketbase"}]' >> "$GITHUB_OUTPUT"
+
   image:
     name: ${{ inputs.publish && 'Publish' || 'Build' }} ${{ matrix.image }}
+    needs: plan
     runs-on: ubuntu-latest
     strategy:
+      # One leg may fail while the other succeeds. That is deliberate — a failure should report
+      # both results, not hide one — and it is safe because `verify` below refuses to advertise a
+      # run that did not publish everything.
       fail-fast: false
       matrix:
-        include:
-          - image: tablemarks-app
-            dockerfile: docker/Dockerfile
-          - image: tablemarks-pocketbase
-            dockerfile: docker/Dockerfile.pocketbase
+        include: ${{ fromJSON(needs.plan.outputs.images) }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -56,21 +97,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # The name is derived, not hardcoded, so a fork publishes under its own owner — and is
-      # lower-cased because GHCR rejects an uppercase path even though GitHub allows the owner.
-      # For this repository it resolves to ghcr.io/baptiste-pasquier/tablemarks-app and
-      # ghcr.io/baptiste-pasquier/tablemarks-pocketbase, which is character-for-character what
-      # docker/docker-compose.prod.yml pulls by default.
-      #
-      # Resolved on both paths, so the build-only run exercises the same expression the publishing
-      # run depends on rather than leaving it untested until it matters.
-      - name: Resolve the image reference
-        id: image
-        run: |
-          set -eu
-          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
-          echo "ref=${REGISTRY}/${owner}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
-
       # `context: .` is the repository root — both Dockerfiles COPY paths relative to it
       # (docker/nginx.conf, pocketbase/pb_migrations, …), exactly as docker-compose.yml builds
       # them. `.dockerignore` at the root keeps pb_data and the host-built binary out.
@@ -84,30 +110,72 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: ${{ inputs.publish }}
-          # Both matrix legs read the same `github.sha`, so the two images always carry the same
-          # immutable tag for a given run (KTD7/R28). `latest` is the moving tag; the SHA is the
-          # one an operator can roll back to.
-          tags: |
-            ${{ steps.image.outputs.ref }}:${{ github.sha }}
-            ${{ steps.image.outputs.ref }}:latest
+          # Both matrix legs read the same `github.sha`, resolved once by GitHub for the whole run,
+          # so the two images carry the same immutable tag (KTD7/R28). The SHA is the only tag
+          # published: see the header on why there is no `latest`.
+          tags: ${{ needs.plan.outputs.ref-prefix }}/${{ matrix.image }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-      # The operator needs the exact string to paste into TABLEMARKS_IMAGE_TAG. Printing it in the
-      # run summary saves a trip to the package page, where the two images are listed separately
-      # and nothing states that they must move together.
+  # The gate between "published" and "announced". `needs: image` on a matrix job means every leg
+  # succeeded, so this is skipped outright when one did not.
+  verify:
+    name: Verify and record the deployable tag
+    needs: [plan, image]
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    steps:
+      # `imagetools` talks to the registry directly and needs no builder, but it is a CLI plugin —
+      # this guarantees it is present rather than assuming the runner image ships it.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to ${{ env.REGISTRY }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # `needs` proves the jobs reported success; this proves the tags are actually retrievable,
+      # which is the thing the operator is about to rely on. Both manifests, both architectures.
+      #
+      # The count check is not ceremony. A list this step failed to parse would send it through an
+      # empty loop, verify nothing, and pass — a gate that cannot fail is worse than no gate,
+      # because the summary it guards would then be trusted for no reason.
+      - name: Confirm every image carries this run's tag
+        run: |
+          set -eu
+          images=$(printf '%s' '${{ needs.plan.outputs.images }}' \
+            | tr '}' '\n' \
+            | sed -n 's/.*"image":"\([^"]*\)".*/\1/p')
+          count=$(printf '%s\n' "$images" | grep -c . || true)
+          if [ "$count" -lt 1 ]; then
+            echo "::error::Could not read the image list from the plan job; verified nothing." >&2
+            exit 1
+          fi
+          printf '%s\n' "$images" | while read -r image; do
+            ref="${{ needs.plan.outputs.ref-prefix }}/${image}:${{ github.sha }}"
+            echo "Inspecting ${ref}"
+            docker buildx imagetools inspect "$ref" > /dev/null
+          done
+          echo "Verified ${count} image(s) at ${{ github.sha }}."
+
+      # The operator needs the exact string to paste into TABLEMARKS_IMAGE_TAG. Printed once, from
+      # here rather than from each matrix leg: a half-published run used to print this block anyway,
+      # for a tag one of the two images did not carry.
       - name: Record the deployable tag
-        if: inputs.publish
         run: |
           {
-            echo "### ${{ steps.image.outputs.ref }}"
+            echo '### Deployable tag'
             echo
             echo '```'
             echo "TABLEMARKS_IMAGE_TAG=${{ github.sha }}"
             echo '```'
             echo
-            echo 'Both images in this run carry this tag. Upgrade them together.'
+            echo 'Both images in this run carry this tag, and both were re-read from the registry.'
+            echo 'Upgrade them together.'
           } >> "$GITHUB_STEP_SUMMARY"

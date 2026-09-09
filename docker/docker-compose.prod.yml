@@ -16,8 +16,12 @@
 # be advanced independently will be, and a new app talking to an old PocketBase (or the reverse) is
 # a bug nobody can reproduce. Both images are published under the same commit SHA and this file
 # reads ONE variable for both, so `TABLEMARKS_IMAGE_TAG=<sha> docker compose ... up -d` can only
-# move them together. The variable has no default on purpose: an unset tag stops the deploy instead
-# of silently resurrecting whatever `latest` points at today.
+# move them together. The variable has no default on purpose: an unset tag stops the deploy rather
+# than resolving to something nobody chose.
+#
+# There is no `latest` to fall back on either — the publish workflow does not create one. A moving
+# tag is the only thing that can silently desynchronise the two images, because a run that
+# published one and failed the other would leave it pointing at two different commits.
 #
 # ---------------------------------------------------------------------------------------------
 # What the operator's reverse proxy in front of this stack must do

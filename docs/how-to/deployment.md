@@ -254,7 +254,12 @@ Both images are published under the same commit SHA and both Compose services re
 variable, so **the app and PocketBase cannot be rolled forward separately**. A new app talking to
 an old PocketBase is a bug nobody can reproduce, and a single shared tag is what makes that state
 unreachable. The variable has no default on purpose: an unset tag stops the deploy rather than
-resurrecting whatever a floating tag points at today.
+resolving to something nobody chose.
+
+**The commit SHA is the only tag published.** There is no `latest`, deliberately: a moving tag is
+the one thing that could point at two different commits after a run that published one image and
+failed the other. The run summary prints the SHA to paste, and prints it only once both images
+have been re-read from the registry — so a tag that appears there is one both images carry.
 
 ## The PocketBase image depends on `curl` at runtime
 
