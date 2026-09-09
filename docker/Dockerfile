@@ -60,6 +60,13 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 
 COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
 
+# NOT a template, and deliberately not under /etc/nginx/conf.d/. The image's envsubst step
+# renders /etc/nginx/templates/*.template into conf.d/, where the main config includes every
+# *.conf at http level -- these headers would then apply to every server block and be sent
+# twice. The one environment-dependent value reaches this file through $tablemarks_csp, which
+# the template sets at server level.
+COPY docker/security-headers.conf /etc/nginx/snippets/security-headers.conf
+
 # The explicit chmod pins the executable bit into the layer regardless of the mode on the build
 # host — and, unlike `COPY --chmod`, works on the legacy builder as well as BuildKit. A
 # non-executable script in /docker-entrypoint.d/ is skipped with only a log line, which would
