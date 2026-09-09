@@ -246,7 +246,11 @@ container's.
   the app's Content-Security-Policy. **No secret may go in it.**
 - The container **refuses to boot** on a value that is not a plain `http(s)` URL, on a
   non-loopback `http://` URL, or on a value containing quotes, spaces, semicolons or backslashes.
-- Leaving it empty is a valid state, not an error: the app then runs local-only.
+- **Leaving it empty is not how you run without a backend.** `docker-compose.prod.yml` stops
+  the deploy on an empty value exactly as it does on an unset one, and `docker-compose.yml`
+  falls back to `http://127.0.0.1:8090`. The image accepts an empty URL and runs local-only on
+  one, but only when run directly rather than through either Compose file. The backend-free
+  build that ships is the GitHub Pages demo, a static bundle that uses none of this.
 
 ### `TABLEMARKS_IMAGE_TAG` in detail
 
