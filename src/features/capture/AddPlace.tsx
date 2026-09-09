@@ -10,6 +10,15 @@ import { ModalHeader } from '../ui/ModalHeader'
 import { Button } from '../ui/Button'
 import type { Restaurant } from '../../types/models'
 
+/** Why a pasted short link was refused. Each reason gets its own lead sentence. */
+type ShortLinkRefusal = 'absent' | 'unavailable' | 'unresolvable'
+
+const REFUSAL_COPY = {
+  absent: 'capture.shortLinkNeedsBackend',
+  unavailable: 'capture.shortLinkBackendUnreachable',
+  unresolvable: 'capture.shortLinkUnresolvable',
+} as const satisfies Record<ShortLinkRefusal, string>
+
 export function AddPlace({
   onClose,
   onOpenExisting,
@@ -26,7 +35,7 @@ export function AddPlace({
   // message is guidance, not a fault to retry, and it must not wear the red error styling (R5).
   // Null when no short link was refused; otherwise why, because the two reasons need different
   // copy — one is a permanent property of this deployment, the other is an outage.
-  const [shortLinkRefused, setShortLinkRefused] = useState<'absent' | 'unavailable' | null>(null)
+  const [shortLinkRefused, setShortLinkRefused] = useState<ShortLinkRefusal | null>(null)
   const [candidates, setCandidates] = useState<GeoCandidate[] | null>(null)
   const [duplicate, setDuplicate] = useState<Restaurant | null>(null)
   const restaurants = useRestaurants()
@@ -54,6 +63,9 @@ export function AddPlace({
         return
       case 'needs-backend':
         setShortLinkRefused(result.reason)
+        return
+      case 'link-unresolvable':
+        setShortLinkRefused('unresolvable')
         return
       default: {
         const unhandled: never = result
@@ -151,14 +163,12 @@ export function AddPlace({
           role="note"
           className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
         >
-          {/* "This app runs without a server" is true of the demo and false of a private instance
-              whose configuration failed to load — where the header is already showing "Server
-              unreachable" a few centimetres away. The alternatives below work either way. */}
-          <p>
-            {shortLinkRefused === 'absent'
-              ? t('capture.shortLinkNeedsBackend')
-              : t('capture.shortLinkBackendUnreachable')}
-          </p>
+          {/* Three different reasons, three different sentences. "This app runs without a server"
+              is true of the demo and false of a private instance whose configuration failed to
+              load — where the header is already showing "Server unreachable" a few centimetres
+              away — and false again when the server answered and refused the link. The two
+              alternatives below work in all three cases. */}
+          <p>{t(REFUSAL_COPY[shortLinkRefused])}</p>
           <ul className="mt-1 list-disc pl-5">
             <li>{t('capture.shortLinkTrySearch')}</li>
             <li>{t('capture.shortLinkTryFullUrl')}</li>

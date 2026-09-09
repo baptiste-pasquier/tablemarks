@@ -26,3 +26,10 @@ describe('parseMapsUrl', () => {
     expect(out.name).toBeUndefined()
   })
 })
+
+it('treats a legacy goo.gl/maps link as unusable rather than sending it to a resolver that refuses it', () => {
+  // The resolver's allowlist is maps.app.goo.gl only, so classifying this as `short` bought a
+  // round trip ending in a 400 — and, before this, a placeholder record that never resolved.
+  expect(parseMapsUrl('https://goo.gl/maps/abc123').kind).toBe('none')
+  expect(parseMapsUrl('https://maps.app.goo.gl/abc123').kind).toBe('short')
+})

@@ -3,12 +3,15 @@ import { freshDB } from '../test/idb'
 import { setGeocodeProvider } from './geocode'
 import { capturePaste } from './capture'
 import { allRestaurants } from '../data/restaurants'
-import { resolveShortLink } from '../sync/pocketbase'
+import { UnresolvableShortLink, resolveShortLink } from '../sync/pocketbase'
 import { setBackendPresence } from '../sync/backendStatus'
 
-vi.mock('../sync/pocketbase', () => ({
-  resolveShortLink: vi.fn(),
-}))
+vi.mock('../sync/pocketbase', async (importOriginal) => {
+  // The real error class, not a stand-in: capture.ts branches on `instanceof`, so a local
+  // look-alike would make the permanent-refusal path untestable and silently dead.
+  const actual = await importOriginal<typeof import('../sync/pocketbase')>()
+  return { UnresolvableShortLink: actual.UnresolvableShortLink, resolveShortLink: vi.fn() }
+})
 
 const FULL_URL = 'https://www.google.com/maps/place/Chez+Marcel/@48.8566,2.3522,15z'
 const SHORT_URL = 'https://maps.app.goo.gl/abc'
@@ -57,6 +60,18 @@ describe('capturePaste', () => {
     if (res.status !== 'provisional') return
     expect(res.restaurant.pending).toBe(true)
     expect(res.restaurant.lat).toBeNull()
+  })
+
+  it('refuses a link the resolver ruled on, instead of saving a record that never resolves', async () => {
+    // 400 and 422 are verdicts on the URL, not failures to reach the server. Saving a provisional
+    // record for one leaves a placeholder named by the raw link, retried on every startup,
+    // reconnect and sign-in, resolving never.
+    vi.mocked(resolveShortLink).mockRejectedValue(new UnresolvableShortLink(400))
+
+    const res = await capturePaste(SHORT_URL)
+
+    expect(res).toEqual({ status: 'link-unresolvable', link: SHORT_URL })
+    expect(await allRestaurants()).toEqual([])
   })
 
   it('routes plain text to search', async () => {

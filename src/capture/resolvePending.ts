@@ -1,5 +1,5 @@
 import { allRestaurants, updateRestaurant, type RestaurantPatch } from '../data/restaurants'
-import { pb, resolveShortLink } from '../sync/pocketbase'
+import { UnresolvableShortLink, pb, resolveShortLink } from '../sync/pocketbase'
 import { nextRetryDelayMs } from '../sync/backoff'
 import { isOnline, onOnlineChange } from '../sync/onlineStatus'
 import { reverseGeocode } from './geocode'
@@ -12,6 +12,12 @@ let inFlight = false
  * nothing needs to persist. Entries are removed once a record resolves.
  */
 const retryState = new Map<string, { attempt: number; nextAttemptAt: number }>()
+
+/**
+ * Records the resolver has refused on their merits. Not a backoff — a backoff says "later"; this
+ * says "never, until something outside this tab changes". Cleared by a reload, like `retryState`.
+ */
+const giveUp = new Set<string>()
 
 /**
  * Retry provisional records — those saved from a short link that couldn't resolve yet (offline,
@@ -29,6 +35,7 @@ export async function resolvePendingRestaurants(): Promise<number> {
     for (const r of pending) {
       const url = r.mapsUrl
       if (!url) continue
+      if (giveUp.has(r.id)) continue
       const state = retryState.get(r.id)
       if (state && Date.now() < state.nextAttemptAt) continue
       try {
@@ -41,7 +48,15 @@ export async function resolvePendingRestaurants(): Promise<number> {
         await updateRestaurant(r.id, patch)
         retryState.delete(r.id)
         resolved++
-      } catch {
+      } catch (err) {
+        if (err instanceof UnresolvableShortLink) {
+          // The resolver ruled on this URL. Retrying it on every reconnect and sign-in for the
+          // life of the tab spends requests to be told the same thing. In-memory only, like the
+          // rest of this map, so a reload asks once more — persisting a verdict would be a
+          // data-model change, and the record stays visibly provisional either way.
+          giveUp.add(r.id)
+          continue
+        }
         // Still unresolvable — leave provisional; a later startup/reconnect retries, gated by backoff.
         const attempt = (state?.attempt ?? 0) + 1
         retryState.set(r.id, { attempt, nextAttemptAt: Date.now() + nextRetryDelayMs(attempt) })
@@ -76,6 +91,7 @@ export function startPendingResolver(): () => void {
     // way out of, so the delay it earned no longer applies; without this the user waits out a 5s
     // window after signing in and the trigger buys nothing.
     retryState.clear()
+    giveUp.clear()
     run()
   }, false)
   return () => {

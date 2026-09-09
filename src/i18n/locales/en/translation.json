@@ -43,6 +43,7 @@
     "errorAdd": "Could not add that place.",
     "shortLinkNeedsBackend": "Short Google Maps links (maps.app.goo.gl) can only be opened by a server, and this app runs without one. Two other ways work here:",
     "shortLinkBackendUnreachable": "Short Google Maps links (maps.app.goo.gl) can only be opened by a server, and this app's server cannot be reached right now. Two other ways work in the meantime:",
+    "shortLinkUnresolvable": "This link could not be opened as a place. Older goo.gl/maps links and Maps searches are not supported. Two other ways work:",
     "shortLinkTrySearch": "Type the place name instead, then pick it from the search results.",
     "shortLinkTryFullUrl": "Or paste the full Google Maps link from your browser address bar — the long one with coordinates in it.",
     "alreadySaved": "is already saved.",

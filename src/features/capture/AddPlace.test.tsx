@@ -7,12 +7,21 @@ import { AddPlace } from './AddPlace'
 import { allRestaurants, createRestaurant } from '../../data/restaurants'
 import { setBackendPresence } from '../../sync/backendStatus'
 import { mockI18n } from '../../test/setup'
+import { UnresolvableShortLink, resolveShortLink } from '../../sync/pocketbase'
+
+// Partial mock: the real module apart from the network call, so `pb` and the error class the
+// component's branch tests with `instanceof` are the genuine ones.
+vi.mock('../../sync/pocketbase', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../sync/pocketbase')>()
+  return { ...actual, resolveShortLink: vi.fn() }
+})
 
 const FULL_URL = 'https://www.google.com/maps/place/Chez+Marcel/@48.8566,2.3522,15z'
 const SHORT_URL = 'https://maps.app.goo.gl/abc'
 
 beforeEach(async () => {
   await freshDB()
+  vi.mocked(resolveShortLink).mockReset()
   setBackendPresence({ status: 'configured', pocketbaseUrl: 'https://pb.example.test' })
   setGeocodeProvider({ search: async () => [], reverse: async () => '1 Rue de Rivoli, Paris' })
 })
@@ -129,6 +138,23 @@ describe('AddPlace', () => {
       await waitFor(() => expect(onClose).toHaveBeenCalled())
       expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel')
       expect(screen.queryByRole('note')).toBeNull()
+    })
+  })
+
+  describe('when the resolver refuses the link on its merits', () => {
+    it('says so on the same surface, and creates nothing', async () => {
+      // Reachable backend, 400 from the hook. Before this the paste became a placeholder named by
+      // the raw URL, with no pin, retried forever.
+      vi.mocked(resolveShortLink).mockRejectedValue(new UnresolvableShortLink(400))
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(SHORT_URL)
+
+      const note = await screen.findByRole('note')
+      expect(note).toHaveTextContent(/could not be opened as a place/i)
+      expect(note).not.toHaveTextContent(/runs without one/i)
+      expect(note).toHaveTextContent(/type the place name/i)
+      expect(await allRestaurants()).toEqual([])
     })
   })
 

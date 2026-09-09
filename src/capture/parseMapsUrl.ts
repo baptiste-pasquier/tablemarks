@@ -1,5 +1,5 @@
 export interface ParsedMapsUrl {
-  /** coords: lat/lng extracted client-side. short: a maps.app.goo.gl link needing server resolve. none: not a usable Maps URL. */
+  /** coords: lat/lng extracted client-side. short: a maps.app.goo.gl link needing server resolve. none: not a usable Maps URL — including a legacy goo.gl/maps link, which the resolver does not accept. */
   kind: 'coords' | 'short' | 'none'
   lat?: number
   lng?: number
@@ -8,7 +8,17 @@ export interface ParsedMapsUrl {
 
 const COORD = /@(-?\d+\.\d+),(-?\d+\.\d+)/
 const PLACE = /\/maps\/place\/([^/@]+)/
-const SHORT = /(?:maps\.app\.goo\.gl|goo\.gl\/maps)/
+/**
+ * Only what Google Maps produces today. `goo.gl/maps` — the pre-2019 form — is deliberately absent:
+ * the server-side resolver does not accept that host (it is the general-purpose Google redirector,
+ * and allowlisting it would make the route a redirect-follower for anything Google ever shortened),
+ * so classifying one as `short` only sent it on a round trip that ends in a refusal.
+ *
+ * Such a link now reads as `none` and routes to name search, which works. Legacy `goo.gl/maps`
+ * links that are still active do resolve in a browser, so pasting the page's full URL instead is
+ * the other way through.
+ */
+const SHORT = /maps\.app\.goo\.gl/
 
 function placeName(text: string): string | undefined {
   const m = text.match(PLACE)

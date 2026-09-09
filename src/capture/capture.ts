@@ -1,7 +1,7 @@
 import { parseMapsUrl } from './parseMapsUrl'
 import { reverseGeocode, type GeoCandidate } from './geocode'
 import { findNearMatch } from './dedup'
-import { resolveShortLink } from '../sync/pocketbase'
+import { UnresolvableShortLink, resolveShortLink } from '../sync/pocketbase'
 import { getBackendStatus } from '../sync/backendStatus'
 import { allRestaurants, createRestaurant } from '../data/restaurants'
 import type { Restaurant } from '../types/models'
@@ -24,6 +24,12 @@ export type CaptureResult =
    * a few centimetres away, and sends them away from something that will work again.
    */
   | { status: 'needs-backend'; link: string; reason: 'absent' | 'unavailable' }
+  /**
+   * The backend was reachable and refused the link on its merits — an unsupported host, or a
+   * target that turned out not to be a Maps place. Distinct from `provisional` because retrying
+   * cannot help: saving one anyway leaves a placeholder named by the raw URL that never resolves.
+   */
+  | { status: 'link-unresolvable'; link: string }
 
 interface ResolvedPlace {
   lat: number
@@ -69,8 +75,12 @@ export async function capturePaste(input: string): Promise<CaptureResult> {
     try {
       const resolved = await resolveShortLink(text)
       return finalize({ lat: resolved.lat, lng: resolved.lng, name: resolved.name, mapsUrl: text })
-    } catch {
-      // Offline or unresolvable: save a provisional record; it resolves when connectivity returns.
+    } catch (err) {
+      // A verdict on this URL, not a failure to reach the server: nothing about it will change, so
+      // say so now rather than saving a record that is retried forever and resolves never.
+      if (err instanceof UnresolvableShortLink) return { status: 'link-unresolvable', link: text }
+      // Offline, or the server did not answer: save a provisional record; it resolves when
+      // connectivity returns.
       const restaurant = await createRestaurant({ name: text, mapsUrl: text, pending: true })
       return { status: 'provisional', restaurant }
     }
