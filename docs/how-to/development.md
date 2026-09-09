@@ -36,6 +36,8 @@ other feature works. To attach a local PocketBase, see
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run lint` | Type-check (`tsc --noEmit`) |
 | `npm run build` | Type-check, then build for production |
+| `npm run check:docs` | Documentation gate — the same one the pre-commit hook and CI run |
+| `npm run check:demo` | Refuse a tree that would put a service worker or manifest on the Pages origin. Add a build directory (`sh scripts/check-demo-target.sh dist`) to check the artifact too |
 
 ## Project structure
 

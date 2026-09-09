@@ -13,6 +13,9 @@
 # permanently, on an origin that has no way to reach back and unregister it. Ordering is not a
 # guarantee, so the invariant is asserted twice — before the build, against the config, and after
 # it, against the bytes that are about to be uploaded.
+#
+# Both halves live in scripts/check-demo-target.sh, which ci.yml runs on every pull request. This
+# workflow is the last line, not the only one: by the time it fails, the change is already on main.
 name: Deploy demo to GitHub Pages
 
 on:
@@ -42,18 +45,10 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Fails before anything is built, and says exactly what is missing.
+      # Fails before anything is installed or built, and says exactly what is missing. No argument,
+      # so only the source half runs — there is no artifact yet.
       - name: Guard — the tree must carry the demo build target
-        run: |
-          set -eu
-          fail() {
-            echo "::error file=vite.config.ts::$1" >&2
-            exit 1
-          }
-          grep -q "mode === 'demo'" vite.config.ts \
-            || fail "vite.config.ts does not discriminate the demo mode. Publishing this tree would put a service worker on the Pages origin, which cannot then be unregistered from here. Refusing to deploy."
-          grep -q 'disable: isDemo' vite.config.ts \
-            || fail "vite.config.ts does not disable the PWA in demo mode. Publishing this tree would put a service worker and a web manifest on the Pages origin. Refusing to deploy."
+        run: scripts/check-demo-target.sh
 
       # Pinned to 22 for the same reason as CI: nothing else in the repository states a major.
       - name: Set up Node 22
@@ -80,16 +75,7 @@ jobs:
       # The assertion that actually matters: no service worker, no manifest, in the bytes being
       # uploaded. The pre-build guard reads intent; this reads the artifact.
       - name: Guard — the artifact must carry no service worker and no manifest
-        run: |
-          set -eu
-          offenders=$(find dist -maxdepth 1 \
-            \( -name 'sw.js' -o -name 'workbox-*.js' -o -name '*.webmanifest' -o -name 'registerSW.js' \) \
-            -print)
-          if [ -n "$offenders" ]; then
-            echo "::error::The demo build produced service worker or manifest files, which must never reach the Pages origin:" >&2
-            echo "$offenders" >&2
-            exit 1
-          fi
+        run: scripts/check-demo-target.sh dist
 
       - name: Upload the Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

@@ -66,3 +66,10 @@ jobs:
       # from the repository name rather than hardcoded, so a rename or a fork needs no edit.
       - name: Build the public demo target
         run: npx vite build --mode demo --base="/${GITHUB_REPOSITORY#*/}/"
+
+      # The same guard the deploy workflow runs, and the reason it is a script. Building the demo
+      # only proves `vite build` exits zero; what defines this target is what it must NOT contain.
+      # Asserting that here is what blocks the merge, rather than failing after it with the demo
+      # already broken on an origin that cannot unregister a worker.
+      - name: Guard the demo target
+        run: scripts/check-demo-target.sh dist

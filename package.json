@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "check:docs": "python3 scripts/check_docs.py",
+    "check:demo": "sh scripts/check-demo-target.sh",
     "prepare": "husky"
   },
   "dependencies": {

@@ -186,6 +186,19 @@ That check proves the **app** is up. It does not prove the backend is answering:
 shell and its health endpoint whether or not PocketBase is reachable, by design. A visitor
 discovers a dead backend as a sign-in that does not complete, and the check stays green.
 
+## The demo must never ship a service worker
+
+`scripts/check-demo-target.sh` refuses a tree, or a build, that would put a service worker or a web
+manifest on the Pages origin. CI runs it on every pull request and the deploy workflow runs it
+twice more — once against the source before building, once against the bytes about to be uploaded.
+`npm run check:demo` runs the source half by hand; pass a build directory to check an artifact too.
+
+The reason it is a gate rather than a convention: `vite.config.ts` disables the worker in demo mode
+with a plain `disable`, not `selfDestroying`. That is safe only while nothing has ever registered a
+worker on that origin. One deploy from a tree without the demo-mode handling installs one
+permanently, and the Pages origin offers no way to reach back and unregister it — so the failure is
+not a bad release you can roll back.
+
 ## The demo's third-party dependencies
 
 The public demo has no backend of its own, and it reaches two third parties directly from the
