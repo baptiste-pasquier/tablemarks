@@ -7,17 +7,17 @@
  * network dependency stays out of the tests that render the whole app.
  */
 
+import { CONFIG_TIMEOUT_MS } from './configTimeouts'
+
+// Re-exported so this module stays the one import site for configuration reading; the constant
+// itself lives next to the service worker's matching deadline, which it is coupled to.
+export { CONFIG_TIMEOUT_MS }
+
 /** File name served next to `index.html`. The container entrypoint rewrites it at boot. */
 const CONFIG_FILE_NAME = 'config.json'
 
 /** Key the configuration file carries. The container entrypoint writes the same key. */
 const POCKETBASE_URL_KEY = 'pocketbaseUrl'
-
-/**
- * Budget for the whole resolution. Well under the geocoder's 10s (`src/capture/geocode.ts`)
- * because this one gates the first paint rather than a background lookup.
- */
-export const CONFIG_TIMEOUT_MS = 3_000
 
 /**
  * Three outcomes, never two. A failed fetch is *not* "no backend configured": collapsing them

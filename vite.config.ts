@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { CONFIG_SW_NETWORK_TIMEOUT_SECONDS } from './src/sync/configTimeouts'
 
 // Two build targets, one source tree. The target discriminator is the Vite **mode**:
 //
@@ -66,11 +67,15 @@ export default defineConfig(({ mode }) => {
               // the backend URL must be re-readable after a redeploy. CacheFirst would pin the first
               // value it ever saw on every installed client, permanently. NetworkFirst falls back to
               // the cached copy only when the network does not answer.
+              //
+              // The timeout is imported, not written here: it has to fire before the page's own
+              // abort or the fallback never gets to deliver. src/sync/configTimeouts.ts holds both
+              // halves of that ordering, and a test pins it.
               urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.endsWith('/config.json'),
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'runtime-config',
-                networkTimeoutSeconds: 5,
+                networkTimeoutSeconds: CONFIG_SW_NETWORK_TIMEOUT_SECONDS,
                 expiration: { maxEntries: 1 },
                 cacheableResponse: { statuses: [200] },
               },
