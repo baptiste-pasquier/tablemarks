@@ -76,9 +76,11 @@ describe('capturePaste', () => {
       setBackendPresence({ status: 'absent' })
     })
 
-    it('refuses a short link and creates no record', async () => {
+    // `reason` is what lets the caller say "this deployment has no server" rather than "the server
+    // is down" — a permanent property here, and the copy sends the user to the alternatives for good.
+    it('refuses a short link and creates no record, saying the backend is absent', async () => {
       const res = await capturePaste(SHORT_URL)
-      expect(res).toEqual({ status: 'needs-backend', link: SHORT_URL })
+      expect(res).toEqual({ status: 'needs-backend', link: SHORT_URL, reason: 'absent' })
       expect(await allRestaurants()).toEqual([])
       expect(resolveShortLink).not.toHaveBeenCalled()
     })
@@ -100,10 +102,12 @@ describe('capturePaste', () => {
       setBackendPresence({ status: 'unavailable', reason: 'config fetch failed' })
     })
 
-    // There is no address to call, so a provisional record here would never resolve either.
-    it('refuses a short link and creates no record', async () => {
+    // There is no address to call, so a provisional record here would never resolve either. But the
+    // reason is NOT `absent`: this deployment does have a server, and the header is already saying
+    // it is unreachable — telling the user the app runs without one would contradict that.
+    it('refuses a short link and creates no record, saying the backend is unreachable', async () => {
       const res = await capturePaste(SHORT_URL)
-      expect(res).toEqual({ status: 'needs-backend', link: SHORT_URL })
+      expect(res).toEqual({ status: 'needs-backend', link: SHORT_URL, reason: 'unavailable' })
       expect(await allRestaurants()).toEqual([])
       expect(resolveShortLink).not.toHaveBeenCalled()
     })

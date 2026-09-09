@@ -2,7 +2,7 @@ import { parseMapsUrl } from './parseMapsUrl'
 import { reverseGeocode, type GeoCandidate } from './geocode'
 import { findNearMatch } from './dedup'
 import { resolveShortLink } from '../sync/pocketbase'
-import { backendAddressIsKnown, getBackendStatus } from '../sync/backendStatus'
+import { getBackendStatus } from '../sync/backendStatus'
 import { allRestaurants, createRestaurant } from '../data/restaurants'
 import type { Restaurant } from '../types/models'
 
@@ -12,12 +12,18 @@ export type CaptureResult =
   | { status: 'duplicate'; match: Restaurant }
   | { status: 'needs-search'; query: string }
   /**
-   * A short link was pasted into a deployment that has no backend to resolve it (R5). A result
-   * variant rather than a throw (KTD6): the caller's catch-all is the generic "could not add"
-   * message, and this is neither an error nor transient — it is a permanent property of this
-   * deployment, and the caller owns the copy that says so.
+   * A short link was pasted and no backend can resolve it (R5). A result variant rather than a
+   * throw (KTD6): the caller's catch-all is the generic "could not add" message, and the caller
+   * owns the copy that explains this one.
+   *
+   * `reason` is the difference between the two ways there is no backend, and the copy must not
+   * blur them. `absent` is permanent — this deployment ships without one, so the message may say
+   * so and send the user to the alternatives for good. `unavailable` means the address could not
+   * be read: a deployment that does have a server, whose header is already saying it is
+   * unreachable. Telling that user the app "runs without a server" contradicts what is on screen
+   * a few centimetres away, and sends them away from something that will work again.
    */
-  | { status: 'needs-backend'; link: string }
+  | { status: 'needs-backend'; link: string; reason: 'absent' | 'unavailable' }
 
 interface ResolvedPlace {
   lat: number
@@ -55,7 +61,10 @@ export async function capturePaste(input: string): Promise<CaptureResult> {
     // exactly what that record exists for. Both `absent` and `unavailable` refuse instead: neither
     // has an address to call, so a provisional record would sit there forever unresolved (the
     // pending resolver only runs when a backend is configured, see `sync/bootstrap.ts`).
-    if (!backendAddressIsKnown(getBackendStatus())) return { status: 'needs-backend', link: text }
+    const presence = getBackendStatus().presence.status
+    if (presence !== 'configured') {
+      return { status: 'needs-backend', link: text, reason: presence }
+    }
 
     try {
       const resolved = await resolveShortLink(text)

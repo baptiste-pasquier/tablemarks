@@ -24,7 +24,9 @@ export function AddPlace({
   const [error, setError] = useState<string | null>(null)
   // Held apart from `error` on purpose: this deployment will never resolve a short link, so the
   // message is guidance, not a fault to retry, and it must not wear the red error styling (R5).
-  const [shortLinkRefused, setShortLinkRefused] = useState(false)
+  // Null when no short link was refused; otherwise why, because the two reasons need different
+  // copy — one is a permanent property of this deployment, the other is an outage.
+  const [shortLinkRefused, setShortLinkRefused] = useState<'absent' | 'unavailable' | null>(null)
   const [candidates, setCandidates] = useState<GeoCandidate[] | null>(null)
   const [duplicate, setDuplicate] = useState<Restaurant | null>(null)
   const restaurants = useRestaurants()
@@ -51,7 +53,7 @@ export function AddPlace({
         await runSearch(result.query)
         return
       case 'needs-backend':
-        setShortLinkRefused(true)
+        setShortLinkRefused(result.reason)
         return
       default: {
         const unhandled: never = result
@@ -79,7 +81,7 @@ export function AddPlace({
     setBusy(true)
     setError(null)
     setDuplicate(null)
-    setShortLinkRefused(false)
+    setShortLinkRefused(null)
     try {
       await handle(await capturePaste(input))
     } catch {
@@ -149,7 +151,14 @@ export function AddPlace({
           role="note"
           className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
         >
-          <p>{t('capture.shortLinkNeedsBackend')}</p>
+          {/* "This app runs without a server" is true of the demo and false of a private instance
+              whose configuration failed to load — where the header is already showing "Server
+              unreachable" a few centimetres away. The alternatives below work either way. */}
+          <p>
+            {shortLinkRefused === 'absent'
+              ? t('capture.shortLinkNeedsBackend')
+              : t('capture.shortLinkBackendUnreachable')}
+          </p>
           <ul className="mt-1 list-disc pl-5">
             <li>{t('capture.shortLinkTrySearch')}</li>
             <li>{t('capture.shortLinkTryFullUrl')}</li>

@@ -42,6 +42,7 @@
     "errorSearchFailed": "Échec de la recherche. Réessayez, ou collez le lien Google Maps complet contenant les coordonnées.",
     "errorAdd": "Impossible d'ajouter ce lieu.",
     "shortLinkNeedsBackend": "Les liens Google Maps courts (maps.app.goo.gl) ne peuvent être ouverts que par un serveur, et cette application fonctionne sans serveur. Deux autres méthodes fonctionnent ici :",
+    "shortLinkBackendUnreachable": "Les liens Google Maps courts (maps.app.goo.gl) ne peuvent être ouverts que par un serveur, et celui de cette application est injoignable pour le moment. Deux autres méthodes fonctionnent en attendant :",
     "shortLinkTrySearch": "Saisissez plutôt le nom du lieu, puis choisissez-le dans les résultats de recherche.",
     "shortLinkTryFullUrl": "Ou collez le lien Google Maps complet depuis la barre d'adresse de votre navigateur — le lien long qui contient les coordonnées.",
     "alreadySaved": "est déjà enregistré.",

@@ -86,6 +86,16 @@ describe('AddPlace', () => {
       expect(await allRestaurants()).toEqual([])
     })
 
+    it('says this deployment has no server, permanently', async () => {
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(SHORT_URL)
+
+      const note = await screen.findByRole('note')
+      expect(note).toHaveTextContent(/runs without one/i)
+      expect(note).not.toHaveTextContent(/right now/i)
+    })
+
     it('names both paths that still work: searching by name and a full Maps URL', async () => {
       render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
 
@@ -119,6 +129,34 @@ describe('AddPlace', () => {
       await waitFor(() => expect(onClose).toHaveBeenCalled())
       expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel')
       expect(screen.queryByRole('note')).toBeNull()
+    })
+  })
+
+  describe('with a backend whose address could not be read', () => {
+    beforeEach(() => {
+      setBackendPresence({ status: 'unavailable', reason: 'config fetch failed' })
+    })
+
+    it('says the server is unreachable, not that the app has none (review #13)', async () => {
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(SHORT_URL)
+
+      const note = await screen.findByRole('note')
+      // The header is already showing "Server unreachable" next to this. Claiming the app "runs
+      // without one" would contradict it, and would send the user away from something transient.
+      expect(note).toHaveTextContent(/cannot be reached right now/i)
+      expect(note).not.toHaveTextContent(/runs without one/i)
+    })
+
+    it('still names both paths that work in the meantime', async () => {
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(SHORT_URL)
+
+      const note = await screen.findByRole('note')
+      expect(note).toHaveTextContent(/type the place name/i)
+      expect(note).toHaveTextContent(/full google maps link/i)
     })
   })
 
