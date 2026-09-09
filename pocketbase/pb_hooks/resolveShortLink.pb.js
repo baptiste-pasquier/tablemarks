@@ -1,8 +1,20 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// Public route that resolves a maps.app.goo.gl short link to coordinates.
+// Resolves a maps.app.goo.gl short link to coordinates for a signed-in caller.
 // The browser cannot follow Google's cross-origin redirect, so we do it here.
-// Callable without authentication so it works in no-account (local) mode.
+//
+// Authentication is required (`$apis.requireAuth()` at the bottom of this file). The route was
+// public at first so capture would work with no account, but that reasoning only ever covered one
+// case: a *configured* backend with a signed-out user. With no backend configured the client
+// refuses the paste before calling (src/capture/capture.ts), so the demo never reaches this route.
+// Against that one case stands the cost of answering an anonymous caller: every hit forks a curl
+// process and opens a TLS connection, so an unauthenticated GET is a denial-of-service lever on
+// an internet-exposed instance. A signed-out paste now saves a provisional record instead, which
+// the pending resolver retries once the user signs in (src/capture/resolvePending.ts).
+//
+// This is code, not topology, so it does not belong to the operator steps KD5 assigns to the
+// console: unlike a per-IP rate limit, it needs no trusted-proxy header and it survives a pb_data
+// restore.
 //
 // Verified against PocketBase 0.39.3 (the version docker/Dockerfile.pocketbase pins). Both
 // PocketBase-internals facts this file depends on were confirmed empirically against a running
@@ -75,7 +87,10 @@ routerAdd('GET', '/api/tablemarks/resolve-short-link', (e) => {
           '--output', '/dev/null',
           '--proto', '=https',
           '--max-redirs', '0',
-          '--max-time', '10',
+          // Bound how long one anonymous-shaped request can hold a process and a socket. A Google
+          // redirect answers in well under a second; 4s is slack, not a budget.
+          '--connect-timeout', '2',
+          '--max-time', '4',
           '--write-out', '%{http_code} %{redirect_url}',
           '--',
           url,
@@ -122,4 +137,4 @@ routerAdd('GET', '/api/tablemarks/resolve-short-link', (e) => {
     lng: parseFloat(coords[2]),
     name: name,
   })
-})
+}, $apis.requireAuth())

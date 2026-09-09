@@ -1,5 +1,5 @@
 import { allRestaurants, updateRestaurant, type RestaurantPatch } from '../data/restaurants'
-import { resolveShortLink } from '../sync/pocketbase'
+import { pb, resolveShortLink } from '../sync/pocketbase'
 import { nextRetryDelayMs } from '../sync/backoff'
 import { isOnline, onOnlineChange } from '../sync/onlineStatus'
 import { reverseGeocode } from './geocode'
@@ -53,10 +53,33 @@ export async function resolvePendingRestaurants(): Promise<number> {
   }
 }
 
-/** Run the resolver now and on every reconnect. Returns an unsubscribe fn. Independent of sign-in. */
+/**
+ * Run the resolver now, on every reconnect, and whenever the sign-in state changes. Returns an
+ * unsubscribe fn.
+ *
+ * Sign-in is a trigger because the resolver hook requires authentication
+ * (`pocketbase/pb_hooks/resolveShortLink.pb.js`): a link pasted while signed out is refused and
+ * saved provisional, and without this the record would sit unresolved until the next reload even
+ * though signing in is exactly what unblocks it.
+ */
 export function startPendingResolver(): () => void {
-  void resolvePendingRestaurants().catch(() => {})
-  return onOnlineChange(() => {
+  const run = () => {
     if (isOnline()) void resolvePendingRestaurants().catch(() => {})
-  })
+  }
+  run()
+  const stopOnline = onOnlineChange(run)
+  // `false` — do not fire on subscribe; `run()` above already covers the initial pass.
+  const stopAuth = pb.authStore.onChange(() => {
+    // Clear the backoff first, unlike the reconnect trigger. Reconnecting says the network is back,
+    // which tells us nothing about a link that may simply be bad — so those records keep waiting
+    // out their delay. A sign-in change removes the one failure cause the resolver cannot retry its
+    // way out of, so the delay it earned no longer applies; without this the user waits out a 5s
+    // window after signing in and the trigger buys nothing.
+    retryState.clear()
+    run()
+  }, false)
+  return () => {
+    stopOnline()
+    stopAuth()
+  }
 }

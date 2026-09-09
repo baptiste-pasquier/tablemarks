@@ -53,12 +53,12 @@ The client-generated `id` (15-char `[a-z0-9]`) is reused as the PocketBase recor
 
 ## Short-link resolver hook
 
-`pb_hooks/resolveShortLink.pb.js` adds `GET /api/tablemarks/resolve-short-link?url=...`, which reads a `maps.app.goo.gl` redirect server-side and returns `{lat, lng, name?}`. It is public (no auth) so capture works in local-only mode.
+`pb_hooks/resolveShortLink.pb.js` adds `GET /api/tablemarks/resolve-short-link?url=...`, which reads a `maps.app.goo.gl` redirect server-side and returns `{lat, lng, name?}`. It requires authentication: answering an anonymous caller forks a `curl` process per hit, which is a denial-of-service lever once the instance is internet-exposed. A short link pasted while signed out saves a provisional record instead, and the client retries it on sign-in.
 
 Two rules govern any edit to this file, both verified against a running PocketBase 0.39.3:
 
 1. **Everything a hook handler uses is declared inside the handler.** PocketBase runs each handler in an isolated goja VM with no access to file-level scope; a constant or helper declared at the top of the file raises `ReferenceError`, which PocketBase reports to the caller as a generic `400`.
-2. **Do not use `$http.send` to inspect a redirect.** It follows redirects and exposes no final URL. The hook shells out to `curl` with `--max-redirs 0` instead, which makes `curl` a load-bearing runtime dependency of the PocketBase image — remove it and the resolver fails closed.
+2. **Do not use `$http.send` to inspect a redirect.** It follows redirects and exposes no final URL — its documented options are `url`, `method`, `body`, `data`, `headers` and `timeout`, with no redirect control. The hook shells out to `curl` with `--max-redirs 0` instead, which makes `curl` a load-bearing runtime dependency of the PocketBase image — remove it and the resolver fails closed.
 
 Both, with the evidence: [`docs/journal/solutions/database-issues/pocketbase-hook-handlers-cannot-see-file-level-scope.md`](../docs/journal/solutions/database-issues/pocketbase-hook-handlers-cannot-see-file-level-scope.md).
 
