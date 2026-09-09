@@ -83,6 +83,23 @@ interface UnhandledRejectionSource {
 }
 const runner = (globalThis as { process?: UnhandledRejectionSource }).process
 
+/**
+ * A persisted session the SDK accepts as valid, so `auth.resume()` reaches `SyncController.start()`
+ * and the realtime connect actually happens. `pb.authStore.isValid` decodes the token and checks
+ * `exp`, so a placeholder string will not do — and without a real one the "no realtime connect"
+ * assertions below can never fail, which is exactly what a mutation test found them doing.
+ */
+function seedSignedInSession(): void {
+  const b64url = (value: object) =>
+    btoa(JSON.stringify(value)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
+  const token = [
+    b64url({ alg: 'HS256', typ: 'JWT' }),
+    b64url({ id: 'user1', type: 'auth', collectionId: 'users', exp: Math.floor(Date.now() / 1000) + 3600 }),
+    'not-verified-client-side',
+  ].join('.')
+  pb.authStore.save(token, { id: 'user1', email: 'someone@example.test', collectionName: 'users' } as never)
+}
+
 /** Backend calls a startup must never make — excludes the configuration file itself. */
 function backendCalls(mock: ReturnType<typeof installFetch>): string[] {
   return mock.mock.calls.map((c) => String(c[0])).filter((url) => !url.endsWith('config.json'))
@@ -98,6 +115,9 @@ beforeEach(async () => {
   // A baseline that is neither of the two outcomes under test, so every assertion below observes
   // a real transition rather than the value the previous test happened to leave behind.
   setBackendPresence({ status: 'unavailable', reason: 'test baseline' })
+  // No test may inherit a session from the one before it: a leaked one would make the
+  // "no realtime connect" assertions pass for the wrong reason, and a missing one makes them vacuous.
+  pb.authStore.clear()
   setSyncState('synced')
   pb.baseURL = ''
   setGeocodeProvider({ search: async () => [], reverse: async () => 'somewhere' })
@@ -115,6 +135,11 @@ describe('bootstrap — no backend configured (R7)', () => {
   it('starts no controllers and makes no backend call', async () => {
     // A record the resolver would act on if it ran: without one, "no call" proves nothing.
     await createRestaurant({ name: SHORT_LINK, mapsUrl: SHORT_LINK, pending: true })
+    // And a persisted session, for the same reason: `auth.resume()` returns early when signed out,
+    // so without one the realtime assertion below is unreachable in both directions and proves
+    // nothing either. Signed-in-with-no-backend is also the state R7 actually has to withstand — a
+    // token outliving the deployment that issued it.
+    seedSignedInSession()
     const fetchMock = installFetch()
     const eventSource = installEventSource()
     const resume = vi.spyOn(auth, 'resume')
@@ -177,6 +202,22 @@ describe('bootstrap — backend configured', () => {
     expect(resume).toHaveBeenCalledTimes(1)
     expect(vi.mocked(startPendingResolver)).toHaveBeenCalledTimes(1)
     expect(render).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens the realtime connection for a persisted session (review #14)', async () => {
+    // The positive half of the two `expect(eventSource).not.toHaveBeenCalled()` assertions in this
+    // file. Without it they were structurally dead: no test ever made pb.authStore valid, so
+    // `auth.resume()` returned early and the EventSource path was unreachable in every direction.
+    // This proves the spy observes a connect when one is supposed to happen, which is what gives
+    // the negative assertions their meaning.
+    seedSignedInSession()
+    installFetch(configured())
+    const eventSource = installEventSource()
+
+    dispose = await bootstrap(render)
+
+    await vi.waitFor(() => expect(eventSource).toHaveBeenCalled())
+    expect(eventSource.mock.calls[0][0]).toContain(CONFIGURED_URL)
   })
 
   it('records the backend as reachable once the health check answers', async () => {
@@ -350,6 +391,9 @@ describe('bootstrap — configuration that cannot be read (R30)', () => {
 
   it('makes no backend call when the address could not be read', async () => {
     await createRestaurant({ name: SHORT_LINK, mapsUrl: SHORT_LINK, pending: true })
+    // Signed in, but the address is unknown — nothing may be contacted, least of all a realtime
+    // channel against an empty base URL, which resolves against the app's own origin.
+    seedSignedInSession()
     const fetchMock = installFetch({
       config: async () => {
         throw new TypeError('Failed to fetch')
