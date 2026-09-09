@@ -260,6 +260,41 @@ describe('bootstrap — configuration that cannot be read (R30)', () => {
     expect(backendIsAbsent(getBackendStatus())).toBe(false)
   })
 
+  it('reports a sync problem instead of claiming everything is backed up (review #4)', async () => {
+    // `syncStatus` initialises to `synced` and no controller starts here, so without the
+    // composition root's own write the account menu would read "all synced" while nothing syncs.
+    installFetch({
+      config: async () => {
+        throw new TypeError('Failed to fetch')
+      },
+    })
+    installEventSource()
+
+    dispose = await bootstrap(render)
+
+    expect(getSyncStatus().state).toBe('problem')
+    expect(getSyncStatus().cause).toBe('server-unreachable')
+  })
+
+  it('has already said so by the time the shell paints', async () => {
+    // Ordering, not just outcome: a first paint that claims "all synced" and corrects itself
+    // afterwards still shows the reassuring lie, and this is the one claim that must never flash.
+    installFetch({
+      config: async () => {
+        throw new TypeError('Failed to fetch')
+      },
+    })
+    installEventSource()
+    const stateAtPaint: string[] = []
+    const recordingRender = vi.fn(() => {
+      stateAtPaint.push(getSyncStatus().state)
+    })
+
+    dispose = await bootstrap(recordingRender)
+
+    expect(stateAtPaint).toEqual(['problem'])
+  })
+
   it('makes no backend call when the address could not be read', async () => {
     await createRestaurant({ name: SHORT_LINK, mapsUrl: SHORT_LINK, pending: true })
     const fetchMock = installFetch({
