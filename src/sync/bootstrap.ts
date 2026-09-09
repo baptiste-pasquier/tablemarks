@@ -38,9 +38,14 @@ import { setSyncState } from './syncStatus'
  * Resolves once the shell has been rendered, with a teardown that releases everything bootstrap
  * subscribed to. Production never calls it (the page load *is* the lifetime); tests do.
  */
+export interface BootstrapOptions extends LoadRuntimeConfigOptions {
+  /** Override the health-check budget. Tests use a short one; production takes the default. */
+  healthTimeoutMs?: number
+}
+
 export async function bootstrap(
   render: () => void,
-  options: LoadRuntimeConfigOptions = {},
+  options: BootstrapOptions = {},
 ): Promise<() => void> {
   const teardown: Array<() => void> = []
   let addressIsKnown = false
@@ -69,12 +74,13 @@ export async function bootstrap(
   }
 
   if (addressIsKnown) {
-    void checkReachability()
+    const healthTimeoutMs = options.healthTimeoutMs ?? HEALTH_CHECK_TIMEOUT_MS
+    void checkReachability(healthTimeoutMs)
     // Re-derive rather than write once and strand: a launch with no network reports unreachable,
     // and the header would keep saying so for the life of the tab without this.
     teardown.push(
       onOnlineChange(() => {
-        if (isOnline()) void checkReachability()
+        if (isOnline()) void checkReachability(healthTimeoutMs)
       }),
     )
   }
@@ -107,12 +113,49 @@ function reportUnsyncableIfAddressUnknown(): void {
   setSyncState('problem', 'server-unreachable')
 }
 
-/** Ask the configured backend whether it is answering. Never throws; writes the store either way. */
-async function checkReachability(): Promise<void> {
+/**
+ * How long to wait for the health check before calling the backend unreachable.
+ *
+ * Deliberately its own number rather than `CONFIG_TIMEOUT_MS`: that budget gates the first paint,
+ * this one runs after it, so the two are not one decision and must not move together. It is the
+ * more patient of the two on purpose — this check competes with the app's own cold-start traffic
+ * (assets, tiles, the first sync), and a tight bound would report "unreachable" on a slow but
+ * perfectly working connection, which is a false alarm on the one signal that exists to be
+ * trusted. Nothing renders while reachability is `unknown` (ADR-0002), so the patience costs no
+ * wrong pixel — only a later-arriving true answer.
+ */
+const HEALTH_CHECK_TIMEOUT_MS = 5_000
+
+/**
+ * Newest health check wins. Incremented on entry, compared before either write.
+ *
+ * Needed because `requestKey: null` below opts out of the SDK's auto-cancellation, which used to
+ * serialise these for us: an online/offline flap can now leave two checks in flight, and without
+ * this a slow *earlier* one could resolve last and pin the store to an answer that is already out
+ * of date. Cheaper and clearer than reintroducing cancellation we do not want.
+ */
+let healthGeneration = 0
+
+/**
+ * Ask the configured backend whether it is answering. Never throws; writes the store either way.
+ *
+ * The bound is the point. `pb.health.check()` inherits `fetch`'s default of waiting forever, so a
+ * connection that is accepted and then never answered — a half-open socket, a proxy that holds the
+ * request — would leave this promise pending for the life of the tab and strand reachability at
+ * `unknown`, which renders no indicator at all. "Did not answer in time" is unreachable, so the
+ * abort lands in the same catch as a refused connection.
+ *
+ * `requestKey: null` is load-bearing, not decoration. With the SDK's auto-cancellation active —
+ * the default — `initSendOptions` overwrites `signal` with its own controller's, so an
+ * `AbortSignal.timeout` passed alongside it is silently discarded and the hang is unbounded after
+ * all. Opting this one request out is what lets our signal survive to `fetch`.
+ */
+async function checkReachability(timeoutMs: number): Promise<void> {
+  const generation = ++healthGeneration
   try {
-    await pb.health.check()
-    setBackendReachability('reachable')
+    await pb.health.check({ requestKey: null, signal: AbortSignal.timeout(timeoutMs) })
+    if (generation === healthGeneration) setBackendReachability('reachable')
   } catch {
-    setBackendReachability('unreachable')
+    if (generation === healthGeneration) setBackendReachability('unreachable')
   }
 }

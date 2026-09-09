@@ -34,8 +34,9 @@ function json(body: unknown, status = 200): Response {
 interface Routes {
   /** Answer for `config.json`. Defaults to a deployment with no backend. */
   config?: () => Promise<Response>
-  /** Answer for the PocketBase health endpoint. Defaults to healthy. */
-  health?: () => Promise<Response>
+  /** Answer for the PocketBase health endpoint. Defaults to healthy. Receives the request init
+   *  so a route can honour (or deliberately ignore) the caller's abort signal. */
+  health?: (init?: RequestInit) => Promise<Response>
 }
 
 /**
@@ -44,11 +45,11 @@ interface Routes {
  * a leaked backend call has to be visible as a call, not merely as a failure.
  */
 function installFetch(routes: Routes = {}) {
-  const mock = vi.fn(async (input: unknown): Promise<Response> => {
+  const mock = vi.fn(async (input: unknown, init?: RequestInit): Promise<Response> => {
     const url = String(input)
     if (url.endsWith('config.json')) return routes.config ? routes.config() : json({ pocketbaseUrl: '' })
     if (url.includes('/api/health')) {
-      return routes.health ? routes.health() : json({ code: 200, message: 'API is healthy.', data: {} })
+      return routes.health ? routes.health(init) : json({ code: 200, message: 'API is healthy.', data: {} })
     }
     throw new TypeError(`Failed to fetch: ${url}`)
   })
@@ -203,6 +204,58 @@ describe('bootstrap — backend configured', () => {
 
     await vi.waitFor(() => expect(backendIsUnreachable(getBackendStatus())).toBe(true))
     expect(backendIsAbsent(getBackendStatus())).toBe(false)
+  })
+
+  it('gives up on a health check that is accepted and never answered (review #17)', async () => {
+    // The failure this guards is not a slow answer but no answer at all: fetch waits forever by
+    // default, so without the abort the promise stays pending, reachability stays `unknown`, and
+    // `unknown` renders no indicator whatsoever (ADR-0002) -- a silent hang, not a visible error.
+    installFetch({
+      ...configured(),
+      health: (init) =>
+        new Promise<Response>((_, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+        }),
+    })
+    installEventSource()
+    vi.spyOn(auth, 'resume').mockResolvedValue(undefined)
+
+    dispose = await bootstrap(render, { healthTimeoutMs: 40 })
+
+    expect(getBackendStatus().reachability).toBe('unknown')
+    await vi.waitFor(() => expect(getBackendStatus().reachability).toBe('unreachable'))
+    // Not absent: the address is known, the server just did not answer.
+    expect(backendIsAbsent(getBackendStatus())).toBe(false)
+  })
+
+  it('lets the newest health check win when a slow earlier one is still in flight', async () => {
+    // Opting out of the SDK's auto-cancellation (needed for the abort above to survive) means two
+    // checks can now overlap. The stale one must not land last and pin an out-of-date answer.
+    let call = 0
+    installFetch({
+      ...configured(),
+      health: (init) => {
+        call += 1
+        if (call === 1) {
+          // Still hanging when the reconnect fires; aborts later, after the second has answered.
+          return new Promise<Response>((_, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+          })
+        }
+        return Promise.resolve(json({ code: 200, message: 'API is healthy.', data: {} }))
+      },
+    })
+    installEventSource()
+    vi.spyOn(auth, 'resume').mockResolvedValue(undefined)
+
+    dispose = await bootstrap(render, { healthTimeoutMs: 60 })
+    window.dispatchEvent(new Event('online'))
+
+    await vi.waitFor(() => expect(getBackendStatus().reachability).toBe('reachable'))
+    // Outlive the first check's abort: without the generation guard its rejection lands here and
+    // overwrites the fresher answer.
+    await new Promise((resolve) => setTimeout(resolve, 120))
+    expect(getBackendStatus().reachability).toBe('reachable')
   })
 
   it('re-derives reachability when the online-status seam reports a reconnect', async () => {
