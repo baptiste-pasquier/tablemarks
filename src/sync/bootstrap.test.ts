@@ -408,6 +408,81 @@ describe('bootstrap — configuration that cannot be read (R30)', () => {
     expect(vi.mocked(startPendingResolver)).not.toHaveBeenCalled()
   })
 
+  it('re-reads the configuration when connectivity returns, and recovers (review #16)', async () => {
+    // One failed read used to strand the tab for its whole life: the reconnect retry existed only
+    // on the branch where the address was already known -- behind the very state that needs it.
+    let configFails = true
+    const fetchMock = installFetch({
+      config: async () => {
+        if (configFails) throw new TypeError('Failed to fetch')
+        return json({ pocketbaseUrl: CONFIGURED_URL })
+      },
+    })
+    installEventSource()
+    const resume = vi.spyOn(auth, 'resume').mockResolvedValue(undefined)
+
+    dispose = await bootstrap(render, { healthTimeoutMs: 40 })
+
+    expect(getBackendStatus().presence.status).toBe('unavailable')
+    expect(resume).not.toHaveBeenCalled()
+    expect(backendCalls(fetchMock)).toEqual([])
+
+    configFails = false
+    window.dispatchEvent(new Event('online'))
+
+    await vi.waitFor(() => expect(getBackendStatus().presence.status).toBe('configured'))
+    // Recovery means the same controllers a normal startup would have started, not merely a
+    // corrected label.
+    expect(pb.baseURL).toBe(CONFIGURED_URL)
+    expect(resume).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(startPendingResolver)).toHaveBeenCalledTimes(1)
+    // And the sync claim written while the address was unknown is retracted.
+    expect(getSyncStatus().state).not.toBe('problem')
+  })
+
+  it('recovers only once, however many reconnects arrive', async () => {
+    let configFails = true
+    installFetch({
+      config: async () => {
+        if (configFails) throw new TypeError('Failed to fetch')
+        return json({ pocketbaseUrl: CONFIGURED_URL })
+      },
+    })
+    installEventSource()
+    const resume = vi.spyOn(auth, 'resume').mockResolvedValue(undefined)
+
+    dispose = await bootstrap(render, { healthTimeoutMs: 40 })
+    expect(getBackendStatus().presence.status).toBe('unavailable')
+    configFails = false
+
+    window.dispatchEvent(new Event('online'))
+    await vi.waitFor(() => expect(getBackendStatus().presence.status).toBe('configured'))
+    window.dispatchEvent(new Event('online'))
+    window.dispatchEvent(new Event('online'))
+    await new Promise((resolve) => setTimeout(resolve, 60))
+
+    // A second activation would mean two pending resolvers and two sync controllers on one tab.
+    expect(resume).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(startPendingResolver)).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not retry a deployment that read its configuration and found no backend', async () => {
+    // `absent` is an answer, not a failure. Retrying it would poll config.json forever on the demo.
+    const fetchMock = installFetch()
+    installEventSource()
+    const resume = vi.spyOn(auth, 'resume')
+
+    dispose = await bootstrap(render)
+    expect(backendIsAbsent(getBackendStatus())).toBe(true)
+    const readsBefore = fetchMock.mock.calls.length
+
+    window.dispatchEvent(new Event('online'))
+    await new Promise((resolve) => setTimeout(resolve, 40))
+
+    expect(fetchMock.mock.calls.length).toBe(readsBefore)
+    expect(resume).not.toHaveBeenCalled()
+  })
+
   it('renders the shell even when configuration resolution throws', async () => {
     installFetch()
     installEventSource()

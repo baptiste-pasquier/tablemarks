@@ -48,21 +48,44 @@ export async function bootstrap(
   options: BootstrapOptions = {},
 ): Promise<() => void> {
   const teardown: Array<() => void> = []
+  const healthTimeoutMs = options.healthTimeoutMs ?? HEALTH_CHECK_TIMEOUT_MS
   let addressIsKnown = false
+
+  /**
+   * Everything a known address unlocks. One definition, reached from the initial resolution or
+   * from the retry below — a second copy in the retry path would be free to drift into starting a
+   * different set of controllers than a normal startup does.
+   */
+  function activate(pocketbaseUrl: string): void {
+    // Assigned before anything below can issue a request. `baseURL` is a plain mutable field and
+    // constructing the client did no I/O, so the module-scope client needs no lazy construction.
+    pb.baseURL = pocketbaseUrl
+    // Restore runtime state a persisted session implies — no-op when signed out.
+    void auth.resume().catch((err) => console.error('[startup] sync resume failed', err))
+    // Retry provisional short-link records now and on every reconnect. It needs the server-side
+    // hook to resolve a link at all, so with no backend there is nothing for it to do (R7).
+    teardown.push(startPendingResolver())
+  }
+
+  /** Health check now, and again on every reconnect. Separate from `activate` only because the
+   *  initial path runs it after the first paint, never before. */
+  function watchReachability(): void {
+    void checkReachability(healthTimeoutMs)
+    // Re-derive rather than write once and strand: a launch with no network reports unreachable,
+    // and the header would keep saying so for the life of the tab without this.
+    teardown.push(
+      onOnlineChange(() => {
+        if (isOnline()) void checkReachability(healthTimeoutMs)
+      }),
+    )
+  }
 
   try {
     const presence = await loadRuntimeConfig(options)
     setBackendPresence(presence)
     if (presence.status === 'configured') {
       addressIsKnown = true
-      // Assigned before anything below can issue a request. `baseURL` is a plain mutable field and
-      // constructing the client did no I/O, so the module-scope client needs no lazy construction.
-      pb.baseURL = presence.pocketbaseUrl
-      // Restore runtime state a persisted session implies — no-op when signed out.
-      void auth.resume().catch((err) => console.error('[startup] sync resume failed', err))
-      // Retry provisional short-link records now and on every reconnect. It needs the server-side
-      // hook to resolve a link at all, so with no backend there is nothing for it to do (R7).
-      teardown.push(startPendingResolver())
+      activate(presence.pocketbaseUrl)
     }
   } catch (err) {
     // `loadRuntimeConfig` promises never to reject; this is the safety net for that promise being
@@ -74,15 +97,50 @@ export async function bootstrap(
   }
 
   if (addressIsKnown) {
-    const healthTimeoutMs = options.healthTimeoutMs ?? HEALTH_CHECK_TIMEOUT_MS
-    void checkReachability(healthTimeoutMs)
-    // Re-derive rather than write once and strand: a launch with no network reports unreachable,
-    // and the header would keep saying so for the life of the tab without this.
-    teardown.push(
-      onOnlineChange(() => {
-        if (isOnline()) void checkReachability(healthTimeoutMs)
-      }),
-    )
+    watchReachability()
+  } else if (getBackendStatus().presence.status === 'unavailable') {
+    teardown.push(retryConfigOnReconnect())
+  }
+
+  /**
+   * Re-read the configuration when connectivity returns, for the one presence that can recover.
+   *
+   * Without this, a single failed read — a slow launch, a transient 5xx, an installed app opened
+   * offline — strands the tab for its whole life: sign-in renders disabled, no controller starts,
+   * short-link capture is refused, and the reconnect retry that would fix it was registered only
+   * on the branch where the address is already known. That is the narrow-window form of the
+   * failure `docs/journal/solutions/architecture-patterns/restart-controllers-on-startup.md`
+   * exists to close.
+   *
+   * `absent` is excluded: it is a deployment that read its configuration and found no backend, so
+   * there is nothing to retry. Only a *failed read* can succeed later.
+   */
+  function retryConfigOnReconnect(): () => void {
+    let inFlight = false
+    let unsubscribe = () => {}
+    const attempt = () => {
+      if (inFlight || !isOnline()) return
+      inFlight = true
+      void loadRuntimeConfig(options)
+        .then((retried) => {
+          if (retried.status !== 'configured') return
+          // Stop first: activate() below starts controllers, and a second reconnect landing
+          // mid-activation would start a second set.
+          unsubscribe()
+          setBackendPresence(retried)
+          // The address is known now, so the reason this was written is gone. A controller started
+          // below will overwrite it with the truth; when signed out none does, and this is the
+          // state a normal startup would have left.
+          setSyncState('synced')
+          activate(retried.pocketbaseUrl)
+          watchReachability()
+        })
+        .finally(() => {
+          inFlight = false
+        })
+    }
+    unsubscribe = onOnlineChange(attempt)
+    return () => unsubscribe()
   }
 
   return () => {
