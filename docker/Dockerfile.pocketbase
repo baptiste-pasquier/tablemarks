@@ -27,34 +27,20 @@ ARG POCKETBASE_VERSION=0.39.3
 FROM alpine:3.22 AS fetch
 
 ARG POCKETBASE_VERSION
-# Supplied by BuildKit; empty on the legacy builder, which the app image is also written to
-# support. Defaulted rather than required so the build does not fail on a host without buildx —
-# `uname -m` inside the stage names the same architecture whenever there is no cross-build.
-ARG TARGETARCH=""
+# Set by BuildKit, which is what builds this image everywhere it is built: the publish workflow
+# through buildx, and `docker compose build` locally. PocketBase names its amd64 and arm64
+# archives exactly as Docker names those platforms, so the value goes straight into the URL.
+# Only those two are published (see the workflow's `platforms:`); adding linux/arm/v7 would need a
+# mapping here, because PocketBase calls that one `armv7` and Docker calls it `arm`.
+ARG TARGETARCH
 
-RUN apk add --no-cache ca-certificates unzip wget
+RUN apk add --no-cache unzip
 
 WORKDIR /out
-RUN set -eu; \
-    arch="${TARGETARCH:-}"; \
-    if [ -z "$arch" ]; then \
-      case "$(uname -m)" in \
-        x86_64)  arch=amd64 ;; \
-        aarch64) arch=arm64 ;; \
-        armv7l)  arch=arm ;; \
-      esac; \
-    fi; \
-    case "$arch" in \
-      amd64) pb_arch=amd64 ;; \
-      arm64) pb_arch=arm64 ;; \
-      arm)   pb_arch=armv7 ;; \
-      *) echo "unsupported architecture: '${arch}' (uname -m: $(uname -m))" >&2; exit 1 ;; \
-    esac; \
-    wget -q -O pb.zip \
-      "https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_${pb_arch}.zip"; \
-    unzip -q pb.zip pocketbase; \
-    rm pb.zip; \
-    chmod 0755 pocketbase
+# BuildKit fetches this itself, outside the stage, so nothing here needs a network client or a
+# CA bundle. An unsupported TARGETARCH fails on the 404, naming the URL it could not fetch.
+ADD https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_${TARGETARCH}.zip pb.zip
+RUN unzip -q pb.zip pocketbase && rm pb.zip && chmod 0755 pocketbase
 
 # ---------------------------------------------------------------------------
 # Runtime stage
