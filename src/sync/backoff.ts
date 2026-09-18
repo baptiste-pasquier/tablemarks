@@ -41,3 +41,20 @@ export function classifyFailure(err: unknown): FailureCause {
   if (status === 401 || status === 403) return 'sign-in-needed'
   return 'server-unreachable'
 }
+
+/**
+ * Did the backend answer at all?
+ *
+ * A different question from `classifyFailure`, which decides what to tell the user about *sync*.
+ * This one decides what to record about *reachability* (KD3), and the two do not have the same
+ * answer: a 429 from the rate limiter `docs/how-to/deployment.md` tells the operator to switch on,
+ * a 400, a 404 — each is a healthy server replying. Reporting those as unreachable puts "Server
+ * unreachable" in the header of an instance that is serving every other request fine.
+ *
+ * 5xx counts as no answer: the request may have died in a proxy without ever reaching the backend.
+ * A transport failure carries no status, or status 0 from the PocketBase SDK; neither is an answer.
+ */
+export function serverAnswered(err: unknown): boolean {
+  const status = (err as { status?: number } | null)?.status
+  return typeof status === 'number' && status > 0 && status < 500
+}

@@ -8,7 +8,7 @@ import { allVisitsForSync, putVisitRaw, markVisitSynced } from '../data/visits'
 import { recomputeRollup } from '../data/rollup'
 import { onLocalChange, emitStoreChange } from '../data/events'
 import { isOnline, onOnlineChange } from './onlineStatus'
-import { nextRetryDelayMs, classifyFailure } from './backoff'
+import { nextRetryDelayMs, classifyFailure, serverAnswered } from './backoff'
 import { recomputePending, setSyncState, getSyncStatus } from './syncStatus'
 import { setBackendReachability } from './backendStatus'
 import { reconcile } from './reconcile'
@@ -300,13 +300,14 @@ export class SyncController {
       // written at startup and on a browser online/offline transition, so a backend that dies or
       // recovers mid-session is never reported -- in either direction.
       //
-      // Classified, not blanket: a rejected credential is proof the server *answered*, so
-      // 'sign-in-needed' reports reachable. Only a transport failure reports unreachable. The
-      // offline branch above writes nothing at all -- it short-circuits before any request, so it
-      // has learned nothing about the server. Reporting from the first failure rather than from
-      // the escalation threshold is deliberate: reachability is an observation, while
-      // ESCALATION_THRESHOLD exists to keep the *sync status* from flapping on one blip.
-      setBackendReachability(cause === 'sign-in-needed' ? 'reachable' : 'unreachable')
+      // Classified, not blanket: any HTTP answer below 500 is proof the server *answered* — a
+      // rejected credential, a rate limit, a rejected payload alike — so only a transport failure
+      // or a 5xx reports unreachable. The offline branch above writes nothing at all: it
+      // short-circuits before any request, so it has learned nothing about the server. Reporting
+      // from the first failure rather than from the escalation threshold is deliberate:
+      // reachability is an observation, while ESCALATION_THRESHOLD exists to keep the *sync
+      // status* from flapping on one blip.
+      setBackendReachability(serverAnswered(err) ? 'reachable' : 'unreachable')
       await recomputePending()
       if (this.consecutiveFailures >= ESCALATION_THRESHOLD) {
         setSyncState('problem', cause)

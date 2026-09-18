@@ -557,6 +557,37 @@ describe('SyncController -> backendStatus reachability', () => {
     expect(getBackendStatus().reachability).toBe('reachable')
   })
 
+  // The rate limiter is something `docs/how-to/deployment.md` tells the operator to switch on, so
+  // a 429 is an ordinary answer from a perfectly healthy server. Same for a 400 or a 404: the
+  // request reached the backend and the backend replied. Reporting "unreachable" there tells the
+  // user their server is down while it is serving every other request fine.
+  it.each([429, 400, 404])('reports reachable on a %i — the server answered', async (status) => {
+    await createRestaurant({ name: 'A', lat: 1, lng: 1 })
+    stubRealtime()
+    const remote = new FailingRemote()
+    remote.err = Object.assign(new Error('answered'), { status })
+
+    controller = new SyncController()
+    await controller.start(remote)
+    await flush()
+
+    expect(getBackendStatus().reachability).toBe('reachable')
+  })
+
+  // 5xx stays unreachable: the request may never have got past a proxy to the backend at all.
+  it.each([500, 502, 503])('still reports unreachable on a %i', async (status) => {
+    await createRestaurant({ name: 'A', lat: 1, lng: 1 })
+    stubRealtime()
+    const remote = new FailingRemote()
+    remote.err = Object.assign(new Error('server error'), { status })
+
+    controller = new SyncController()
+    await controller.start(remote)
+    await flush()
+
+    expect(getBackendStatus().reachability).toBe('unreachable')
+  })
+
   it('clears a stale unreachable once the backend answers again', async () => {
     await createRestaurant({ name: 'A', lat: 1, lng: 1 })
     stubRealtime()
