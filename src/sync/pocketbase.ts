@@ -53,11 +53,14 @@ export async function resolveShortLink(url: string): Promise<ResolvedLink> {
       query: { url },
     })
   } catch (err) {
-    // 400: not a host the resolver accepts. 422: it followed the link and what it found was not a
-    // Maps place. Both are verdicts on this URL. A 401, a 502 or a transport error is not — the
-    // session, the upstream or the network can change.
+    // 422 and nothing else. The route answers 422 for its two verdicts on a URL — not a host it
+    // accepts, or a link that resolved to something that is not a Maps place — and PocketBase
+    // turns *any* exception thrown inside a hook handler into a generic 400. So 400 is
+    // indistinguishable from a crashed hook, a missing `curl`, a shipped regression; treating it
+    // as a verdict refuses the user's link permanently for a fault a retry would survive
+    // (review #4). A 401, a 502 or a transport error is likewise not a verdict.
     const status = (err as { status?: number } | null)?.status
-    if (status === 400 || status === 422) throw new UnresolvableShortLink(status)
+    if (status === 422) throw new UnresolvableShortLink(status)
     throw err
   }
   if (typeof res.lat !== 'number' || typeof res.lng !== 'number') {

@@ -62,13 +62,20 @@ routerAdd('GET', '/api/tablemarks/resolve-short-link', (e) => {
   if (!url) {
     return e.json(400, { error: 'missing url parameter' })
   }
+  // 422, not 400, for both of the verdicts below, and the distinction is load-bearing. PocketBase
+  // turns any exception thrown in here into a generic 400 (see the header), so the client cannot
+  // tell a 400 that means "this URL is unusable" from a 400 that means "the hook crashed". It
+  // treats 422 as final and everything else as retryable, so a verdict has to say 422 or a user's
+  // link is retried forever -- and a crash has to stay a 400 or their link is refused forever
+  // (review #4). `missing url parameter` keeps its 400: our client cannot produce it, and a
+  // caller that does has a bug worth retrying rather than a URL worth rejecting.
   if (url.length > MAX_URL_LENGTH) {
-    return e.json(400, { error: 'url is too long' })
+    return e.json(422, { error: 'url is too long' })
   }
 
   const source = parseHttpsUrl(url)
   if (!source || ALLOWED_SHORT_LINK_HOSTS.indexOf(source.host) === -1) {
-    return e.json(400, { error: 'only https://maps.app.goo.gl/ short links are allowed' })
+    return e.json(422, { error: 'only https://maps.app.goo.gl/ short links are allowed' })
   }
 
   // One request, to the allowlisted host, and no second one. `-L` is absent so curl does not
@@ -129,7 +136,15 @@ routerAdd('GET', '/api/tablemarks/resolve-short-link', (e) => {
   let name
   const place = location.match(/\/maps\/place\/([^/@]+)/)
   if (place) {
-    name = decodeURIComponent(place[1].replace(/\+/g, ' '))
+    const raw = place[1].replace(/\+/g, ' ')
+    try {
+      name = decodeURIComponent(raw)
+    } catch (err) {
+      // Malformed percent-encoding. The client twin does exactly this (`parseMapsUrl.ts`), and
+      // here it matters more: an uncaught throw leaves the handler as a generic 400, and the
+      // coordinates we already extracted are lost with it (review #5).
+      name = raw
+    }
   }
 
   return e.json(200, {

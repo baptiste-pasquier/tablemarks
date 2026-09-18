@@ -61,6 +61,11 @@ export async function capturePaste(input: string): Promise<CaptureResult> {
 
   if (parsed.kind === 'none') return { status: 'needs-search', query: text }
 
+  // A Google Maps URL with nothing this app can use in it — a legacy `goo.gl` link, a search URL.
+  // Refusing it names the two ways through; sending it to name search searched for the URL text
+  // and found nothing, which told the user only that their place does not exist (review #6).
+  if (parsed.kind === 'unsupported') return { status: 'link-unresolvable', link: text }
+
   if (parsed.kind === 'short') {
     // Presence is read before the attempt, never from its catch. A *configured* backend that is
     // merely down must still fall through to the provisional record below — a transient outage is
@@ -86,7 +91,7 @@ export async function capturePaste(input: string): Promise<CaptureResult> {
     }
   }
 
-  return finalize({ lat: parsed.lat!, lng: parsed.lng!, name: parsed.name, mapsUrl: text })
+  return finalize({ lat: parsed.lat, lng: parsed.lng, name: parsed.name, mapsUrl: text })
 }
 
 /** Capture from a chosen geocoding-search candidate. */

@@ -74,6 +74,19 @@ describe('capturePaste', () => {
     expect(await allRestaurants()).toEqual([])
   })
 
+  it('refuses a Maps link it cannot use, instead of searching for the URL text (review #6)', async () => {
+    // A legacy goo.gl link went to name search, where Nominatim looked for the literal URL and
+    // found nothing: the user got "No matching places found" and no hint of the real reason. The
+    // copy that explains it — and names the two ways through — could never be reached.
+    const legacy = 'https://goo.gl/maps/abc123'
+
+    const res = await capturePaste(legacy)
+
+    expect(res).toEqual({ status: 'link-unresolvable', link: legacy })
+    expect(await allRestaurants()).toEqual([])
+    expect(resolveShortLink).not.toHaveBeenCalled()
+  })
+
   it('routes plain text to search', async () => {
     const res = await capturePaste('Chez Marcel Paris')
     expect(res).toEqual({ status: 'needs-search', query: 'Chez Marcel Paris' })
