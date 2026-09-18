@@ -39,8 +39,13 @@
     "working": "Working…",
     "submit": "Add",
     "errorNoMatches": "No matching places found.",
-    "errorSearchFailed": "Search failed. Try again.",
+    "errorSearchFailed": "Search failed. Try again, or paste the full Google Maps link with coordinates in it.",
     "errorAdd": "Could not add that place.",
+    "shortLinkNeedsBackend": "Short Google Maps links (maps.app.goo.gl) can only be opened by a server, and this app runs without one. Two other ways work here:",
+    "shortLinkBackendUnreachable": "Short Google Maps links (maps.app.goo.gl) can only be opened by a server, and this app's server cannot be reached right now. Two other ways work in the meantime:",
+    "shortLinkUnresolvable": "This link could not be opened as a place. Older goo.gl/maps links and Maps searches are not supported. Two other ways work:",
+    "shortLinkTrySearch": "Type the place name instead, then pick it from the search results.",
+    "shortLinkTryFullUrl": "Or paste the full Google Maps link from your browser address bar — the long one with coordinates in it.",
     "alreadySaved": "is already saved.",
     "openIt": "Open it"
   },
@@ -134,6 +139,11 @@
     "detailOffline": "You're offline. Changes are saved on this device and will sync when you're back online.",
     "detailProblemSignIn": "Your sign-in expired. Sign in again from the header to resume backing up.",
     "detailProblemUnreachable": "We can't reach the server right now. We'll keep trying in the background."
+  },
+  "backend": {
+    "unreachable": "Server unreachable",
+    "unreachableDetail": "This app has a server, but it isn't answering. Your places stay saved on this device.",
+    "signInUnavailable": "Sign in is unavailable: this app's server address could not be read."
   },
   "pwa": {
     "appUpdateAria": "App update",

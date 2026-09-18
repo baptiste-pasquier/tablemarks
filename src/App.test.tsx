@@ -4,6 +4,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { freshDB } from './test/idb'
 import { createMockLeafletMap } from './test/mockLeafletMap'
 import { useAuth } from './auth/useAuth'
+import { useBackendStatus } from './sync/useBackendStatus'
+import type { BackendStatus } from './sync/backendStatus'
+import { setSyncState } from './sync/syncStatus'
+import { mockI18n } from './test/setup'
 import { createRestaurant } from './data/restaurants'
 import { readSortPreference, writeSortPreference } from './lib/sortPreference'
 import type { GeoPoint } from './lib/geolocate'
@@ -13,6 +17,22 @@ vi.mock('./auth/useAuth', () => ({
 }))
 
 const mockUseAuth = vi.mocked(useAuth)
+
+// Backend availability (U4). Roughly forty tests in this file render the whole app; leaving the
+// real hook in place would have each of them subscribe to the store the bootstrap writes and,
+// through it, reach for the runtime configuration file. Mocked here with a shared default in
+// `beforeEach` (a configured, answering backend — the shape every pre-U4 assertion was written
+// against) so only the tests that care about a different configuration set one.
+vi.mock('./sync/useBackendStatus', () => ({
+  useBackendStatus: vi.fn(),
+}))
+
+const mockUseBackendStatus = vi.mocked(useBackendStatus)
+
+const CONFIGURED_REACHABLE: BackendStatus = {
+  presence: { status: 'configured', pocketbaseUrl: 'https://pb.example.test' },
+  reachability: 'reachable',
+}
 
 // Controls the on-mount fetch (F1) and the "Localiser" tap (F2) — both call through this mock.
 const mockGeolocate = vi.fn<() => Promise<GeoPoint | null>>()
@@ -85,6 +105,10 @@ beforeEach(async () => {
   await freshDB()
   window.localStorage.clear()
   mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+  mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
+  // Module-global store, shared across this file's tests — reset so an unreachable case set by
+  // one test can't leak into the next one's account-menu chip.
+  setSyncState('synced')
   mockGeolocate.mockReset().mockResolvedValue(null)
   mockLastRestaurantListProps.current = null
   mockLastMapViewProps.current = null
@@ -935,5 +959,279 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     expect(screen.getByText('French Place')).toBeInTheDocument()
     expect(screen.queryByText('Thai Place')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument()
+  })
+})
+
+// U4 — the header in each of the three backend outcomes (R4, R6, R21, R30). Presence and
+// reachability are read as two separate signals (KD3), so these tests drive them independently
+// rather than through a single boolean.
+describe('backend availability in the header (U4)', () => {
+  const ABSENT: BackendStatus = { presence: { status: 'absent' }, reachability: 'unknown' }
+  const CONFIGURED_UNREACHABLE: BackendStatus = {
+    presence: { status: 'configured', pocketbaseUrl: 'https://pb.example.test' },
+    reachability: 'unreachable',
+  }
+  const CONFIGURED_UNKNOWN: BackendStatus = {
+    presence: { status: 'configured', pocketbaseUrl: 'https://pb.example.test' },
+    reachability: 'unknown',
+  }
+  const UNAVAILABLE: BackendStatus = {
+    presence: { status: 'unavailable', reason: 'configuration request failed (404)' },
+    reachability: 'unknown',
+  }
+
+  const signInButton = () => screen.queryByRole('button', { name: /sign in|se connecter/i })
+  const settingsButton = () => screen.queryByRole('button', { name: /settings|paramètres/i })
+  const indicator = () => screen.queryByRole('status', { name: /unreachable|injoignable/i })
+
+  it('never renders the Sign in control with no backend configured, and keeps Settings reachable (R4, R21)', async () => {
+    mockUseBackendStatus.mockReturnValue(ABSENT)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(signInButton()).not.toBeInTheDocument()
+    expect(settingsButton()).toBeInTheDocument()
+  })
+
+  it('opens Settings in a local-only build, with no backend at all (R21)', async () => {
+    mockUseBackendStatus.mockReturnValue(ABSENT)
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    await user.click(settingsButton() as HTMLElement)
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  })
+
+  it('keeps sign-in available and reports the backend as unreachable, rather than as local-only (R6, KD7)', async () => {
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(signInButton()).toBeInTheDocument()
+    expect(indicator()).toBeInTheDocument()
+  })
+
+  it('renders the Sign in control active when the address is known but unreachable — retrying can work', async () => {
+    const signInMock = vi.fn()
+    mockUseAuth.mockReturnValue({
+      signedIn: false,
+      email: null,
+      avatarUrl: null,
+      signIn: signInMock,
+      signOut: vi.fn(),
+    })
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    const button = signInButton() as HTMLElement
+    expect(button).toBeEnabled()
+    await user.click(button)
+    expect(signInMock).toHaveBeenCalled()
+  })
+
+  it('renders the Sign in control present but disabled when the configuration itself could not be read (KTD9)', async () => {
+    const signInMock = vi.fn()
+    mockUseAuth.mockReturnValue({
+      signedIn: false,
+      email: null,
+      avatarUrl: null,
+      signIn: signInMock,
+      signOut: vi.fn(),
+    })
+    mockUseBackendStatus.mockReturnValue(UNAVAILABLE)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    const button = signInButton() as HTMLElement
+    expect(button).toBeDisabled()
+    // No authentication window can be opened from it: there is no address to open one against.
+    fireEvent.click(button)
+    expect(signInMock).not.toHaveBeenCalled()
+    expect(settingsButton()).toBeInTheDocument()
+  })
+
+  it('renders no indicator at all while reachability is still unknown (KD3)', async () => {
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNKNOWN)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(indicator()).not.toBeInTheDocument()
+    expect(signInButton()).toBeInTheDocument()
+  })
+
+  it('renders no unreachable indicator in local-only — an absent backend is not an outage (R30)', async () => {
+    mockUseBackendStatus.mockReturnValue(ABSENT)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(indicator()).not.toBeInTheDocument()
+  })
+
+  it('matches today’s signed-out header exactly with a configured, reachable backend', async () => {
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(signInButton()).toBeInTheDocument()
+    expect(signInButton()).toBeEnabled()
+    expect(settingsButton()).toBeInTheDocument()
+    expect(indicator()).not.toBeInTheDocument()
+  })
+
+  it('renders the account menu as it does today when signed in with a reachable backend', async () => {
+    mockUseAuth.mockReturnValue({
+      signedIn: true,
+      email: 'person@example.com',
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    })
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(screen.getByRole('button', { name: /account menu|menu du compte/i })).toBeInTheDocument()
+    expect(settingsButton()).not.toBeInTheDocument()
+    expect(indicator()).not.toBeInTheDocument()
+  })
+
+  it('clears the stored session when presence is absent, leaving the stored restaurants untouched', async () => {
+    const signOutMock = vi.fn()
+    mockUseAuth.mockReturnValue({
+      signedIn: true,
+      email: 'person@example.com',
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: signOutMock,
+    })
+    mockUseBackendStatus.mockReturnValue(ABSENT)
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+
+    const { rerender } = render(<App />)
+    await screen.findByText('R1 Place')
+    await waitFor(() => expect(signOutMock).toHaveBeenCalled())
+
+    // useAuth is mocked statically here (its own reactivity is covered by useAuth.test.ts), so
+    // stand in for the re-render the real hook triggers once the auth store is cleared.
+    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+    rerender(<App />)
+
+    expect(screen.queryByRole('button', { name: /account menu|menu du compte/i })).not.toBeInTheDocument()
+    expect(signInButton()).not.toBeInTheDocument()
+    expect(settingsButton()).toBeInTheDocument()
+    // Local data is retained by design — only the session goes.
+    expect(screen.getByText('R1 Place')).toBeInTheDocument()
+  })
+
+  it('never lets the header indicator and the account status chip report opposite facts', async () => {
+    mockUseAuth.mockReturnValue({
+      signedIn: true,
+      email: 'person@example.com',
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    })
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
+    setSyncState('problem', 'server-unreachable')
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    expect(indicator()).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /account menu|menu du compte/i }))
+    const menu = within(screen.getByRole('menu'))
+    expect(menu.getByText("Can't reach the server")).toBeInTheDocument()
+    expect(menu.queryByText(/all synced/i)).not.toBeInTheDocument()
+  })
+
+  it('makes no "all synced" backup claim once presence turns out to be absent', async () => {
+    const signOutMock = vi.fn()
+    mockUseAuth.mockReturnValue({
+      signedIn: true,
+      email: 'person@example.com',
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: signOutMock,
+    })
+    mockUseBackendStatus.mockReturnValue(ABSENT)
+    const { rerender } = render(<App />)
+    await screen.findByText(/no places yet/i)
+    await waitFor(() => expect(signOutMock).toHaveBeenCalled())
+
+    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+    rerender(<App />)
+
+    expect(screen.queryByText(/all synced/i)).not.toBeInTheDocument()
+  })
+
+  it('clears the indicator once a backend that started unreachable answers', async () => {
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
+    const { rerender } = render(<App />)
+    await screen.findByText(/no places yet/i)
+    expect(indicator()).toBeInTheDocument()
+
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
+    rerender(<App />)
+
+    expect(indicator()).not.toBeInTheDocument()
+  })
+
+  it('exposes an accessible name on the indicator, whose visible label is hidden below the sm breakpoint', async () => {
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+
+    // The name has to survive the label being display:none on a phone — hence an explicit one
+    // rather than relying on the pill's own text.
+    const el = screen.getByRole('status', { name: 'Server unreachable' })
+
+    // The gate sits on the label span itself, passed through Badge's `labelClassName`, so the
+    // pill and its dot stay visible while only the words drop out below `sm`.
+    const label = within(el).getByText('Server unreachable')
+    expect(label).toHaveClass('hidden', 'sm:inline')
+  })
+
+  it('keeps the header within a 320px viewport with the indicator present', async () => {
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
+    const originalWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 320 })
+    try {
+      render(<App />)
+      await screen.findByText(/no places yet/i)
+
+      // jsdom computes no layout, so the overflow bug fix documented in App.tsx is asserted
+      // structurally instead: the left group stays the only shrink target, the right group stays
+      // `shrink-0`, and the indicator neither shrinks it nor contributes a label at this width.
+      const header = screen.getByRole('banner')
+      const [left, right] = Array.from(header.children) as HTMLElement[]
+      expect(left.className).toContain('min-w-0')
+      expect(left.className).toContain('flex-1')
+      expect(right.className).toContain('shrink-0')
+      expect(right).toContainElement(indicator())
+      expect((indicator() as HTMLElement).className).toContain('shrink-0')
+      expect(settingsButton()).toBeInTheDocument()
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth })
+    }
+  })
+
+  it('resolves the indicator copy in English', async () => {
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    expect(screen.getByRole('status', { name: 'Server unreachable' })).toBeInTheDocument()
+  })
+
+  it('resolves the indicator copy in French', async () => {
+    mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
+    await act(async () => {
+      await mockI18n.changeLanguage('fr')
+    })
+    render(<App />)
+    await screen.findByText(/aucun lieu pour l'instant/i)
+    expect(screen.getByRole('status', { name: 'Serveur injoignable' })).toBeInTheDocument()
   })
 })

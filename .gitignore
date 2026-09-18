@@ -16,9 +16,19 @@ logs
 *.log
 npm-debug.log*
 
-# PocketBase runtime data (collections schema lives in pb_migrations, which IS tracked)
-pocketbase/pb_data
+# PocketBase runtime data (collections schema lives in pb_migrations, which IS tracked).
+# The `*` suffix also covers the snapshot directories a manual backup leaves behind
+# (pocketbase/pb_data_backup_<timestamp>/), which until now were excluded only by a
+# .gitignore PocketBase wrote *inside* them. A pb_data carries the OAuth client secret
+# and the token signing keys, so it is a secret archive and must never be committable
+# by accident.
+pocketbase/pb_data*
 pocketbase/pocketbase
+
+# Local environment files. Only the tracked templates (docker/.env.example) are kept.
+.env
+.env.*
+!.env.example
 
 # Claude worktrees
 .claude/worktrees

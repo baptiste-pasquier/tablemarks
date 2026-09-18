@@ -1,0 +1,79 @@
+# Tablemarks — private deployment stack, running the published images.
+#
+#   docker compose -f docker/docker-compose.prod.yml pull
+#   docker compose -f docker/docker-compose.prod.yml up -d
+#
+# That upgrades to the newest published release. To pin one, or to roll back, put a commit SHA in
+# TABLEMARKS_IMAGE_TAG.
+#
+# Nothing is built here. Use docker-compose.yml to build from a working tree.
+#
+# Configuration lives in docker/.env (copy docker/.env.example). Compose reads it automatically:
+# the project directory is the directory of the first -f file, i.e. docker/. Two extra variables
+# are read only by these files: TABLEMARKS_APP_PORT (8080) and TABLEMARKS_POCKETBASE_PORT (8090).
+#
+# ---------------------------------------------------------------------------------------------
+# One tag, both images (KTD7)
+# ---------------------------------------------------------------------------------------------
+# The split-rollout hazard is here, on the host: two images that can be advanced independently will
+# be, and a new app talking to an old PocketBase (or the reverse) is a bug nobody can reproduce.
+# Both images are published under the same commit SHA and this file reads ONE variable for both, so
+# neither a `pull` on the default tag nor `TABLEMARKS_IMAGE_TAG=<sha> docker compose ... up -d` can
+# move one without the other.
+#
+# The default is `latest`, so an upgrade needs no tag typed at all. That is safe only because of
+# where the publish workflow writes it: `latest` is moved by the `verify` job, onto digests it has
+# just re-read, and only once BOTH images published successfully. A run that published one image
+# and failed the other leaves `latest` on the last complete release rather than pointing the two
+# images at different commits.
+#
+# Setting the variable to a commit SHA pins that exact release — which is what a rollback is.
+#
+# ---------------------------------------------------------------------------------------------
+# What the operator's reverse proxy in front of this stack must do
+# ---------------------------------------------------------------------------------------------
+#   * Response buffering OFF for the PocketBase service. PocketBase's realtime channel is SSE, and
+#     a buffering proxy holds the events until the buffer fills. This breaks **sign-in**, not only
+#     sync (R23): the OAuth2 flow delivers its authorization code back to the waiting tab over that
+#     same realtime connection. nginx: `proxy_buffering off;` (and `proxy_cache off;` if caching is
+#     enabled globally).
+#   * A read timeout long enough for an idle realtime connection — minutes, not seconds. The
+#     default 60s drops every subscription once a minute. nginx: `proxy_read_timeout 3600s;`.
+#
+# Also operator steps, deliberately not codified here: the public origin, the trusted proxy header
+# (PocketBase Settings > Application > proxy, so the rate limiter sees real client IPs and not the
+# proxy's), the rate limiter itself, and the Google OAuth2 client id/secret.
+# ---------------------------------------------------------------------------------------------
+
+name: tablemarks
+
+services:
+  pocketbase:
+    image: ${TABLEMARKS_IMAGE_REPOSITORY:-ghcr.io/baptiste-pasquier}/tablemarks-pocketbase:${TABLEMARKS_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    volumes:
+      - pb_data:/pb/pb_data
+    ports:
+      # The browser talks to PocketBase directly; this is the port the reverse proxy points at.
+      # Bind it to loopback and let the proxy terminate TLS in front of it.
+      - '127.0.0.1:${TABLEMARKS_POCKETBASE_PORT:-8090}:8090'
+    # No healthcheck here: the image declares one (GET /api/health).
+
+  app:
+    image: ${TABLEMARKS_IMAGE_REPOSITORY:-ghcr.io/baptiste-pasquier}/tablemarks-app:${TABLEMARKS_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      # The public https origin the BROWSER uses to reach PocketBase — not a Compose service name,
+      # and not the loopback address above. Required: the app boots local-only without it, which
+      # would silently disable sign-in and sync on a deployment that is supposed to have both.
+      TABLEMARKS_POCKETBASE_URL: ${TABLEMARKS_POCKETBASE_URL:?set the public https URL the browser uses to reach PocketBase}
+    ports:
+      - '127.0.0.1:${TABLEMARKS_APP_PORT:-8080}:80'
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+    # No healthcheck and no read_only: the image declares GET /healthz, and its entrypoint writes
+    # config.json into the web root at start.
+
+volumes:
+  pb_data:

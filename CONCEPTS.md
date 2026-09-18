@@ -52,6 +52,9 @@ A calendar day with no time-of-day, interpreted relative to the viewer's device 
 ### Local-first canonical store
 The principle that the on-device store is the source of truth and always written first; the cloud is an optional mirror enabled by signing in. The app is fully usable with no account and no network.
 
+### Local-only deployment
+A deployment configured with no backend at all, so sign-in, sync, and short-link resolution are absent by design rather than temporarily failing. Distinct from a deployment whose backend is configured but not answering, where those capabilities exist and are interrupted.
+
 ### Last-Write-Wins (LWW)
 The conflict-resolution rule: when the same record exists on two sides, the version with the newer change-timestamp (an Instant) wins, both directions, with ties keeping the local copy. Reconciliation is keyed on a stable client-generated id shared between local and cloud, so signing in merges rather than duplicates.
 
@@ -70,3 +73,4 @@ The single global backup-trust state shown when signed in: *all synced*, *N pend
 ## Flagged ambiguities
 
 - "Rating" refers to the Verdict (a returnability judgment), not a numeric score — Tablemarks has no star rating.
+- "Local" spans three unrelated states: a Local-only deployment (no backend configured), *offline* (the device has no network, a Sync Status value), and signed out (an account state). A signed-out user on a fully-backed deployment is none of the other two.

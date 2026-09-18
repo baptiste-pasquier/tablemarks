@@ -62,6 +62,8 @@ Every maintained doc appears here. A doc missing from this list fails the gate.
 
 ### `how-to/`
 
+- [`deployment.md`](how-to/deployment.md) — the two deployment targets, the PocketBase console
+  sequence, upgrade, rollback and recovery
 - [`development.md`](how-to/development.md) — setup, project structure, testing, and the optional PocketBase backend
 
 ### `reference/`
@@ -95,7 +97,8 @@ Templates: [`solutions/README.md`](journal/solutions/README.md),
 
 ## What the gate enforces
 
-`scripts/check_docs.py` runs via a pre-commit hook and can be run manually
+`scripts/check_docs.py` runs in CI on every push and pull request
+(`.github/workflows/ci.yml`), via a pre-commit hook, and by hand
 (`npm run check:docs`). It fails on:
 
 1. a file whose `type` does not match its folder, or a file in an unknown folder

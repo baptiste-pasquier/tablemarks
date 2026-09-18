@@ -8,8 +8,9 @@ import { allVisitsForSync, putVisitRaw, markVisitSynced } from '../data/visits'
 import { recomputeRollup } from '../data/rollup'
 import { onLocalChange, emitStoreChange } from '../data/events'
 import { isOnline, onOnlineChange } from './onlineStatus'
-import { nextRetryDelayMs, classifyFailure } from './backoff'
+import { nextRetryDelayMs, classifyFailure, serverAnswered } from './backoff'
 import { recomputePending, setSyncState, getSyncStatus } from './syncStatus'
+import { setBackendReachability } from './backendStatus'
 import { reconcile } from './reconcile'
 import { pb } from './pocketbase'
 import {
@@ -199,11 +200,25 @@ export class SyncController {
       if (this.stopped) void unsub()
       else this.unsubscribers.push(unsub)
     }
-    void pb.collection('restaurants').subscribe('*', () => this.scheduleSync()).then(track)
-    void pb.collection('visits').subscribe('*', () => this.scheduleSync()).then(track)
+    this.subscribeRealtime('restaurants', track)
+    this.subscribeRealtime('visits', track)
     // Best-effort initial reconcile — a failure here (e.g. PocketBase down on sign-in) must not
     // prevent the controller from starting; subscriptions are registered so a later trigger recovers.
     this.runSync()
+  }
+
+  /**
+   * Opens one realtime subscription. The rejection path is not exceptional: a configured backend
+   * that is unreachable fails the realtime connect on every `start()`, and an unhandled rejection
+   * there would be a process-level error, not a degraded feature. Failing to subscribe only costs
+   * remote-change triggers — the local-write and reconnect triggers still drive sync.
+   */
+  private subscribeRealtime(collection: string, track: (unsub: () => void) => void): void {
+    void pb
+      .collection(collection)
+      .subscribe('*', () => this.scheduleSync())
+      .then(track)
+      .catch((err) => console.error(`[sync] realtime subscribe to ${collection} failed`, err))
   }
 
   /**
@@ -274,14 +289,28 @@ export class SyncController {
         clearTimeout(this.backoffTimer)
         this.backoffTimer = null
       }
+      setBackendReachability('reachable')
       await recomputePending()
       this.reportPendingOrSynced()
       return outcome
     } catch (err) {
       this.consecutiveFailures += 1
+      const cause = classifyFailure(err)
+      // The second writer `backendStatus.ts` documents. Without it reachability is only ever
+      // written at startup and on a browser online/offline transition, so a backend that dies or
+      // recovers mid-session is never reported -- in either direction.
+      //
+      // Classified, not blanket: any HTTP answer below 500 is proof the server *answered* — a
+      // rejected credential, a rate limit, a rejected payload alike — so only a transport failure
+      // or a 5xx reports unreachable. The offline branch above writes nothing at all: it
+      // short-circuits before any request, so it has learned nothing about the server. Reporting
+      // from the first failure rather than from the escalation threshold is deliberate:
+      // reachability is an observation, while ESCALATION_THRESHOLD exists to keep the *sync
+      // status* from flapping on one blip.
+      setBackendReachability(serverAnswered(err) ? 'reachable' : 'unreachable')
       await recomputePending()
       if (this.consecutiveFailures >= ESCALATION_THRESHOLD) {
-        setSyncState('problem', classifyFailure(err))
+        setSyncState('problem', cause)
       } else {
         this.reportPendingOrSynced()
       }

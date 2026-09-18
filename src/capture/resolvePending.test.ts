@@ -1,18 +1,40 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../test/idb'
 import { setGeocodeProvider } from './geocode'
-import { resolvePendingRestaurants } from './resolvePending'
+import { resolvePendingRestaurants, startPendingResolver } from './resolvePending'
 import { createRestaurant, getRestaurant, allRestaurants } from '../data/restaurants'
-import { resolveShortLink } from '../sync/pocketbase'
+import { UnresolvableShortLink, resolveShortLink } from '../sync/pocketbase'
 
-vi.mock('../sync/pocketbase', () => ({
+/**
+ * `authStore.onChange` is a real subscriber list, not a bare `vi.fn()`: the sign-in trigger below
+ * has to be *invoked* to be tested, and a stub that swallows the callback would let the trigger be
+ * deleted without a failure.
+ */
+const authListeners = new Set<() => void>()
+const emitAuthChange = () => authListeners.forEach((fn) => fn())
+
+vi.mock('../sync/pocketbase', async (importOriginal) => {
+  // The real error class, for the same reason as in capture.test.ts: `instanceof` is the branch.
+  const actual = await importOriginal<typeof import('../sync/pocketbase')>()
+  return {
+  UnresolvableShortLink: actual.UnresolvableShortLink,
   resolveShortLink: vi.fn(),
-}))
+  pb: {
+    authStore: {
+      onChange: (cb: () => void) => {
+        authListeners.add(cb)
+        return () => authListeners.delete(cb)
+      },
+    },
+  },
+  }
+})
 
 const SHORT = 'https://maps.app.goo.gl/abc'
 
 beforeEach(async () => {
   await freshDB()
+  authListeners.clear()
   vi.mocked(resolveShortLink).mockReset()
   setGeocodeProvider({ search: async () => [], reverse: async () => '1 Rue de Rivoli, Paris' })
 })
@@ -92,5 +114,65 @@ describe('resolvePendingRestaurants', () => {
       expect(vi.mocked(resolveShortLink)).toHaveBeenCalledTimes(2)
       expect((await getRestaurant(r.id))?.pending).toBe(false)
     })
+  })
+})
+
+describe('a record the resolver has ruled on', () => {
+  it('is not retried again, unlike one that merely failed', async () => {
+    // A backoff says "later". A verdict says "never" — and this record was retried on every
+    // startup, reconnect and sign-in to be told the same thing.
+    await createRestaurant({ name: SHORT, mapsUrl: SHORT, pending: true })
+    vi.mocked(resolveShortLink).mockRejectedValue(new UnresolvableShortLink(422))
+
+    expect(await resolvePendingRestaurants()).toBe(0)
+    expect(vi.mocked(resolveShortLink)).toHaveBeenCalledTimes(1)
+
+    // Past any backoff window a transient failure would have earned. Without advancing the clock
+    // this test cannot tell "gave up" from "waiting 5s", and would pass either way.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(Date.now() + 60_000)
+      expect(await resolvePendingRestaurants()).toBe(0)
+      expect(vi.mocked(resolveShortLink)).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stays visibly provisional rather than being deleted', async () => {
+    const r = await createRestaurant({ name: SHORT, mapsUrl: SHORT, pending: true })
+    vi.mocked(resolveShortLink).mockRejectedValue(new UnresolvableShortLink(400))
+
+    await resolvePendingRestaurants()
+
+    expect((await getRestaurant(r.id))?.pending).toBe(true)
+  })
+})
+
+describe('startPendingResolver', () => {
+  it('retries a provisional record when the sign-in state changes', async () => {
+    // The resolver hook requires auth, so a link pasted while signed out is refused and saved
+    // provisional. Signing in is what unblocks it -- and must not wait for the next page load.
+    const r = await createRestaurant({ name: SHORT, mapsUrl: SHORT, pending: true })
+    vi.mocked(resolveShortLink).mockRejectedValueOnce(new Error('401'))
+
+    const stop = startPendingResolver()
+    await vi.waitFor(() => expect(vi.mocked(resolveShortLink)).toHaveBeenCalledTimes(1))
+    expect((await getRestaurant(r.id))?.pending).toBe(true)
+
+    vi.mocked(resolveShortLink).mockResolvedValue({ lat: 48.8566, lng: 2.3522, name: 'Chez Marcel' })
+    emitAuthChange()
+
+    await vi.waitFor(async () => expect((await getRestaurant(r.id))?.pending).toBe(false))
+    expect((await getRestaurant(r.id))?.lat).toBe(48.8566)
+    stop()
+  })
+
+  it('stops listening for sign-in changes after teardown', async () => {
+    vi.mocked(resolveShortLink).mockResolvedValue({ lat: 1, lng: 2 })
+    const stop = startPendingResolver()
+    expect(authListeners.size).toBe(1)
+    stop()
+    expect(authListeners.size).toBe(0)
   })
 })

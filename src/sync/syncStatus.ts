@@ -3,7 +3,11 @@
  * backed up?" `state` distinguishes offline / synced / pending / problem, `pendingCount` is how
  * many local records still differ from what was last pushed, and `cause` names the likely
  * problem once escalated to `'problem'`. `SyncController` (`syncEngine.ts`) is this store's only
- * writer of `state`/`cause` via `setSyncState`.
+ * writer of `state`/`cause` via `setSyncState` — with one deliberate exception, the composition
+ * root (`bootstrap.ts`), which reports `problem`/`server-unreachable` when it resolves a presence
+ * of `unavailable` and therefore starts no controller at all. Without that second writer the
+ * initial `synced` would stand unchallenged for the life of the tab, which is the app's one false
+ * backup claim.
  *
  * `pendingCount` also self-corrects independently of any sync attempt: this module subscribes to
  * `onStoreChange` (`src/data/events.ts`) and recomputes on every local write. That is necessary

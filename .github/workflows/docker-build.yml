@@ -1,0 +1,67 @@
+# Container images — the private deployment target.
+#
+# A pull request builds both images for both architectures and publishes nothing (R17). A push to
+# `main` builds the same two images and publishes them to GHCR (R16).
+#
+# ---------------------------------------------------------------------------------------------
+# One tag, both images (KTD7)
+# ---------------------------------------------------------------------------------------------
+# The split-rollout hazard lives on the private host, where the operator pulls by hand and can
+# advance one image without the other. Both images are therefore tagged with the *same* value —
+# `github.sha`, resolved once per run by GitHub for the whole workflow — alongside the moving
+# `latest` tag (R28). `docker/docker-compose.prod.yml` reads one `TABLEMARKS_IMAGE_TAG` for both
+# services, so pasting that SHA can only move them together.
+#
+# The SHA tag is the FULL 40-character commit SHA, not a short prefix: it is what an operator
+# copies out of the run summary and pastes into `TABLEMARKS_IMAGE_TAG`, and what `git show` takes
+# back without ambiguity.
+#
+# ---------------------------------------------------------------------------------------------
+# No backend URL is passed here, on purpose
+# ---------------------------------------------------------------------------------------------
+# `docker/Dockerfile` declares no build argument for the PocketBase location (KD2/R3): a
+# build-time value would bake the private hostname into the image and into this public build log.
+# The operator supplies TABLEMARKS_POCKETBASE_URL when the container starts. If a build arg for it
+# ever appears in this file, that decision has been broken.
+name: Docker images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only by default. Only the publishing call below widens this, and only for itself — which is
+# why the two paths are separate jobs rather than one with a conditional step. Job permissions are
+# static, so a single job would carry `packages: write` on pull requests as well. The shared build
+# lives in docker-image.yml; only the two entry points are here.
+permissions:
+  contents: read
+
+# A new push supersedes an in-flight run for the same ref. Multi-architecture builds are slow
+# (linux/arm64 is emulated), so a superseded run is worth cancelling.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Pull requests: prove both images still build, for both architectures. Nothing is published, and
+  # this call holds no credential that could publish — no `packages: write`, no registry login.
+  build:
+    name: Build
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      publish: false
+
+  # Pushes to main: the same build, published.
+  publish:
+    name: Publish
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      publish: true

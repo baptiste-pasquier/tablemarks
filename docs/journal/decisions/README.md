@@ -5,8 +5,8 @@ One architectural choice per entry, in [MADR 4.0.0](https://adr.github.io/madr/)
 Path: `journal/decisions/NNNN-title-with-dashes.md` — `NNNN` a consecutive four-digit
 number, the title lowercase and dash-separated.
 
-This folder is seeded with this template only. No decisions have been backfilled into it —
-see below.
+This folder holds the template below and the decisions recorded since it existed. No
+decisions have been backfilled into it — see below.
 
 ## An accepted decision is never edited
 

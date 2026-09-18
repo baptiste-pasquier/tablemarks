@@ -1,0 +1,89 @@
+# Build context for docker/Dockerfile. The context is the repository root (the app build needs
+# package.json, index.html, vite.config.ts, tsconfig.json, src/ and public/), so everything that
+# is not an input to a build must be listed here or it is uploaded to the daemon on every build.
+#
+# Extending this file: add a new section rather than editing an existing one, and keep the
+# "keep these" re-includes at the bottom so a later `!` line is never overridden by an earlier
+# exclude (last match wins in .dockerignore).
+
+# ---------------------------------------------------------------------------
+# Installed and generated output — reinstalled/rebuilt inside the image
+# ---------------------------------------------------------------------------
+node_modules
+**/node_modules
+dist
+dist-ssr
+coverage
+*.tsbuildinfo
+*.local
+
+# ---------------------------------------------------------------------------
+# Version control and agent scratch space
+# .claude/worktrees holds full checkouts of this repository — hundreds of MB.
+# ---------------------------------------------------------------------------
+.git
+.gitignore
+.gitattributes
+.github
+.husky
+.claude
+.compound-engineering
+.context
+.docs-taxonomy
+--help
+
+# ---------------------------------------------------------------------------
+# Documentation and repo-maintenance files — never read by the build
+# ---------------------------------------------------------------------------
+docs
+scripts
+*.md
+
+# ---------------------------------------------------------------------------
+# PocketBase: runtime state and the downloaded binary are host-side artifacts.
+# pb_migrations is deliberately NOT excluded — it is the tracked collection
+# schema and a PocketBase image may need to COPY it.
+# ---------------------------------------------------------------------------
+pocketbase/pb_data
+pocketbase/pocketbase
+
+# ---------------------------------------------------------------------------
+# Secrets and local environment overrides. `.env.example` is re-included below.
+# ---------------------------------------------------------------------------
+**/.env
+**/.env.*
+
+# ---------------------------------------------------------------------------
+# Editor and OS noise
+# ---------------------------------------------------------------------------
+.vscode
+.idea
+.DS_Store
+**/.DS_Store
+logs
+*.log
+npm-debug.log*
+
+# ---------------------------------------------------------------------------
+# PocketBase runtime state, second pass (added for the PocketBase image build).
+#
+# `pocketbase/pb_data` above does not match the sibling snapshot directories a
+# manual backup leaves behind (`pocketbase/pb_data_backup_<timestamp>/`), and a
+# pb_data is a secret archive rather than just settings: it holds the OAuth
+# client secret and the token signing keys as well as every uploaded file. Both
+# images are published publicly, so every pb_data-shaped path is excluded by
+# prefix, and any stray SQLite file by extension.
+#
+# pb_hooks and pb_migrations deliberately stay in the context — the PocketBase
+# image COPYs them (R9).
+# ---------------------------------------------------------------------------
+pocketbase/pb_data*
+pocketbase/pb_public
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# ---------------------------------------------------------------------------
+# Keep these (last match wins)
+# ---------------------------------------------------------------------------
+!**/.env.example

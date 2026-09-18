@@ -39,8 +39,13 @@
     "working": "En cours…",
     "submit": "Ajouter",
     "errorNoMatches": "Aucun lieu correspondant trouvé.",
-    "errorSearchFailed": "Échec de la recherche. Réessayez.",
+    "errorSearchFailed": "Échec de la recherche. Réessayez, ou collez le lien Google Maps complet contenant les coordonnées.",
     "errorAdd": "Impossible d'ajouter ce lieu.",
+    "shortLinkNeedsBackend": "Les liens Google Maps courts (maps.app.goo.gl) ne peuvent être ouverts que par un serveur, et cette application fonctionne sans serveur. Deux autres méthodes fonctionnent ici :",
+    "shortLinkBackendUnreachable": "Les liens Google Maps courts (maps.app.goo.gl) ne peuvent être ouverts que par un serveur, et celui de cette application est injoignable pour le moment. Deux autres méthodes fonctionnent en attendant :",
+    "shortLinkUnresolvable": "Ce lien n'a pas pu être ouvert comme un lieu. Les anciens liens goo.gl/maps et les recherches Maps ne sont pas pris en charge. Deux autres méthodes fonctionnent :",
+    "shortLinkTrySearch": "Saisissez plutôt le nom du lieu, puis choisissez-le dans les résultats de recherche.",
+    "shortLinkTryFullUrl": "Ou collez le lien Google Maps complet depuis la barre d'adresse de votre navigateur — le lien long qui contient les coordonnées.",
     "alreadySaved": "est déjà enregistré.",
     "openIt": "Ouvrir"
   },
@@ -134,6 +139,11 @@
     "detailOffline": "Vous êtes hors ligne. Les modifications sont enregistrées sur cet appareil et seront synchronisées une fois de retour en ligne.",
     "detailProblemSignIn": "Votre session a expiré. Reconnectez-vous depuis l'en-tête pour reprendre la sauvegarde.",
     "detailProblemUnreachable": "Impossible de joindre le serveur pour l'instant. Nous continuons d'essayer en arrière-plan."
+  },
+  "backend": {
+    "unreachable": "Serveur injoignable",
+    "unreachableDetail": "Cette application a un serveur, mais il ne répond pas. Vos adresses restent enregistrées sur cet appareil.",
+    "signInUnavailable": "Connexion indisponible : l'adresse du serveur de cette application n'a pas pu être lue."
   },
   "pwa": {
     "appUpdateAria": "Mise à jour de l'application",

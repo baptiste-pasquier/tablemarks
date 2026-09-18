@@ -1,0 +1,86 @@
+# Tablemarks — private deployment stack, built from this working tree.
+#
+#   docker compose -f docker/docker-compose.yml up -d --build
+#
+# Requires BuildKit: docker/Dockerfile pins its Node stage to $BUILDPLATFORM so the multi-arch
+# publish does not replay the whole bundle build under emulation, and only BuildKit defines that
+# variable. The legacy builder fails with an empty-platform error -- install the buildx
+# component (`brew install docker-buildx` on macOS) if you hit it.
+#
+# Use docker-compose.prod.yml on the host that runs the published images; this file is for
+# building and smoke-testing locally. Both files describe the same two-service topology.
+#
+# Configuration lives in docker/.env (copy docker/.env.example). Compose reads it automatically:
+# the project directory is the directory of the first -f file, i.e. docker/. Two extra variables
+# are read only by this file and default to the values docker/.env.example assumes:
+# TABLEMARKS_APP_PORT (8080) and TABLEMARKS_POCKETBASE_PORT (8090).
+#
+# ---------------------------------------------------------------------------------------------
+# What the operator's reverse proxy in front of this stack must do
+# ---------------------------------------------------------------------------------------------
+# The proxy itself is a host concern and is not described here (KD5) — but two of its settings are
+# not optional, and getting them wrong fails in ways that do not look like proxy problems:
+#
+#   * Response buffering OFF for the PocketBase service. PocketBase's realtime channel is SSE, and
+#     a buffering proxy holds the events until the buffer fills. This breaks **sign-in**, not only
+#     sync (R23): the OAuth2 flow delivers its authorization code back to the waiting tab over that
+#     same realtime connection, so with buffering on the popup closes and the app just sits there.
+#     nginx: `proxy_buffering off;` (plus `proxy_cache off;` if caching is on globally).
+#
+#   * A read timeout long enough for an idle realtime connection — minutes, not seconds. The
+#     default 60s drops every subscription once a minute and the client reconnect-storms.
+#     nginx: `proxy_read_timeout 3600s;`.
+#
+# Also operator steps, deliberately not codified here: the public origin, the trusted proxy header
+# (PocketBase Settings > Application > proxy, so the rate limiter sees real client IPs and not the
+# proxy's), the rate limiter itself, and the Google OAuth2 client id/secret.
+# ---------------------------------------------------------------------------------------------
+
+name: tablemarks
+
+services:
+  pocketbase:
+    build:
+      # The repository root — .dockerignore lives there and keeps pb_data, every
+      # pb_data_backup_*, and the host-built pocketbase binary out of the context (R22).
+      context: ..
+      dockerfile: docker/Dockerfile.pocketbase
+    image: tablemarks-pocketbase:local
+    restart: unless-stopped
+    # Named volume, mounted at the data directory only. pb_migrations and pb_hooks stay inside the
+    # image so an image upgrade ships new schema and hooks (R9) while the database survives the
+    # container being recreated (R8).
+    volumes:
+      - pb_data:/pb/pb_data
+    ports:
+      # Published because the browser talks to PocketBase directly — it is not proxied through the
+      # app container. On a real host this port is what the reverse proxy points at. The host side
+      # is a variable because 8090 is PocketBase's default and a host that already runs one (a
+      # `pocketbase serve` for development, another stack) cannot start this one otherwise.
+      - '${TABLEMARKS_POCKETBASE_PORT:-8090}:8090'
+    # No healthcheck here: docker/Dockerfile.pocketbase declares one (GET /api/health).
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: tablemarks-app:local
+    restart: unless-stopped
+    environment:
+      # The URL the BROWSER uses, never a Compose service name: `http://pocketbase:8090` resolves
+      # only inside this network. The app refuses to boot on a non-loopback http:// URL, so the
+      # default below is the loopback form that matches the published port above; a real host sets
+      # its https origin in docker/.env.
+      TABLEMARKS_POCKETBASE_URL: ${TABLEMARKS_POCKETBASE_URL:-http://127.0.0.1:${TABLEMARKS_POCKETBASE_PORT:-8090}}
+    ports:
+      - '${TABLEMARKS_APP_PORT:-8080}:80'
+    depends_on:
+      pocketbase:
+        # The app's own health endpoint answers before PocketBase is ready to serve, so the wait
+        # has to be on PocketBase's health check, not on container start.
+        condition: service_healthy
+    # No healthcheck and no read_only here either: docker/Dockerfile declares GET /healthz, and the
+    # entrypoint writes config.json into the web root at start, so the filesystem must be writable.
+
+volumes:
+  pb_data:

@@ -40,8 +40,9 @@ does not retell the story.
 
 ### Rules that are enforced
 
-`scripts/check_docs.py` runs via a Husky pre-commit hook (`npm run check:docs` to run it
-by hand — there is no CI in this repo yet). These fail:
+`scripts/check_docs.py` runs via a Husky pre-commit hook and again in CI
+(`.github/workflows/ci.yml`), so a skipped hook does not get the change past review.
+`npm run check:docs` runs it by hand. These fail:
 
 - **Never narrate a past attempt, failure, or measured symptom in `docs/reference/`,
   `docs/conventions/` or `docs/how-to/`.** Write a `docs/journal/solutions/` entry
