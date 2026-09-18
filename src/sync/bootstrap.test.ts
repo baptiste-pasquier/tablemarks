@@ -338,6 +338,43 @@ describe('bootstrap — backend configured', () => {
   })
 })
 
+describe('bootstrap — a backend that was down at launch (review #3)', () => {
+  it('re-checks reachability on a timer and clears the badge when the server comes back', async () => {
+    // Signed out, so no sync controller runs and nothing else ever writes reachability. Before
+    // this the header said "Server unreachable" for the life of the tab, however long the server
+    // had been back.
+    let healthFails = true
+    installFetch({
+      config: async () => json({ pocketbaseUrl: CONFIGURED_URL }),
+      health: async () => {
+        if (healthFails) throw new TypeError('Failed to fetch')
+        return json({ code: 200, message: 'API is healthy.', data: {} })
+      },
+    })
+    installEventSource()
+
+    dispose = await bootstrap(render, { healthTimeoutMs: 40, recheckIntervalMs: 20 })
+    await vi.waitFor(() => expect(getBackendStatus().reachability).toBe('unreachable'))
+
+    healthFails = false
+    // No reconnect event: the tab was online throughout. The server was the thing that moved.
+
+    await vi.waitFor(() => expect(getBackendStatus().reachability).toBe('reachable'))
+  })
+
+  it('stops re-checking once the server answers, rather than polling for the life of the tab', async () => {
+    const fetchMock = installFetch({ config: async () => json({ pocketbaseUrl: CONFIGURED_URL }) })
+    installEventSource()
+
+    dispose = await bootstrap(render, { healthTimeoutMs: 40, recheckIntervalMs: 20 })
+    await vi.waitFor(() => expect(getBackendStatus().reachability).toBe('reachable'))
+    const afterFirstAnswer = backendCalls(fetchMock).length
+    await new Promise((resolve) => setTimeout(resolve, 80))
+
+    expect(backendCalls(fetchMock).length).toBe(afterFirstAnswer)
+  })
+})
+
 describe('bootstrap — configuration that cannot be read (R30)', () => {
   it('reports unreachable, not local-only, when the configuration fetch rejects', async () => {
     installFetch({
@@ -438,6 +475,45 @@ describe('bootstrap — configuration that cannot be read (R30)', () => {
     expect(vi.mocked(startPendingResolver)).toHaveBeenCalledTimes(1)
     // And the sync claim written while the address was unknown is retracted.
     expect(getSyncStatus().state).not.toBe('problem')
+  })
+
+  it('re-reads the configuration on a timer, with no reconnect to trigger it (review #1)', async () => {
+    // The failure the reconnect retry does not cover, and the likeliest one: the browser never
+    // went offline. A slow launch, a 3s timeout, one transient 5xx -- and with `online` as the
+    // only trigger the tab stays stranded until the user reloads by hand.
+    let configFails = true
+    installFetch({
+      config: async () => {
+        if (configFails) throw new TypeError('Failed to fetch')
+        return json({ pocketbaseUrl: CONFIGURED_URL })
+      },
+    })
+    installEventSource()
+    const resume = vi.spyOn(auth, 'resume').mockResolvedValue(undefined)
+
+    dispose = await bootstrap(render, { healthTimeoutMs: 40, recheckIntervalMs: 20 })
+    expect(getBackendStatus().presence.status).toBe('unavailable')
+
+    configFails = false
+    // No `window.dispatchEvent(new Event('online'))` here. That is the whole point.
+
+    await vi.waitFor(() => expect(getBackendStatus().presence.status).toBe('configured'))
+    expect(pb.baseURL).toBe(CONFIGURED_URL)
+    expect(resume).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops re-reading once the configuration is disposed', async () => {
+    // A tab that never recovers must not poll config.json until it is closed.
+    const fetchMock = installFetch({ config: async () => { throw new TypeError('Failed to fetch') } })
+    installEventSource()
+
+    dispose = await bootstrap(render, { healthTimeoutMs: 40, recheckIntervalMs: 20 })
+    dispose()
+    dispose = undefined
+    const afterDispose = fetchMock.mock.calls.length
+    await new Promise((resolve) => setTimeout(resolve, 80))
+
+    expect(fetchMock.mock.calls.length).toBe(afterDispose)
   })
 
   it('recovers only once, however many reconnects arrive', async () => {

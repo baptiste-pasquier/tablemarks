@@ -41,6 +41,8 @@ import { setSyncState } from './syncStatus'
 export interface BootstrapOptions extends LoadRuntimeConfigOptions {
   /** Override the health-check budget. Tests use a short one; production takes the default. */
   healthTimeoutMs?: number
+  /** Override the recovery poll interval. Tests use a short one; production takes the default. */
+  recheckIntervalMs?: number
 }
 
 export async function bootstrap(
@@ -49,6 +51,7 @@ export async function bootstrap(
 ): Promise<() => void> {
   const teardown: Array<() => void> = []
   const healthTimeoutMs = options.healthTimeoutMs ?? HEALTH_CHECK_TIMEOUT_MS
+  const recheckIntervalMs = options.recheckIntervalMs ?? RECOVERY_POLL_MS
   let addressIsKnown = false
 
   /**
@@ -78,6 +81,15 @@ export async function bootstrap(
         if (isOnline()) void checkReachability(healthTimeoutMs)
       }),
     )
+    // Poll, but only while the answer is "no". When signed out no controller runs, so a reconnect
+    // is the only other trigger -- and a server that was down at launch and came back produced no
+    // reconnect at all. The header said "Server unreachable" for the life of the tab (review #3).
+    // The guard is what keeps this free on a healthy instance: it stops the moment one answers.
+    const timer = setInterval(() => {
+      if (getBackendStatus().reachability !== 'unreachable' || !isOnline()) return
+      void checkReachability(healthTimeoutMs)
+    }, recheckIntervalMs)
+    teardown.push(() => clearInterval(timer))
   }
 
   try {
@@ -139,7 +151,16 @@ export async function bootstrap(
           inFlight = false
         })
     }
-    unsubscribe = onOnlineChange(attempt)
+    // Two triggers, because `online` alone misses the common case. The browser fires it only on a
+    // connectivity *transition*, and the read that fails most often never had one: a slow launch,
+    // a 3s timeout, one transient 5xx, all while the tab stayed online the whole time. Without the
+    // timer that tab is stranded until the user reloads by hand (review #1).
+    const off = onOnlineChange(attempt)
+    const timer = setInterval(attempt, recheckIntervalMs)
+    unsubscribe = () => {
+      off()
+      clearInterval(timer)
+    }
     return () => unsubscribe()
   }
 
@@ -182,6 +203,15 @@ function reportUnsyncableIfAddressUnknown(): void {
  * trusted. Nothing renders while reachability is `unknown` (ADR-0002), so the patience costs no
  * wrong pixel — only a later-arriving true answer.
  */
+/**
+ * How often a tab that could not reach its backend tries again on its own.
+ *
+ * Slow on purpose. This exists to rescue a tab from a state it would otherwise stay in for its
+ * whole life, not to detect an outage quickly -- a sync attempt or a reconnect does that sooner.
+ * Polling faster would put a steady request stream on an instance that is already unwell.
+ */
+const RECOVERY_POLL_MS = 30_000
+
 const HEALTH_CHECK_TIMEOUT_MS = 5_000
 
 /**
