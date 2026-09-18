@@ -24,11 +24,11 @@
 # `verify` iterate the same source. A second hardcoded list in `verify` would be the same
 # duplication this file was created to remove.
 #
-# No `latest` tag is published. The deployment never reads one — `docker-compose.prod.yml` makes
-# `TABLEMARKS_IMAGE_TAG` mandatory precisely so an unset tag stops the deploy rather than
-# resurrecting whatever `latest` points at — and a moving tag is the one thing here that can
-# silently desynchronise, because it is the only tag a half-failed run leaves pointing at two
-# different commits.
+# `latest` is published, and `verify` is the only job that writes it. A moving tag is the one tag a
+# half-failed run could leave naming two different commits — so it is never written by the matrix
+# job that builds. It is moved onto the digests `verify` has just re-read, after the same gate that
+# guards the operator's summary. A run that published one image and failed the other therefore
+# leaves `latest` exactly where it was, pointing at the last complete release.
 name: Container image
 
 on:
@@ -111,8 +111,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ inputs.publish }}
           # Both matrix legs read the same `github.sha`, resolved once by GitHub for the whole run,
-          # so the two images carry the same immutable tag (KTD7/R28). The SHA is the only tag
-          # published: see the header on why there is no `latest`.
+          # so the two images carry the same immutable tag (KTD7/R28). The SHA is the only tag this
+          # job writes; `latest` is moved by `verify`, after both legs are known to have succeeded.
           tags: ${{ needs.plan.outputs.ref-prefix }}/${{ matrix.image }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
@@ -140,13 +140,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # `needs` proves the jobs reported success; this proves the tags are actually retrievable,
-      # which is the thing the operator is about to rely on. Both manifests, both architectures.
+      # `needs` proves the jobs reported success; the first pass proves the tags are actually
+      # retrievable, which is the thing the operator is about to rely on. Both manifests, both
+      # architectures.
       #
       # The count check is not ceremony. A list this step failed to parse would send it through an
       # empty loop, verify nothing, and pass — a gate that cannot fail is worse than no gate,
       # because the summary it guards would then be trusted for no reason.
-      - name: Confirm every image carries this run's tag
+      #
+      # Two passes in one step, and the order is the point: nothing is advertised until everything
+      # is proven. `imagetools create` writes a second tag onto the manifest list that already
+      # exists — no rebuild, no layer upload, and the two images take the digests this run verified
+      # rather than whatever a later build might produce. The remaining window is the gap between
+      # the two `create` calls, which is why they are adjacent and last.
+      - name: Confirm every image carries this run's tag, then move latest onto it
         run: |
           set -eu
           images=$(printf '%s' '${{ needs.plan.outputs.images }}' \
@@ -162,20 +169,33 @@ jobs:
             echo "Inspecting ${ref}"
             docker buildx imagetools inspect "$ref" > /dev/null
           done
-          echo "Verified ${count} image(s) at ${{ github.sha }}."
+          printf '%s\n' "$images" | while read -r image; do
+            ref="${{ needs.plan.outputs.ref-prefix }}/${image}"
+            echo "Pointing ${ref}:latest at ${{ github.sha }}"
+            docker buildx imagetools create --tag "${ref}:latest" "${ref}:${{ github.sha }}"
+          done
+          echo "Verified and tagged ${count} image(s) at ${{ github.sha }}."
 
-      # The operator needs the exact string to paste into TABLEMARKS_IMAGE_TAG. Printed once, from
-      # here rather than from each matrix leg: a half-published run used to print this block anyway,
-      # for a tag one of the two images did not carry.
+      # An ordinary upgrade needs no tag at all now — both images answer to `latest`, which the
+      # step above has just moved. The SHA is printed for the two cases that do need one: pinning a
+      # deploy, and rolling back.
       - name: Record the deployable tag
         run: |
           {
-            echo '### Deployable tag'
+            echo '### Deployed'
+            echo
+            echo 'The latest tag now points at this run on both images. To upgrade:'
+            echo
+            echo '```'
+            echo 'docker compose -f docker/docker-compose.prod.yml pull'
+            echo 'docker compose -f docker/docker-compose.prod.yml up -d'
+            echo '```'
+            echo
+            echo 'To pin this release, or to roll back to it later:'
             echo
             echo '```'
             echo "TABLEMARKS_IMAGE_TAG=${{ github.sha }}"
             echo '```'
             echo
-            echo 'Both images in this run carry this tag, and both were re-read from the registry.'
-            echo 'Upgrade them together.'
+            echo 'Both images were re-read from the registry before the tag was moved.'
           } >> "$GITHUB_STEP_SUMMARY"

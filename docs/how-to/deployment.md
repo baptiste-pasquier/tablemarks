@@ -27,7 +27,7 @@ out where they apply.
    the public route at it yet.
 
    ```bash
-   TABLEMARKS_IMAGE_TAG=<commit-sha> docker compose -f docker/docker-compose.prod.yml up -d
+   docker compose -f docker/docker-compose.prod.yml up -d
    ```
 
 2. **Claim the superuser account**, over that private path, at `/_/`.
@@ -124,11 +124,11 @@ restore-from-backup**, and nothing else.
    off the host** and store it where a secret belongs — the same place as the OAuth client secret,
    not next to a code checkout.
 
-2. **Move the tag forward** for both images at once:
+2. **Pull and restart.** Both images answer to `latest`, and they move together:
 
    ```bash
-   TABLEMARKS_IMAGE_TAG=<new-commit-sha> docker compose -f docker/docker-compose.prod.yml pull
-   TABLEMARKS_IMAGE_TAG=<new-commit-sha> docker compose -f docker/docker-compose.prod.yml up -d
+   docker compose -f docker/docker-compose.prod.yml pull
+   docker compose -f docker/docker-compose.prod.yml up -d
    ```
 
 3. **Check the result in the console, with no SQL.** Open **Collections → restaurants** and
@@ -228,7 +228,7 @@ the project directory is the directory of the first `-f` file.
 | Variable | Default | What it is |
 |---|---|---|
 | `TABLEMARKS_POCKETBASE_URL` | none in `docker-compose.prod.yml`; the deploy stops without it | The URL the **browser** uses to reach PocketBase |
-| `TABLEMARKS_IMAGE_TAG` | none; the deploy stops without it | The single commit SHA **both** images are addressed by |
+| `TABLEMARKS_IMAGE_TAG` | `latest` | The single tag **both** images are addressed by; set a commit SHA to pin or roll back |
 | `TABLEMARKS_IMAGE_REPOSITORY` | `ghcr.io/baptiste-pasquier` | The registry namespace both images are pulled from |
 | `TABLEMARKS_APP_PORT` | `8080` | Host-side port for the app container (container port 80) |
 | `TABLEMARKS_POCKETBASE_PORT` | `8090` | Host-side port for the PocketBase container (container port 8090) |
@@ -254,16 +254,24 @@ container's.
 
 ### `TABLEMARKS_IMAGE_TAG` in detail
 
-Both images are published under the same commit SHA and both Compose services read this one
-variable, so **the app and PocketBase cannot be rolled forward separately**. A new app talking to
-an old PocketBase is a bug nobody can reproduce, and a single shared tag is what makes that state
-unreachable. The variable has no default on purpose: an unset tag stops the deploy rather than
-resolving to something nobody chose.
+Both images are published under the same commit SHA *and* under `latest`, and both Compose services
+read this one variable, so **the app and PocketBase cannot be rolled forward separately**. A new app
+talking to an old PocketBase is a bug nobody can reproduce, and a single shared tag is what makes
+that state unreachable.
 
-**The commit SHA is the only tag published.** There is no `latest`, deliberately: a moving tag is
-the one thing that could point at two different commits after a run that published one image and
-failed the other. The run summary prints the SHA to paste, and prints it only once both images
-have been re-read from the registry — so a tag that appears there is one both images carry.
+**The default is `latest`, so an ordinary upgrade needs no tag typed at all.** What makes a moving
+tag safe here is where it is written: the publish workflow's `verify` job moves `latest` onto the
+digests it has just re-read from the registry, and it runs only once **both** images published
+successfully. A run that published one and failed the other leaves `latest` on the last complete
+release rather than pointing the two images at different commits.
+
+**Set the variable to a commit SHA to pin a release** — which is what a rollback is. The publish
+run's summary prints the SHA for exactly that.
+
+One window remains open, and it is worth knowing about rather than discovering: `verify` writes the
+two `latest` tags with two consecutive registry calls, not one transaction. A `pull` landing in the
+gap between them would take a new app against an old PocketBase. The gap is two API calls wide with
+no build in it. Pin a SHA when that is not a risk you want at all.
 
 ## The PocketBase image depends on `curl` at runtime
 
