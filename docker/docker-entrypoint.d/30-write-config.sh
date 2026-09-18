@@ -39,12 +39,19 @@ if [ -n "$url" ]; then
         echo "$ME: ERROR: TABLEMARKS_POCKETBASE_URL is not a plain http(s) URL: $url" >&2
         exit 1
     fi
+    # http:// is accepted only for loopback, and "loopback" has to mean exactly what the app means
+    # by it (`isSecureOrLoopback`, src/sync/runtimeConfig.ts): literal localhost, or a 127.x.x.x
+    # address. The `http://127.*` glob this replaces also matched `127.example.com` and
+    # `127.0.0.1.evil.com` — ordinary hostnames somebody else owns. The container booted without
+    # complaint, the app then rejected the value, and every visitor got "Server unreachable" with
+    # nothing in the logs to explain it (review #7).
     case "$url" in
         https://*) ;;
-        http://localhost|http://localhost:*|http://localhost/*|http://127.*) ;;
         *)
-            echo "$ME: ERROR: TABLEMARKS_POCKETBASE_URL must use https:// unless the host is loopback: $url" >&2
-            exit 1
+            if ! printf '%s' "$url" | grep -Eq '^http://(localhost|127\.[0-9]+\.[0-9]+\.[0-9]+)(:[0-9]+)?(/.*)?$'; then
+                echo "$ME: ERROR: TABLEMARKS_POCKETBASE_URL must use https:// unless the host is loopback: $url" >&2
+                exit 1
+            fi
             ;;
     esac
 fi
