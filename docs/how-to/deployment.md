@@ -37,6 +37,19 @@ out where they apply.
    reaches the installer first owns the instance. Claiming over a private path closes the window
    before anyone else can be in it. This is why step 1 keeps the public route shut.
 
+   **Configure Settings → Mail in that first session.**
+   `pb_migrations/1789808500_superusers_enable_mfa_otp.js` turns MFA and OTP on for
+   `_superusers`, so every *later* login answers your password with an emailed code instead of a
+   session. The claim itself is exempt — the installer link authenticates directly — which makes
+   this the one session that does not need working mail. When mail is broken, the way back in is a
+   shell on the host (`--dir` because `exec` bypasses the image's `CMD`, and the default path is
+   next to the binary, not the volume):
+
+   ```bash
+   docker compose -f docker/docker-compose.prod.yml exec pocketbase \
+     pocketbase superuser otp --dir=/pb/pb_data <your-email>
+   ```
+
 3. **Set the trusted proxy header.** Console → **Settings → Application → Proxy**: header
    `X-Forwarded-For`, selection **rightmost**.
 
@@ -49,8 +62,12 @@ out where they apply.
    own address puts **every visitor in one bucket**: the first busy client exhausts the quota and
    the instance rate-limits everybody, including itself.
 
-5. **Enable the Google auth provider.** Console → **Collections → users → Options → OAuth2**,
+5. **Add the Google credentials.** Console → **Collections → users → Options → OAuth2**,
    enable Google, paste the Client ID and Client Secret from Google Cloud Console.
+
+   The OAuth2 method itself is already on — `pb_migrations/1789808600_users_enable_oauth2.js`
+   enables it, because it is the only sign-in path the app has. What is left here is the
+   per-instance credential, which cannot live in a migration.
 
 6. **Register the deployed origin as a redirect URI on the Google side**, last:
    `https://<your-pocketbase-origin>/api/oauth2-redirect`. Google rejects any callback to an

@@ -27,13 +27,21 @@ sign-in, no sync, and refuses short links. Keep your local edit out of your comm
 
 ## Google OAuth2
 
-In the admin UI: **Collections → users → Settings → OAuth2 → enable Google**, paste a Client ID + Secret from Google Cloud Console. Local-dev redirect URI: `http://127.0.0.1:8090/api/oauth2-redirect`.
+The OAuth2 auth method on `users` is on already — `pb_migrations/1789808600_users_enable_oauth2.js` enables it, since it is the only sign-in path the app offers. What stays a console step is the credential: **Collections → users → Settings → OAuth2 → enable Google**, paste a Client ID + Secret from Google Cloud Console. Local-dev redirect URI: `http://127.0.0.1:8090/api/oauth2-redirect`.
+
+Superuser login asks for a second factor: `pb_migrations/1789808500_superusers_enable_mfa_otp.js` turns on MFA + OTP on `_superusers`, so a password gets you an emailed code prompt rather than a session. On an instance with no working mailer, `./pocketbase superuser otp <email>` prints the code instead.
 
 For a public instance the console steps are ordered, and the order matters — claim the superuser over a private path before opening the public route, and set the trusted proxy header before enabling the rate limiter. The full sequence is in [`docs/how-to/deployment.md`](../docs/how-to/deployment.md).
 
 ## Collections
 
-Both collections are per-user (every record relates to an `owner`; collection rules scope reads/writes to `owner = @request.auth.id`).
+Both collections are per-user (every record relates to an `owner`; collection rules scope reads/writes to `owner = @request.auth.id`). The **update** rule carries one more clause, because an update rule is checked against the stored record and would otherwise let a caller rewrite `owner` in the request body and hand their record to another account:
+
+```
+@request.auth.id != "" && owner = @request.auth.id && (@request.body.owner:isset = false || @request.body.owner = @request.auth.id)
+```
+
+Why, with the measurements: [`docs/journal/solutions/database-issues/pocketbase-update-rules-do-not-see-the-request-body.md`](../docs/journal/solutions/database-issues/pocketbase-update-rules-do-not-see-the-request-body.md).
 
 **restaurants** — `name`, `lat`, `lng`, `address`, `mapsUrl`, `cuisine`, `note`, `added`, `pending`, `latestVerdict`, `latestVisitDate`, `visitCount`, `syncedAt`, `deleted`.
 
