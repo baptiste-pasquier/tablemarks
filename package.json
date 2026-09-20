@@ -17,8 +17,11 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx}": "eslint --cache --fix",
-    "**/*": "prettier --write --ignore-unknown"
+    "*.{ts,tsx}": [
+      "eslint --cache --fix",
+      "prettier --write"
+    ],
+    "!(*.ts|*.tsx)": "prettier --write --ignore-unknown"
   },
   "dependencies": {
     "i18next": "^26.4.0",
