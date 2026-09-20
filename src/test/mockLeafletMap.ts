@@ -54,7 +54,8 @@ export function createMockLeafletMap(overrides: MockLeafletMapOverrides = {}): M
     getZoom: overrides.getZoom ?? (() => 12),
     getCenter: overrides.getCenter ?? (() => ({ lat: 0, lng: 0 })),
     getSize: overrides.getSize ?? (() => ({ x: 400, y: 400 })),
-    latLngToContainerPoint: overrides.latLngToContainerPoint ?? (([lat, lng]) => ({ x: lng * 10, y: lat * 10 })),
+    latLngToContainerPoint:
+      overrides.latLngToContainerPoint ?? (([lat, lng]) => ({ x: lng * 10, y: lat * 10 })),
     invalidateSize: overrides.invalidateSize ?? (() => {}),
     on: overrides.on ?? (() => {}),
     off: overrides.off ?? (() => {}),

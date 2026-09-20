@@ -42,7 +42,8 @@ const IMPORT_ERROR_KEYS = {
 function resolvePanelError(t: TFunction, error: PanelError): string {
   if (error.kind === 'local') return t(error.key)
   const key = IMPORT_ERROR_KEYS[error.error.code]
-  if (error.error.code === 'schema_too_new') return t(key, { schemaVersion: error.error.schemaVersion })
+  if (error.error.code === 'schema_too_new')
+    return t(key, { schemaVersion: error.error.schemaVersion })
   return t(key)
 }
 
@@ -135,7 +136,12 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
 
       <p className="text-sm text-gray-600">{t('portability.description')}</p>
 
-      <Button variant="primary" className="mt-3 w-full" onClick={() => void exportNow()} disabled={busy}>
+      <Button
+        variant="primary"
+        className="mt-3 w-full"
+        onClick={() => void exportNow()}
+        disabled={busy}
+      >
         {exportBusy ? t('portability.exportBusy') : t('portability.exportAction')}
       </Button>
 
@@ -160,14 +166,19 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       {error && <p className="mt-3 text-sm text-red-600">{resolvePanelError(t, error)}</p>}
 
       {pending && (
-        <div className="mt-3 rounded-md bg-brand-soft p-3 text-sm">
+        <div className="bg-brand-soft mt-3 rounded-md p-3 text-sm">
           <p>
             {t('portability.confirm.question', {
               places: t('portability.confirm.place', { count: pending.restaurants.length }),
               visits: t('portability.confirm.visit', { count: pending.visits.length }),
             })}
           </p>
-          <Button variant="primary" className="mt-3" onClick={() => void confirmImport()} disabled={busy}>
+          <Button
+            variant="primary"
+            className="mt-3"
+            onClick={() => void confirmImport()}
+            disabled={busy}
+          >
             {importBusy ? t('portability.importBusy') : t('portability.confirmImport')}
           </Button>
         </div>

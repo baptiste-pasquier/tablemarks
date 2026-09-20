@@ -126,7 +126,8 @@ export function backendIsUnreachable(status: BackendStatus): boolean {
 
 function samePresence(a: BackendPresence, b: BackendPresence): boolean {
   if (a.status !== b.status) return false
-  if (a.status === 'configured' && b.status === 'configured') return a.pocketbaseUrl === b.pocketbaseUrl
+  if (a.status === 'configured' && b.status === 'configured')
+    return a.pocketbaseUrl === b.pocketbaseUrl
   if (a.status === 'unavailable' && b.status === 'unavailable') return a.reason === b.reason
   return true
 }

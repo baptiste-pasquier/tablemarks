@@ -5,7 +5,7 @@ paragraph goes.
 
 ## Two axes
 
-**Lifecycle first.** Is this text *maintained*, or is it a *dated record*?
+**Lifecycle first.** Is this text _maintained_, or is it a _dated record_?
 
 - The folders below the line are **maintained**. They are edited, pruned, and kept true.
   They are the sources of truth.
@@ -14,13 +14,13 @@ paragraph goes.
 
 **Then, for maintained text, the [Diátaxis](https://diataxis.fr/) quadrant.**
 
-| Folder | The question it answers | Shape |
-| --- | --- | --- |
-| [`explanation/`](explanation/) | *Why does it work this way?* | Narrative allowed. Human-first. |
-| [`how-to/`](how-to/) | *How do I reach this goal?* | Numbered steps. |
-| [`reference/`](reference/) | *What is true?* | Tables and contracts. No narrative. |
-| [`conventions/`](conventions/) | *What must I do when I write?* | Imperative, checkable. Agent-first. |
-| [`journal/`](journal/) | *What happened, and what did we decide?* | Dated records. |
+| Folder                         | The question it answers                  | Shape                               |
+| ------------------------------ | ---------------------------------------- | ----------------------------------- |
+| [`explanation/`](explanation/) | _Why does it work this way?_             | Narrative allowed. Human-first.     |
+| [`how-to/`](how-to/)           | _How do I reach this goal?_              | Numbered steps.                     |
+| [`reference/`](reference/)     | _What is true?_                          | Tables and contracts. No narrative. |
+| [`conventions/`](conventions/) | _What must I do when I write?_           | Imperative, checkable. Agent-first. |
+| [`journal/`](journal/)         | _What happened, and what did we decide?_ | Dated records.                      |
 
 There is no `tutorials/` folder. Diátaxis's fourth quadrant is real, but nothing here is a
 tutorial yet, and it warns against empty quadrants. When one is written, it gets its folder.
@@ -30,21 +30,21 @@ tutorial yet, and it warns against empty quadrants. When one is written, it gets
 The **Diátaxis compass**, two questions in order. It works at paragraph scale, which is the
 scale at which docs actually drift.
 
-| The content… | …serves the reader… | …belongs in |
-| --- | --- | --- |
-| informs **action** | **applying** a skill (working) | `how-to/` |
-| informs **action** | **acquiring** a skill (studying) | a tutorial — we have none, so `how-to/` |
-| informs **cognition** | **applying** a skill (working) | `reference/` |
-| informs **cognition** | **acquiring** a skill (studying) | `explanation/` |
+| The content…          | …serves the reader…              | …belongs in                             |
+| --------------------- | -------------------------------- | --------------------------------------- |
+| informs **action**    | **applying** a skill (working)   | `how-to/`                               |
+| informs **action**    | **acquiring** a skill (studying) | a tutorial — we have none, so `how-to/` |
+| informs **cognition** | **applying** a skill (working)   | `reference/`                            |
+| informs **cognition** | **acquiring** a skill (studying) | `explanation/`                          |
 
 Four extensions, for text that is not about the product:
 
-| The paragraph… | goes to | never to |
-| --- | --- | --- |
-| tells a future writer or agent what to do | `conventions/` | `explanation/` |
+| The paragraph…                                          | goes to              | never to            |
+| ------------------------------------------------------- | -------------------- | ------------------- |
+| tells a future writer or agent what to do               | `conventions/`       | `explanation/`      |
 | recounts what was tried, what failed, what was measured | `journal/solutions/` | anywhere maintained |
-| records a choice between options | `journal/decisions/` | `explanation/` |
-| names something not built yet | a GitHub issue | prose, anywhere |
+| records a choice between options                        | `journal/decisions/` | `explanation/`      |
+| names something not built yet                           | a GitHub issue       | prose, anywhere     |
 
 **The rule that keeps this from sprawling:** a maintained doc states the rule **once** and
 links the journal entry for the evidence. It does not retell the story.
@@ -89,11 +89,11 @@ Templates: [`solutions/README.md`](journal/solutions/README.md),
 
 ## Not in this tree
 
-| What | Where | Why |
-| --- | --- | --- |
-| Backend schema, OAuth setup, the short-link resolver hook | [`pocketbase/README.md`](../pocketbase/README.md) | Owned by the `pocketbase/` sub-project; linked from `reference/data-model.md` and `how-to/development.md` |
-| Unbuilt work | the issue tracker, `gh issue list --label backlog` | No mirror in this tree — see `conventions/documentation.md` |
-| Agent-facing conventions not about docs prose | [`AGENTS.md`](../AGENTS.md) | This tree governs the prose in `docs/` only |
+| What                                                      | Where                                              | Why                                                                                                       |
+| --------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Backend schema, OAuth setup, the short-link resolver hook | [`pocketbase/README.md`](../pocketbase/README.md)  | Owned by the `pocketbase/` sub-project; linked from `reference/data-model.md` and `how-to/development.md` |
+| Unbuilt work                                              | the issue tracker, `gh issue list --label backlog` | No mirror in this tree — see `conventions/documentation.md`                                               |
+| Agent-facing conventions not about docs prose             | [`AGENTS.md`](../AGENTS.md)                        | This tree governs the prose in `docs/` only                                                               |
 
 ## What the gate enforces
 

@@ -14,11 +14,10 @@ function candidate(over: Partial<LabelCandidate> & Pick<LabelCandidate, 'id'>): 
 
 describe('computeLabelPlacement', () => {
   it('returns an empty set below the zoom floor, regardless of available space (R2, AE1)', () => {
-    const candidates = [
-      candidate({ id: 'a', x: 0, y: 0 }),
-      candidate({ id: 'b', x: 500, y: 500 }),
-    ]
-    const accepted = computeLabelPlacement(candidates, CENTER, false, { measureTextWidth: stubMeasure })
+    const candidates = [candidate({ id: 'a', x: 0, y: 0 }), candidate({ id: 'b', x: 500, y: 500 })]
+    const accepted = computeLabelPlacement(candidates, CENTER, false, {
+      measureTextWidth: stubMeasure,
+    })
     expect(accepted).toEqual(new Set())
   })
 
@@ -27,7 +26,9 @@ describe('computeLabelPlacement', () => {
       candidate({ id: 'a', x: 0, y: 0, name: 'A' }), // width 10 -> box [-5, 5]
       candidate({ id: 'b', x: 200, y: 0, name: 'B' }), // width 10 -> box [195, 205]
     ]
-    const accepted = computeLabelPlacement(candidates, CENTER, true, { measureTextWidth: stubMeasure })
+    const accepted = computeLabelPlacement(candidates, CENTER, true, {
+      measureTextWidth: stubMeasure,
+    })
     expect(accepted).toEqual(new Set(['a', 'b']))
   })
 
@@ -37,7 +38,9 @@ describe('computeLabelPlacement', () => {
       candidate({ id: 'far', x: 20, y: 0, name: 'AAAAAAAAAA' }), // dist 20
       candidate({ id: 'near', x: 5, y: 0, name: 'AAAAAAAAAA' }), // dist 5
     ]
-    const accepted = computeLabelPlacement(candidates, CENTER, true, { measureTextWidth: stubMeasure })
+    const accepted = computeLabelPlacement(candidates, CENTER, true, {
+      measureTextWidth: stubMeasure,
+    })
     expect(accepted).toEqual(new Set(['near']))
   })
 
@@ -46,7 +49,9 @@ describe('computeLabelPlacement', () => {
       candidate({ id: 'dimmed', x: 0, y: 0, name: 'AAAAAAAAAA', dimmed: true }),
       candidate({ id: 'visible', x: 5, y: 0, name: 'AAAAAAAAAA', dimmed: false }),
     ]
-    const accepted = computeLabelPlacement(candidates, CENTER, true, { measureTextWidth: stubMeasure })
+    const accepted = computeLabelPlacement(candidates, CENTER, true, {
+      measureTextWidth: stubMeasure,
+    })
     expect(accepted).toEqual(new Set(['visible']))
   })
 
@@ -56,7 +61,9 @@ describe('computeLabelPlacement', () => {
       candidate({ id: 'a', x: -5, y: 0, name: 'AAAAAAAAAA' }),
     ]
     const first = computeLabelPlacement(candidates, CENTER, true, { measureTextWidth: stubMeasure })
-    const second = computeLabelPlacement(candidates, CENTER, true, { measureTextWidth: stubMeasure })
+    const second = computeLabelPlacement(candidates, CENTER, true, {
+      measureTextWidth: stubMeasure,
+    })
     expect(first).toEqual(new Set(['a']))
     expect(second).toEqual(first)
   })

@@ -35,7 +35,14 @@ beforeEach(() => {
 
 describe('AccountMenu (U3)', () => {
   it('shows the avatar trigger with an initial-letter fallback when no avatarUrl is set (R3, AE4)', () => {
-    render(<AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={vi.fn()} onSignOut={vi.fn()} />)
+    render(
+      <AccountMenu
+        email="person@example.com"
+        avatarUrl={null}
+        onOpenSettings={vi.fn()}
+        onSignOut={vi.fn()}
+      />,
+    )
     expect(screen.getByText('P')).toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
@@ -92,7 +99,12 @@ describe('AccountMenu (U3)', () => {
     const onOpenSettings = vi.fn()
     const user = userEvent.setup()
     render(
-      <AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={onOpenSettings} onSignOut={vi.fn()} />,
+      <AccountMenu
+        email="person@example.com"
+        avatarUrl={null}
+        onOpenSettings={onOpenSettings}
+        onSignOut={vi.fn()}
+      />,
     )
     await user.click(screen.getByRole('button', { name: /account menu/i }))
     await user.click(screen.getByRole('menuitem', { name: /settings/i }))
@@ -104,7 +116,14 @@ describe('AccountMenu (U3)', () => {
   it('clicking Se déconnecter calls onSignOut and closes the dropdown', async () => {
     const onSignOut = vi.fn()
     const user = userEvent.setup()
-    render(<AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={vi.fn()} onSignOut={onSignOut} />)
+    render(
+      <AccountMenu
+        email="person@example.com"
+        avatarUrl={null}
+        onOpenSettings={vi.fn()}
+        onSignOut={onSignOut}
+      />,
+    )
     await user.click(screen.getByRole('button', { name: /account menu/i }))
     await user.click(screen.getByRole('menuitem', { name: /sign out/i }))
 
@@ -144,14 +163,24 @@ describe('AccountMenu (U3)', () => {
   it('updates the badge and chip without closing when sync state changes while open', async () => {
     const user = userEvent.setup()
     const { rerender } = render(
-      <AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={vi.fn()} onSignOut={vi.fn()} />,
+      <AccountMenu
+        email="person@example.com"
+        avatarUrl={null}
+        onOpenSettings={vi.fn()}
+        onSignOut={vi.fn()}
+      />,
     )
     await user.click(screen.getByRole('button', { name: /account menu/i }))
     expect(screen.getByText(/all synced/i)).toBeInTheDocument()
 
     setStatus({ state: 'pending', pendingCount: 2 })
     rerender(
-      <AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={vi.fn()} onSignOut={vi.fn()} />,
+      <AccountMenu
+        email="person@example.com"
+        avatarUrl={null}
+        onOpenSettings={vi.fn()}
+        onSignOut={vi.fn()}
+      />,
     )
 
     expect(screen.getByRole('menu')).toBeInTheDocument()
@@ -184,7 +213,12 @@ describe('AccountMenu (U3)', () => {
 
   it('does not push the header layout height when opened (fcebe71 overflow regression guard)', async () => {
     const { container } = render(
-      <AccountMenu email="person@example.com" avatarUrl={null} onOpenSettings={vi.fn()} onSignOut={vi.fn()} />,
+      <AccountMenu
+        email="person@example.com"
+        avatarUrl={null}
+        onOpenSettings={vi.fn()}
+        onSignOut={vi.fn()}
+      />,
     )
     const heightBefore = container.firstElementChild?.getBoundingClientRect().height
     const user = userEvent.setup()

@@ -90,7 +90,9 @@ vi.mock('react-leaflet', () => {
   // for those).
   const map = createMockLeafletMap()
   return {
-    MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map">{children}</div>,
+    MapContainer: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="map">{children}</div>
+    ),
     TileLayer: () => null,
     Marker: () => null,
     Popup: () => null,
@@ -104,7 +106,13 @@ import App from './App.tsx'
 beforeEach(async () => {
   await freshDB()
   window.localStorage.clear()
-  mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+  mockUseAuth.mockReturnValue({
+    signedIn: false,
+    email: null,
+    avatarUrl: null,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  })
   mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
   // Module-global store, shared across this file's tests — reset so an unreachable case set by
   // one test can't leak into the next one's account-menu chip.
@@ -188,10 +196,18 @@ describe('App shell', () => {
     // useAuth is mocked statically in this suite (its own reactivity is covered by
     // useAuth.test.ts) — simulate the re-render the real hook triggers once signOut() clears
     // pb.authStore, before the deferred focus-shift below fires.
-    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+    mockUseAuth.mockReturnValue({
+      signedIn: false,
+      email: null,
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    })
     rerender(<App />)
 
-    expect(screen.queryByRole('button', { name: /account menu|menu du compte/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /account menu|menu du compte/i }),
+    ).not.toBeInTheDocument()
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
@@ -211,7 +227,13 @@ describe('App shell', () => {
     await user.click(screen.getByRole('button', { name: /account menu|menu du compte/i }))
     await user.click(screen.getByRole('menuitem', { name: /sign out|se déconnecter/i }))
 
-    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+    mockUseAuth.mockReturnValue({
+      signedIn: false,
+      email: null,
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    })
     rerender(<App />)
 
     await waitFor(() => expect(document.getElementById('shell-signin-button')).toHaveFocus())
@@ -303,12 +325,16 @@ describe('currentPosition state and fetch wiring (U2)', () => {
 
     render(<App />)
     await screen.findByText(/no places yet/i)
-    await waitFor(() => expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(initial))
+    await waitFor(() =>
+      expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(initial),
+    )
 
     mockGeolocate.mockResolvedValueOnce(updated)
     await user.click(screen.getByRole('button', { name: /center on my location/i }))
 
-    await waitFor(() => expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(updated))
+    await waitFor(() =>
+      expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(updated),
+    )
     expect(mockGeolocate).toHaveBeenCalledTimes(2)
   })
 
@@ -319,7 +345,9 @@ describe('currentPosition state and fetch wiring (U2)', () => {
 
     render(<App />)
     await screen.findByText(/no places yet/i)
-    await waitFor(() => expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(initial))
+    await waitFor(() =>
+      expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(initial),
+    )
 
     mockGeolocate.mockResolvedValueOnce(null)
     await user.click(screen.getByRole('button', { name: /center on my location/i }))
@@ -350,7 +378,9 @@ describe('currentPosition state and fetch wiring (U2)', () => {
     const tapPoint: GeoPoint = { lat: 9, lng: 9 }
     const mountPoint: GeoPoint = { lat: 1, lng: 1 }
     resolveTap(tapPoint)
-    await waitFor(() => expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(tapPoint))
+    await waitFor(() =>
+      expect(mockLastRestaurantListProps.current?.currentPosition).toEqual(tapPoint),
+    )
 
     resolveMount(mountPoint)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -404,7 +434,9 @@ describe('fallbackCenter wiring (U2, R2/R5)', () => {
 
     render(<App />)
     await screen.findByText('Thai Place')
-    await waitFor(() => expect(mockLastMapViewProps.current?.fallbackCenter).toEqual({ lat: 2, lng: 2 }))
+    await waitFor(() =>
+      expect(mockLastMapViewProps.current?.fallbackCenter).toEqual({ lat: 2, lng: 2 }),
+    )
 
     // Narrow the visible list to French only, via the cuisine facet chip.
     await user.click(screen.getByRole('button', { name: 'French' }))
@@ -540,8 +572,12 @@ describe('desktop filter overlay (U3)', () => {
 
     // DOCUMENT_POSITION_FOLLOWING: the argument node comes after the node compareDocumentPosition
     // was called on, in DOM order.
-    expect(whereToEat.compareDocumentPosition(cuisineChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(cuisineChip.compareDocumentPosition(restaurantRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(
+      whereToEat.compareDocumentPosition(cuisineChip) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      cuisineChip.compareDocumentPosition(restaurantRow) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('does not float a visible white card over the map when there are no restaurants yet (FilterBar renders nothing, but the measurement wrapper must stay mounted)', () => {
@@ -551,7 +587,9 @@ describe('desktop filter overlay (U3)', () => {
       el.className.includes('md:top-[var(--filter-overlay-top)]'),
     )
     expect(overlayWrapper).toBeDefined()
-    expect(overlayWrapper?.className).not.toMatch(/md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-2xl/)
+    expect(overlayWrapper?.className).not.toMatch(
+      /md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-2xl/,
+    )
     expect(overlayWrapper?.textContent).toBe('')
   })
 
@@ -626,13 +664,15 @@ describe('desktop filter overlay (U3)', () => {
       return observer
     }
 
-    it("writes the filter overlay's measured height to --filter-overlay-height, and updates it when the overlay resizes (e.g. the cuisine row's \"+N autres\" expanding it)", async () => {
+    it('writes the filter overlay\'s measured height to --filter-overlay-height, and updates it when the overlay resizes (e.g. the cuisine row\'s "+N autres" expanding it)', async () => {
       await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
 
       const { container } = render(<App />)
       await screen.findByText('R1 Place')
 
-      expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('120px')
+      expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe(
+        '120px',
+      )
 
       // The real callback reads the size straight off the entry the browser already computed
       // (`entry.borderBoxSize[0].blockSize`), rather than re-querying getBoundingClientRect — so
@@ -644,7 +684,9 @@ describe('desktop filter overlay (U3)', () => {
       const observer = overlayObserver(container)
       observer.callback([entry], observer as unknown as ResizeObserver)
 
-      expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe('260px')
+      expect(document.documentElement.style.getPropertyValue('--filter-overlay-height')).toBe(
+        '260px',
+      )
     })
 
     it("also writes the header's measured height to --header-height, independently of the filter overlay (fixes the top/left gap mismatch)", async () => {
@@ -679,7 +721,13 @@ describe('sort criterion/direction wiring (U4)', () => {
   async function createNearAndFarByDistanceAndDate() {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-08-30T10:00:00.000Z'))
-    await createRestaurant({ id: 'near', name: 'Near Place', lat: 0, lng: 0.001, cuisine: 'French' })
+    await createRestaurant({
+      id: 'near',
+      name: 'Near Place',
+      lat: 0,
+      lng: 0.001,
+      cuisine: 'French',
+    })
     vi.setSystemTime(new Date('2026-08-30T11:00:00.000Z'))
     await createRestaurant({ id: 'far', name: 'Far Place', lat: 0, lng: 1, cuisine: 'Thai' })
     vi.useRealTimers()
@@ -693,7 +741,10 @@ describe('sort criterion/direction wiring (U4)', () => {
   })
 
   it('re-sorts by distance with no user action when a persisted Distance preference exists and a position resolves after mount (AE2)', async () => {
-    writeSortPreference({ criterion: 'distance', directions: { distance: 'nearest', date: 'newest' } })
+    writeSortPreference({
+      criterion: 'distance',
+      directions: { distance: 'nearest', date: 'newest' },
+    })
     await createNearAndFarByDistanceAndDate()
     mockGeolocate.mockResolvedValue(HERE)
 
@@ -720,10 +771,25 @@ describe('sort criterion/direction wiring (U4)', () => {
   })
 
   it('keeps the active sort applied to the newly filtered set after a facet filter changes (R11)', async () => {
-    writeSortPreference({ criterion: 'distance', directions: { distance: 'nearest', date: 'newest' } })
-    await createRestaurant({ id: 'french-near', name: 'French Near', lat: 0, lng: 0.001, cuisine: 'French' })
+    writeSortPreference({
+      criterion: 'distance',
+      directions: { distance: 'nearest', date: 'newest' },
+    })
+    await createRestaurant({
+      id: 'french-near',
+      name: 'French Near',
+      lat: 0,
+      lng: 0.001,
+      cuisine: 'French',
+    })
     await createRestaurant({ id: 'thai-mid', name: 'Thai Mid', lat: 0, lng: 0.5, cuisine: 'Thai' })
-    await createRestaurant({ id: 'french-far', name: 'French Far', lat: 0, lng: 1, cuisine: 'French' })
+    await createRestaurant({
+      id: 'french-far',
+      name: 'French Far',
+      lat: 0,
+      lng: 1,
+      cuisine: 'French',
+    })
     mockGeolocate.mockResolvedValue(HERE)
 
     const user = userEvent.setup()
@@ -740,11 +806,17 @@ describe('sort criterion/direction wiring (U4)', () => {
     await user.click(screen.getByRole('button', { name: 'French' }))
 
     expect(screen.queryByText('Thai Mid')).not.toBeInTheDocument()
-    expect(mockLastRestaurantListProps.current?.items.map((r) => r.id)).toEqual(['french-near', 'french-far'])
+    expect(mockLastRestaurantListProps.current?.items.map((r) => r.id)).toEqual([
+      'french-near',
+      'french-far',
+    ])
   })
 
   it('does not overwrite a stashed Distance preference when the visually-active Date segment is clicked while Distance is unselectable', async () => {
-    writeSortPreference({ criterion: 'distance', directions: { distance: 'nearest', date: 'newest' } })
+    writeSortPreference({
+      criterion: 'distance',
+      directions: { distance: 'nearest', date: 'newest' },
+    })
     // mockGeolocate resolves null (the beforeEach default) — Distance stays unselectable and Date
     // renders as the active segment even though the persisted preference is still 'distance'.
     const user = userEvent.setup()
@@ -778,7 +850,9 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     await screen.findByText('R1 Place')
     await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
 
-    const overlay = screen.getByRole('button', { name: /see results/i }).closest('[class*="fixed inset-0"]')
+    const overlay = screen
+      .getByRole('button', { name: /see results/i })
+      .closest('[class*="fixed inset-0"]')
     expect(overlay).toHaveClass('z-[var(--z-modal)]')
   })
 
@@ -788,7 +862,9 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     render(<App />)
     await screen.findByText('R1 Place')
 
-    const filterWrapper = screen.getByRole('button', { name: 'French' }).closest('[class*="md:fixed"]')
+    const filterWrapper = screen
+      .getByRole('button', { name: 'French' })
+      .closest('[class*="md:fixed"]')
     expect(filterWrapper).toHaveClass('hidden', 'md:block')
 
     const sortWrapper = screen.getByRole('button', { name: 'Date' }).closest('[class*="md:block"]')
@@ -805,7 +881,11 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     expect(asideEl).not.toHaveClass('pb-[var(--safe-area-floating-offset)]')
 
     const scrollBox = restaurantRow.closest('[class*="overflow-y-auto"]')
-    expect(scrollBox).toHaveClass('overflow-y-auto', 'pb-[var(--safe-area-floating-offset)]', 'md:pb-0')
+    expect(scrollBox).toHaveClass(
+      'overflow-y-auto',
+      'pb-[var(--safe-area-floating-offset)]',
+      'md:pb-0',
+    )
   })
 
   it('does not put a safe-area bottom clearance on <main> either, so the map fills it fully with no dead gap above the bottom nav', () => {
@@ -901,7 +981,9 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
     await user.click(screen.getByRole('button', { name: 'Filters · 0' }))
 
     const seeResults = screen.getByRole('button', { name: /see results/i })
-    const scrollBox = seeResults.closest('[class*="rounded-t-2xl"]')?.querySelector('.overflow-y-auto')
+    const scrollBox = seeResults
+      .closest('[class*="rounded-t-2xl"]')
+      ?.querySelector('.overflow-y-auto')
     expect(seeResults).toHaveClass('shrink-0')
     expect(scrollBox).not.toBeNull()
     expect(scrollBox?.contains(seeResults)).toBe(false)
@@ -943,7 +1025,13 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
 
   it('applies a filter toggled inside the sheet to the restaurant list behind it, once the sheet closes (R6)', async () => {
     const user = userEvent.setup()
-    await createRestaurant({ id: 'french', name: 'French Place', lat: 1, lng: 1, cuisine: 'French' })
+    await createRestaurant({
+      id: 'french',
+      name: 'French Place',
+      lat: 1,
+      lng: 1,
+      cuisine: 'French',
+    })
     await createRestaurant({ id: 'thai', name: 'Thai Place', lat: 2, lng: 2, cuisine: 'Thai' })
 
     render(<App />)
@@ -1116,10 +1204,18 @@ describe('backend availability in the header (U4)', () => {
 
     // useAuth is mocked statically here (its own reactivity is covered by useAuth.test.ts), so
     // stand in for the re-render the real hook triggers once the auth store is cleared.
-    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+    mockUseAuth.mockReturnValue({
+      signedIn: false,
+      email: null,
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    })
     rerender(<App />)
 
-    expect(screen.queryByRole('button', { name: /account menu|menu du compte/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /account menu|menu du compte/i }),
+    ).not.toBeInTheDocument()
     expect(signInButton()).not.toBeInTheDocument()
     expect(settingsButton()).toBeInTheDocument()
     // Local data is retained by design — only the session goes.
@@ -1161,7 +1257,13 @@ describe('backend availability in the header (U4)', () => {
     await screen.findByText(/no places yet/i)
     await waitFor(() => expect(signOutMock).toHaveBeenCalled())
 
-    mockUseAuth.mockReturnValue({ signedIn: false, email: null, avatarUrl: null, signIn: vi.fn(), signOut: vi.fn() })
+    mockUseAuth.mockReturnValue({
+      signedIn: false,
+      email: null,
+      avatarUrl: null,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    })
     rerender(<App />)
 
     expect(screen.queryByText(/all synced/i)).not.toBeInTheDocument()
@@ -1214,7 +1316,11 @@ describe('backend availability in the header (U4)', () => {
       expect((indicator() as HTMLElement).className).toContain('shrink-0')
       expect(settingsButton()).toBeInTheDocument()
     } finally {
-      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth })
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        writable: true,
+        value: originalWidth,
+      })
     }
   })
 

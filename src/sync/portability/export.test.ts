@@ -24,14 +24,30 @@ function restaurant(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaur
 describe('buildExport', () => {
   it('wraps records in the versioned envelope, preserving id/updated/cuisine/deleted', () => {
     const r = restaurant({ id: 'r1', cuisine: 'French', updated: '2026-02-02T00:00:00Z' })
-    const v: Visit = { id: 'v1', restaurantId: 'r1', date: '2026-02-01', verdict: 'go_back', updated: '2026-02-01T00:00:00Z', deleted: false }
+    const v: Visit = {
+      id: 'v1',
+      restaurantId: 'r1',
+      date: '2026-02-01',
+      verdict: 'go_back',
+      updated: '2026-02-01T00:00:00Z',
+      deleted: false,
+    }
     const env = buildExport([r], [v], '2026-06-13T00:00:00Z')
 
     expect(env.format).toBe(EXPORT_FORMAT)
     expect(env.schemaVersion).toBe(EXPORT_SCHEMA_VERSION)
     expect(env.exportedAt).toBe('2026-06-13T00:00:00Z')
-    expect(env.records.restaurants[0]).toMatchObject({ id: 'r1', cuisine: 'French', updated: '2026-02-02T00:00:00Z', deleted: false })
-    expect(env.records.visits[0]).toMatchObject({ id: 'v1', restaurantId: 'r1', verdict: 'go_back' })
+    expect(env.records.restaurants[0]).toMatchObject({
+      id: 'r1',
+      cuisine: 'French',
+      updated: '2026-02-02T00:00:00Z',
+      deleted: false,
+    })
+    expect(env.records.visits[0]).toMatchObject({
+      id: 'v1',
+      restaurantId: 'r1',
+      verdict: 'go_back',
+    })
   })
 
   it('produces a valid empty envelope for an empty collection', () => {

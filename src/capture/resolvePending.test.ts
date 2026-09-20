@@ -17,16 +17,16 @@ vi.mock('../sync/pocketbase', async (importOriginal) => {
   // The real error class, for the same reason as in capture.test.ts: `instanceof` is the branch.
   const actual = await importOriginal<typeof import('../sync/pocketbase')>()
   return {
-  UnresolvableShortLink: actual.UnresolvableShortLink,
-  resolveShortLink: vi.fn(),
-  pb: {
-    authStore: {
-      onChange: (cb: () => void) => {
-        authListeners.add(cb)
-        return () => authListeners.delete(cb)
+    UnresolvableShortLink: actual.UnresolvableShortLink,
+    resolveShortLink: vi.fn(),
+    pb: {
+      authStore: {
+        onChange: (cb: () => void) => {
+          authListeners.add(cb)
+          return () => authListeners.delete(cb)
+        },
       },
     },
-  },
   }
 })
 
@@ -42,7 +42,11 @@ beforeEach(async () => {
 describe('resolvePendingRestaurants', () => {
   it('fills coordinates and clears pending when the short link now resolves', async () => {
     const r = await createRestaurant({ name: SHORT, mapsUrl: SHORT, pending: true })
-    vi.mocked(resolveShortLink).mockResolvedValue({ lat: 48.8566, lng: 2.3522, name: 'Chez Marcel' })
+    vi.mocked(resolveShortLink).mockResolvedValue({
+      lat: 48.8566,
+      lng: 2.3522,
+      name: 'Chez Marcel',
+    })
 
     const count = await resolvePendingRestaurants()
 
@@ -160,7 +164,11 @@ describe('startPendingResolver', () => {
     await vi.waitFor(() => expect(vi.mocked(resolveShortLink)).toHaveBeenCalledTimes(1))
     expect((await getRestaurant(r.id))?.pending).toBe(true)
 
-    vi.mocked(resolveShortLink).mockResolvedValue({ lat: 48.8566, lng: 2.3522, name: 'Chez Marcel' })
+    vi.mocked(resolveShortLink).mockResolvedValue({
+      lat: 48.8566,
+      lng: 2.3522,
+      name: 'Chez Marcel',
+    })
     emitAuthChange()
 
     await vi.waitFor(async () => expect((await getRestaurant(r.id))?.pending).toBe(false))

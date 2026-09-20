@@ -9,7 +9,14 @@ describe('Badge', () => {
     const label = screen.getByText('Go back')
     const badge = label.parentElement as HTMLElement
     expect(badge).toHaveClass('bg-verdict-go-back')
-    expect(badge).toHaveClass('rounded-full', 'px-2', 'py-0.5', 'text-[11px]', 'font-semibold', 'text-white')
+    expect(badge).toHaveClass(
+      'rounded-full',
+      'px-2',
+      'py-0.5',
+      'text-[11px]',
+      'font-semibold',
+      'text-white',
+    )
     expect(within(badge).getByText('🎉')).toHaveAttribute('aria-hidden', 'true')
   })
 

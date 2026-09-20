@@ -82,7 +82,11 @@ export function SortBar({
         >
           {t('sort.criterionDistance')}
         </ToggleChip>
-        <ToggleChip shape="segment" active={criterion === 'date'} onClick={() => onCriterionChange('date')}>
+        <ToggleChip
+          shape="segment"
+          active={criterion === 'date'}
+          onClick={() => onCriterionChange('date')}
+        >
           {t('sort.criterionDate')}
         </ToggleChip>
       </span>

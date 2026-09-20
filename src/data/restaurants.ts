@@ -134,7 +134,8 @@ export async function allRestaurantsForSync(): Promise<Restaurant[]> {
 export async function markRestaurantSynced(id: string, syncedUpdated: string): Promise<void> {
   await mutateRestaurant(
     id,
-    (existing) => (existing?.updated === syncedUpdated ? { ...existing, syncedUpdated } : undefined),
+    (existing) =>
+      existing?.updated === syncedUpdated ? { ...existing, syncedUpdated } : undefined,
     'store',
   )
 }

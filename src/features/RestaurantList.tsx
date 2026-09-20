@@ -29,7 +29,9 @@ export function RestaurantList({
         <span aria-hidden="true" className="text-4xl">
           🍽️
         </span>
-        <p className="font-display text-lg font-semibold text-gray-900">{t('restaurantList.emptyTitle')}</p>
+        <p className="font-display text-lg font-semibold text-gray-900">
+          {t('restaurantList.emptyTitle')}
+        </p>
         <p className="max-w-[16rem] text-sm text-gray-500">{t('restaurantList.emptyBody')}</p>
       </div>
     )
@@ -60,7 +62,7 @@ export function RestaurantList({
               }}
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 truncate font-display text-base font-semibold text-gray-900">
+                <span className="font-display min-w-0 truncate text-base font-semibold text-gray-900">
                   {r.name}
                 </span>
                 <Badge
@@ -72,7 +74,11 @@ export function RestaurantList({
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <StatusBadge restaurant={r} />
-                  {visited && <span className="text-xs text-gray-600">{translateVisitsCount(r.visitCount)}</span>}
+                  {visited && (
+                    <span className="text-xs text-gray-600">
+                      {translateVisitsCount(r.visitCount)}
+                    </span>
+                  )}
                 </div>
                 {distanceLabel && <span className="text-xs text-gray-600">{distanceLabel}</span>}
               </div>

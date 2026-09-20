@@ -50,14 +50,19 @@ export function runtimeConfigPath(): string {
  * Read the runtime configuration. Never rejects, and always settles within `timeoutMs`: a
  * connection that is accepted and then never answers must not leave the page unrendered.
  */
-export async function loadRuntimeConfig(options: LoadRuntimeConfigOptions = {}): Promise<RuntimeConfig> {
+export async function loadRuntimeConfig(
+  options: LoadRuntimeConfigOptions = {},
+): Promise<RuntimeConfig> {
   const timeoutMs = options.timeoutMs ?? CONFIG_TIMEOUT_MS
 
   let timer: ReturnType<typeof setTimeout> | undefined
   // A hard bound on top of the abort signal below: the signal cancels the request, but only a
   // race guarantees this promise settles even if the transport ignores the abort.
   const expiry = new Promise<RuntimeConfig>((resolve) => {
-    timer = setTimeout(() => resolve(unavailable(`configuration request timed out after ${timeoutMs}ms`)), timeoutMs)
+    timer = setTimeout(
+      () => resolve(unavailable(`configuration request timed out after ${timeoutMs}ms`)),
+      timeoutMs,
+    )
   })
 
   try {
@@ -103,7 +108,9 @@ function interpret(body: unknown): RuntimeConfig {
   if (!isSecureOrLoopback(parsed)) {
     // Treated as a misconfiguration, not as a usable backend: a mistyped `http://` origin would
     // otherwise carry the auth token in the clear.
-    return unavailable(`configured "${POCKETBASE_URL_KEY}" must use HTTPS unless it is a loopback address`)
+    return unavailable(
+      `configured "${POCKETBASE_URL_KEY}" must use HTTPS unless it is a loopback address`,
+    )
   }
 
   return { status: 'configured', pocketbaseUrl: url }

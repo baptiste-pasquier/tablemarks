@@ -21,7 +21,13 @@ import {
   googleMapsDirectionsUrl,
 } from '../../lib/mapsLinks'
 
-function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; disabled?: boolean }) {
+function VerdictButtons({
+  onPick,
+  disabled,
+}: {
+  onPick: (v: Verdict) => void
+  disabled?: boolean
+}) {
   return (
     <div className="flex flex-wrap gap-2">
       {VERDICTS.map((v) => (
@@ -194,7 +200,7 @@ export function RestaurantDetail({
                 href={googleMapsHref}
                 target="_blank"
                 rel="noreferrer"
-                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+                className="bg-brand hover:bg-brand-strong flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition"
               >
                 <MapPin size={14} aria-hidden="true" />
                 {t('visitDetail.googleMaps')}
@@ -205,7 +211,7 @@ export function RestaurantDetail({
                 href={goToHref}
                 target="_blank"
                 rel="noreferrer"
-                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+                className="bg-brand hover:bg-brand-strong flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition"
               >
                 <Navigation size={14} aria-hidden="true" />
                 {t('visitDetail.goTo')}
@@ -255,9 +261,13 @@ export function RestaurantDetail({
       <div className="mt-5">
         <h3 className="text-sm font-semibold text-gray-700">
           {t('visitDetail.visitsHeading')}{' '}
-          {visits.length > 0 && <span className="font-normal text-gray-400">({visits.length})</span>}
+          {visits.length > 0 && (
+            <span className="font-normal text-gray-400">({visits.length})</span>
+          )}
         </h3>
-        {visits.length === 0 && <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>}
+        {visits.length === 0 && (
+          <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>
+        )}
         {visits.length > 0 && (
           <ul className="mt-2">
             {visits.map((v, i) => (
@@ -270,7 +280,7 @@ export function RestaurantDetail({
                 )}
                 <span
                   aria-hidden="true"
-                  className="relative z-10 mt-0.5 h-2 w-2 shrink-0 rounded-full bg-brand"
+                  className="bg-brand relative z-10 mt-0.5 h-2 w-2 shrink-0 rounded-full"
                 />
                 <div className="flex-1 text-sm">
                   <div className="flex items-center justify-between">
@@ -293,7 +303,7 @@ export function RestaurantDetail({
           </ul>
         )}
         <details className="mt-2 rounded-lg border border-dashed border-gray-300 p-2 text-center">
-          <summary className="list-none cursor-pointer text-sm font-semibold text-gray-400">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-gray-400">
             {t('visitDetail.addPastVisit')}
           </summary>
           <div className="mt-2 space-y-2 text-left">

@@ -84,7 +84,9 @@ describe('FilterBar', () => {
   })
 
   it('renders nothing when there are no places', () => {
-    const { container } = render(<FilterBar restaurants={[]} filter={emptyFilter()} onChange={vi.fn()} />)
+    const { container } = render(
+      <FilterBar restaurants={[]} filter={emptyFilter()} onChange={vi.fn()} />,
+    )
     expect(container).toBeEmptyDOMElement()
   })
 
@@ -95,7 +97,9 @@ describe('FilterBar', () => {
   })
 
   it('shows the status/verdict heading and overflow toggle in French when the active language is French, and only in English otherwise (R1)', async () => {
-    const { rerender } = render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+    const { rerender } = render(
+      <FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />,
+    )
     expect(screen.getByText('Status & verdict')).toBeInTheDocument()
     expect(screen.queryByText('Statut & verdict')).not.toBeInTheDocument()
 
@@ -122,7 +126,9 @@ describe('FilterBar', () => {
       'Never again': '🚫',
     }
     const group = screen.getByText('Status & verdict').parentElement as HTMLElement
-    const buttons = Object.keys(verdictIcons).map((label) => within(group).getByRole('button', { name: label }))
+    const buttons = Object.keys(verdictIcons).map((label) =>
+      within(group).getByRole('button', { name: label }),
+    )
     const order = buttons.map((b) => within(group).getAllByRole('button').indexOf(b))
     expect(order).toEqual([...order].sort((a, b) => a - b))
     for (const [label, icon] of Object.entries(verdictIcons)) {
@@ -134,8 +140,8 @@ describe('FilterBar', () => {
   })
 
   it('collapses cuisines beyond 6 behind a "+N more" control, expandable via "Collapse"', async () => {
-    const many = ['Thai', 'Indian', 'French', 'Italian', 'Japanese', 'Chinese', 'Mexican'].map((cuisine, i) =>
-      r({ id: `p${i}`, cuisine }),
+    const many = ['Thai', 'Indian', 'French', 'Italian', 'Japanese', 'Chinese', 'Mexican'].map(
+      (cuisine, i) => r({ id: `p${i}`, cuisine }),
     )
     render(<FilterBar restaurants={many} filter={emptyFilter()} onChange={vi.fn()} />)
 
@@ -174,7 +180,10 @@ describe('FilterBar', () => {
     const filter = { ...emptyFilter(), cuisines: new Set(['ethiopian']) }
     render(<FilterBar restaurants={restaurants} filter={filter} onChange={vi.fn()} />)
 
-    expect(screen.getByRole('button', { name: 'Ethiopian' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Ethiopian' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     expect(screen.getByRole('button', { name: '+1 more' })).toBeInTheDocument()
   })
 
@@ -190,14 +199,18 @@ describe('FilterBar', () => {
     expect(screen.queryByRole('button', { name: /more/i })).not.toBeInTheDocument()
   })
 
-  it('renders the stacked wrapper classes by default, matching today\'s sidebar/sheet shape', () => {
-    const { container } = render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+  it("renders the stacked wrapper classes by default, matching today's sidebar/sheet shape", () => {
+    const { container } = render(
+      <FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />,
+    )
     expect(container.firstChild).toHaveClass('space-y-2', 'border-b', 'border-gray-100', 'p-3')
     expect(container.firstChild).not.toHaveClass('flex', 'flex-wrap', 'items-start', 'gap-4')
   })
 
   it('renders each group as a label-left row beside its own wrapping chip box, when layout="inline"', () => {
-    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />)
+    render(
+      <FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />,
+    )
     const cuisineGroupRow = screen.getByText('Cuisine').parentElement as HTMLElement
     const statusGroupRow = screen.getByText('Status & verdict').parentElement as HTMLElement
 
@@ -211,22 +224,29 @@ describe('FilterBar', () => {
     // Each group's own chip box carries the wrapping, not the label-plus-chips row itself — so an
     // overflowing chip line stays aligned under the first chip rather than resetting flush-left
     // under the label.
-    const cuisineChipsBox = screen.getByRole('button', { name: 'Thai' }).parentElement as HTMLElement
+    const cuisineChipsBox = screen.getByRole('button', { name: 'Thai' })
+      .parentElement as HTMLElement
     expect(cuisineChipsBox).toHaveClass('flex', 'flex-wrap', 'min-w-0', 'flex-1')
     expect(cuisineChipsBox.parentElement).toBe(cuisineGroupRow)
   })
 
   it('renders no divider between the cuisine and status/verdict groups, under either layout', () => {
-    const { rerender } = render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+    const { rerender } = render(
+      <FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />,
+    )
     expect(screen.getByText('Status & verdict').parentElement).not.toHaveClass('border-t')
 
-    rerender(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />)
+    rerender(
+      <FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />,
+    )
     expect(screen.getByText('Status & verdict').parentElement).not.toHaveClass('border-t')
   })
 
   it('toggles a cuisine into the filter under layout="inline" the same as under the default layout', async () => {
     const onChange = vi.fn()
-    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={onChange} layout="inline" />)
+    render(
+      <FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={onChange} layout="inline" />,
+    )
 
     await userEvent.click(screen.getByRole('button', { name: 'Thai' }))
 
@@ -249,7 +269,9 @@ describe('FilterBar', () => {
       r({ id: 'e', cuisine: 'Ethiopian' }),
     ]
     const withPinned = { ...emptyFilter(), cuisines: new Set(['ethiopian']) }
-    const { rerender } = render(<FilterBar restaurants={restaurants} filter={withPinned} onChange={vi.fn()} />)
+    const { rerender } = render(
+      <FilterBar restaurants={restaurants} filter={withPinned} onChange={vi.fn()} />,
+    )
     expect(screen.getByRole('button', { name: 'Ethiopian' })).toBeInTheDocument()
 
     rerender(<FilterBar restaurants={restaurants} filter={emptyFilter()} onChange={vi.fn()} />)

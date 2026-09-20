@@ -10,17 +10,17 @@ stale_after: 2027-03-01
 
 Tablemarks is a client-only React SPA with an optional PocketBase backend. Its defining choice is **local-first**: the browser's IndexedDB is the canonical store, and the cloud is a mirror you switch on by signing in.
 
-"Optional" is literal, and it is data rather than a build flag: the app fetches a served `config.json` at startup and reads a backend URL out of it. An empty URL means *this deployment has no backend*, and the app renders accordingly.
+"Optional" is literal, and it is data rather than a build flag: the app fetches a served `config.json` at startup and reads a backend URL out of it. An empty URL means _this deployment has no backend_, and the app renders accordingly.
 
 ## Two deployment targets, one build
 
 One source tree produces two deployments: a private Docker stack with PocketBase behind it, and a public GitHub Pages demo with no backend at all. Both run the same code.
 
-That is possible because the backend location is read at **runtime**, not baked in at build time. A build-time variable would inline the private hostname into every artifact the build produces — container image layers and public build logs among them — and would force the demo to carry a default backend it does not have. Reading a served file instead lets the image carry no hostname and lets the demo express "no backend" as an empty string. The full reasoning, including what runtime configuration does *not* protect, is in [ADR-0001](../journal/decisions/0001-read-the-backend-location-at-runtime.md).
+That is possible because the backend location is read at **runtime**, not baked in at build time. A build-time variable would inline the private hostname into every artifact the build produces — container image layers and public build logs among them — and would force the demo to carry a default backend it does not have. Reading a served file instead lets the image carry no hostname and lets the demo express "no backend" as an empty string. The full reasoning, including what runtime configuration does _not_ protect, is in [ADR-0001](../journal/decisions/0001-read-the-backend-location-at-runtime.md).
 
-**Presence and reachability are two signals, not one.** "Is a backend configured?" settles immediately from the local file; "is it answering?" settles later, from a health check, or never. Collapsing them into one boolean would make a private instance that is merely down indistinguishable from the demo, so a user whose server was down would see the app quietly present itself as a backend-free build. Resolution has three outcomes — configured, absent, unavailable — and *unavailable* maps to configured-but-unreachable, never to absent. See [ADR-0002](../journal/decisions/0002-separate-backend-presence-from-reachability.md).
+**Presence and reachability are two signals, not one.** "Is a backend configured?" settles immediately from the local file; "is it answering?" settles later, from a health check, or never. Collapsing them into one boolean would make a private instance that is merely down indistinguishable from the demo, so a user whose server was down would see the app quietly present itself as a backend-free build. Resolution has three outcomes — configured, absent, unavailable — and _unavailable_ maps to configured-but-unreachable, never to absent. See [ADR-0002](../journal/decisions/0002-separate-backend-presence-from-reachability.md).
 
-*Unavailable* is also the only one of the three that recovers. *Absent* is an answer — the file was read and declares no backend — so there is nothing to retry; *unavailable* means the file could not be read, and a tab that failed once re-reads it when connectivity returns, then starts the same controllers a clean startup would have. Until it does, the app says the server is unreachable rather than claiming everything is backed up.
+_Unavailable_ is also the only one of the three that recovers. _Absent_ is an answer — the file was read and declares no backend — so there is nothing to retry; _unavailable_ means the file could not be read, and a tab that failed once re-reads it when connectivity returns, then starts the same controllers a clean startup would have. Until it does, the app says the server is unreachable rather than claiming everything is backed up.
 
 One feature is genuinely unavailable without a backend rather than merely degraded: **short Google Maps links**. Resolving a `maps.app.goo.gl` link means following a cross-origin redirect, which a browser cannot do, so it needs a server. With no backend the app refuses the paste on the capture surface and names the two paths that still work — type the place name, or paste the full Maps URL. The server-side mechanism, and why it shells out to `curl` rather than using PocketBase's own HTTP client, is in [this journal entry](../journal/solutions/database-issues/pocketbase-hook-handlers-cannot-see-file-level-scope.md).
 
@@ -46,7 +46,7 @@ Sync engine (src/sync/)  ◄──►  PocketBase (optional)
 
 ## Local-first and accounts
 
-There is no "local vs cloud" mode toggle. Everyone starts local with no account. Signing in with Google is framed as *back up + sync across devices* — its first action is a one-time **union reconcile** that merges existing local data with the account. Signing out stops syncing and leaves local data intact.
+There is no "local vs cloud" mode toggle. Everyone starts local with no account. Signing in with Google is framed as _back up + sync across devices_ — its first action is a one-time **union reconcile** that merges existing local data with the account. Signing out stops syncing and leaves local data intact.
 
 Because every write lands in IndexedDB first, the local store also serves as the **durable sync outbox**: an offline write survives a page reload and is flushed to the cloud on the next connection. There is no separate queue to lose.
 

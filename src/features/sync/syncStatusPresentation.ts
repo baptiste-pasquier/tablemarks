@@ -15,7 +15,9 @@ export function label(status: SyncStatus, t: Translator): string {
         ? t('sync.offlinePending', { count: status.pendingCount })
         : t('sync.offline')
     case 'problem':
-      return status.cause === 'sign-in-needed' ? t('sync.problemSignIn') : t('sync.problemUnreachable')
+      return status.cause === 'sign-in-needed'
+        ? t('sync.problemSignIn')
+        : t('sync.problemUnreachable')
   }
 }
 

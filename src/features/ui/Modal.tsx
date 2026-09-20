@@ -132,7 +132,10 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
         className={`w-full rounded-t-2xl bg-white p-5 shadow-xl outline-none md:max-w-md md:rounded-2xl ${panelClassName}`}
       >
-        <div aria-hidden="true" className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-gray-200 md:hidden" />
+        <div
+          aria-hidden="true"
+          className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-gray-200 md:hidden"
+        />
         {children}
       </div>
     </div>

@@ -46,7 +46,12 @@ export default defineConfig(({ mode }) => {
           icons: [
             { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
             { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-            { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            {
+              src: 'maskable-icon-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
           ],
         },
         workbox: {
@@ -71,7 +76,8 @@ export default defineConfig(({ mode }) => {
               // The timeout is imported, not written here: it has to fire before the page's own
               // abort or the fallback never gets to deliver. src/sync/configTimeouts.ts holds both
               // halves of that ordering, and a test pins it.
-              urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.endsWith('/config.json'),
+              urlPattern: ({ url, sameOrigin }) =>
+                sameOrigin && url.pathname.endsWith('/config.json'),
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'runtime-config',

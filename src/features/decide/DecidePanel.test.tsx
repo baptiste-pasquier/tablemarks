@@ -12,9 +12,11 @@ const ANCHOR: Anchor = { lat: 48.8566, lng: 2.3522 }
 beforeEach(freshDB)
 
 describe('DecidePanel', () => {
-  it('stays above Modal\'s default z-index (--z-modal-elevated), 100 above --z-modal', async () => {
+  it("stays above Modal's default z-index (--z-modal-elevated), 100 above --z-modal", async () => {
     await createRestaurant({ name: 'New Spot', lat: 48.8566, lng: 2.3522 })
-    const { container } = render(<DecidePanel anchor={ANCHOR} onClose={vi.fn()} onOpenRestaurant={vi.fn()} />)
+    const { container } = render(
+      <DecidePanel anchor={ANCHOR} onClose={vi.fn()} onOpenRestaurant={vi.fn()} />,
+    )
 
     expect(await screen.findByText('New Spot')).toBeInTheDocument()
     expect(container.firstElementChild).toHaveClass('z-[var(--z-modal-elevated)]')
@@ -79,8 +81,18 @@ describe('DecidePanel', () => {
   })
 
   it('renders a Directions link only for http(s) Maps URLs', async () => {
-    await createRestaurant({ name: 'Linked', lat: 48.8566, lng: 2.3522, mapsUrl: 'https://maps.app.goo.gl/x' })
-    await createRestaurant({ name: 'Sneaky', lat: 48.8566, lng: 2.3522, mapsUrl: 'javascript:alert(1)/@48.8566,2.3522' })
+    await createRestaurant({
+      name: 'Linked',
+      lat: 48.8566,
+      lng: 2.3522,
+      mapsUrl: 'https://maps.app.goo.gl/x',
+    })
+    await createRestaurant({
+      name: 'Sneaky',
+      lat: 48.8566,
+      lng: 2.3522,
+      mapsUrl: 'javascript:alert(1)/@48.8566,2.3522',
+    })
     render(<DecidePanel anchor={ANCHOR} onClose={vi.fn()} onOpenRestaurant={vi.fn()} />)
 
     const links = await screen.findAllByRole('link', { name: /directions/i })

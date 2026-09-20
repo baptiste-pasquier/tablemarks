@@ -42,7 +42,7 @@ function GroupLabel({ layout, children }: { layout: FilterBarLayout; children: s
   return (
     <span
       className={cn(
-        'text-[10px] font-semibold uppercase tracking-wide text-gray-400',
+        'text-[10px] font-semibold tracking-wide text-gray-400 uppercase',
         // Keeps the label from shrinking below its own text width when the flex row is tight.
         layout === 'inline' && 'shrink-0',
       )}
@@ -133,7 +133,10 @@ export function FilterBar({
   const [expanded, setExpanded] = useState(false)
   const ranked = useMemo(() => rankedCuisines(restaurants), [restaurants])
   const hasUncategorized = useMemo(() => restaurants.some((r) => !r.cuisine?.trim()), [restaurants])
-  const { visible, overflow } = useMemo(() => splitCuisineRows(ranked, filter.cuisines), [ranked, filter.cuisines])
+  const { visible, overflow } = useMemo(
+    () => splitCuisineRows(ranked, filter.cuisines),
+    [ranked, filter.cuisines],
+  )
   const shownCuisines = expanded ? ranked : visible
 
   if (restaurants.length === 0) return null
@@ -159,7 +162,9 @@ export function FilterBar({
                   key={c}
                   shape="pill"
                   active={filter.cuisines.has(c.toLowerCase())}
-                  onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })}
+                  onClick={() =>
+                    onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })
+                  }
                 >
                   <span
                     aria-hidden="true"
@@ -174,7 +179,9 @@ export function FilterBar({
                 <ToggleChip
                   shape="pill"
                   active={filter.cuisines.has(UNCATEGORIZED)}
-                  onClick={() => onChange({ ...filter, cuisines: withToggled(filter.cuisines, UNCATEGORIZED) })}
+                  onClick={() =>
+                    onChange({ ...filter, cuisines: withToggled(filter.cuisines, UNCATEGORIZED) })
+                  }
                 >
                   <span
                     aria-hidden="true"
@@ -193,7 +200,9 @@ export function FilterBar({
                   onClick={() => setExpanded((e) => !e)}
                   className="inline-flex min-h-10 items-center rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 transition hover:border-gray-400 hover:bg-gray-50"
                 >
-                  {expanded ? t('filters.collapse') : t('filters.showMore', { count: overflow.length })}
+                  {expanded
+                    ? t('filters.collapse')
+                    : t('filters.showMore', { count: overflow.length })}
                 </button>
               )}
             </div>

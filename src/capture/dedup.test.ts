@@ -20,14 +20,17 @@ function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
 describe('findNearMatch', () => {
   it('matches the same Maps link', () => {
     const existing = [r({ id: 'a', mapsUrl: 'https://maps.app.goo.gl/x', lat: 0, lng: 0 })]
-    const match = findNearMatch({ lat: 10, lng: 10, mapsUrl: 'https://maps.app.goo.gl/x' }, existing)
+    const match = findNearMatch(
+      { lat: 10, lng: 10, mapsUrl: 'https://maps.app.goo.gl/x' },
+      existing,
+    )
     expect(match?.id).toBe('a')
   })
 
   it('matches a point within ~50m', () => {
     const existing = [r({ id: 'a', lat: 48.8566, lng: 2.3522 })]
     // ~11m north
-    const match = findNearMatch({ lat: 48.85670, lng: 2.3522 }, existing)
+    const match = findNearMatch({ lat: 48.8567, lng: 2.3522 }, existing)
     expect(match?.id).toBe('a')
   })
 

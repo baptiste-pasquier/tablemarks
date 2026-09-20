@@ -3,7 +3,12 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Settings, LogOut } from 'lucide-react'
 import { useSyncStatus } from '../../sync/useSyncStatus'
-import { label as syncLabel, detail as syncDetail, pillToneClassName, badgeColorClassName } from '../sync/syncStatusPresentation'
+import {
+  label as syncLabel,
+  detail as syncDetail,
+  pillToneClassName,
+  badgeColorClassName,
+} from '../sync/syncStatusPresentation'
 import { trapTabFocus } from '../ui/Modal'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
@@ -159,7 +164,7 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t('shell.accountMenuAria')}
-        className="relative rounded-full transition hover:ring-2 hover:ring-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="focus-visible:outline-brand relative rounded-full transition hover:ring-2 hover:ring-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         {showImage ? (
           <img
@@ -169,7 +174,7 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             className="h-9 w-9 rounded-full object-cover ring-1 ring-black/5"
           />
         ) : (
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-soft text-sm font-semibold text-brand-strong ring-1 ring-black/5">
+          <span className="bg-brand-soft text-brand-strong grid h-9 w-9 place-items-center rounded-full text-sm font-semibold ring-1 ring-black/5">
             {initial}
           </span>
         )}
@@ -205,21 +210,11 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             </div>
             <p className="mt-2 px-2 text-xs text-gray-500">{syncDetail(status, t)}</p>
             <div className="my-2 border-t border-gray-100" />
-            <Button
-              variant="menu-item"
-              tone="neutral"
-              role="menuitem"
-              onClick={handleOpenSettings}
-            >
+            <Button variant="menu-item" tone="neutral" role="menuitem" onClick={handleOpenSettings}>
               <Settings className="h-4 w-4 text-gray-500" aria-hidden="true" />
               {t('settings.title')}
             </Button>
-            <Button
-              variant="menu-item"
-              tone="destructive"
-              role="menuitem"
-              onClick={handleSignOut}
-            >
+            <Button variant="menu-item" tone="destructive" role="menuitem" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" aria-hidden="true" />
               {t('shell.signOut')}
             </Button>

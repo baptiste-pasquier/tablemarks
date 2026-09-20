@@ -177,7 +177,7 @@ export function AddPlace({
       )}
 
       {duplicate && (
-        <div className="mt-3 rounded-md bg-brand-soft p-3 text-sm">
+        <div className="bg-brand-soft mt-3 rounded-md p-3 text-sm">
           <p>
             <strong>{duplicate.name}</strong> {t('capture.alreadySaved')}
           </p>

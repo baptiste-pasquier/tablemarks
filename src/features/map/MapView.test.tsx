@@ -235,7 +235,9 @@ vi.mock('react-leaflet', () => {
         const onReal = () => real(fakeEvent)
         const onInternal = () => internalTooltipOpen(fakeEvent)
         const listeners =
-          clickListenerOrder.current === 'internal-first' ? [onInternal, onReal] : [onReal, onInternal]
+          clickListenerOrder.current === 'internal-first'
+            ? [onInternal, onReal]
+            : [onReal, onInternal]
         listeners.forEach((listener) => el.addEventListener('click', listener))
         return () => {
           listeners.forEach((listener) => el.removeEventListener('click', listener))
@@ -278,15 +280,37 @@ beforeEach(() => {
   mockZoomOut.mockClear()
 })
 
-const { mockGeolocate } = vi.hoisted(() => ({ mockGeolocate: vi.fn<() => Promise<GeoPoint | null>>() }))
+const { mockGeolocate } = vi.hoisted(() => ({
+  mockGeolocate: vi.fn<() => Promise<GeoPoint | null>>(),
+}))
 vi.mock('../../lib/geolocate', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/geolocate')>()
   return { ...actual, geolocate: () => mockGeolocate() }
 })
 
 const MARKERS: MapMarker[] = [
-  { id: 'a', lat: 1, lng: 1, name: 'A', pending: false, visitCount: 0, latestVerdict: null, color: '#111111', dimmed: false },
-  { id: 'b', lat: 2, lng: 2, name: 'B', pending: false, visitCount: 0, latestVerdict: null, color: '#222222', dimmed: false },
+  {
+    id: 'a',
+    lat: 1,
+    lng: 1,
+    name: 'A',
+    pending: false,
+    visitCount: 0,
+    latestVerdict: null,
+    color: '#111111',
+    dimmed: false,
+  },
+  {
+    id: 'b',
+    lat: 2,
+    lng: 2,
+    name: 'B',
+    pending: false,
+    visitCount: 0,
+    latestVerdict: null,
+    color: '#222222',
+    dimmed: false,
+  },
 ]
 
 describe('MapView', () => {
@@ -328,8 +352,12 @@ describe('MapView', () => {
         { ...MARKERS[1], id: 'y', lat: 11, lng: 11, name: 'Same Color Y', color: '#abcabc' },
       ]
       render(<MapView markers={sameColor} />)
-      expect(screen.getByTestId('marker-10-10').dataset.iconHtml).toContain('aria-label="Same Color X"')
-      expect(screen.getByTestId('marker-11-11').dataset.iconHtml).toContain('aria-label="Same Color Y"')
+      expect(screen.getByTestId('marker-10-10').dataset.iconHtml).toContain(
+        'aria-label="Same Color X"',
+      )
+      expect(screen.getByTestId('marker-11-11').dataset.iconHtml).toContain(
+        'aria-label="Same Color Y"',
+      )
     })
 
     it('HTML-escapes a restaurant name containing quotes/markup before interpolating it into the icon HTML', () => {
@@ -344,7 +372,9 @@ describe('MapView', () => {
   })
 
   it('renders the selected marker larger, and moves the glow when selection changes', () => {
-    const { getByTestId, rerender } = render(<MapView markers={MARKERS} selectedId="a" onSelect={vi.fn()} />)
+    const { getByTestId, rerender } = render(
+      <MapView markers={MARKERS} selectedId="a" onSelect={vi.fn()} />,
+    )
     expect(getByTestId('marker-1-1').dataset.size).toBe('30')
     expect(getByTestId('marker-2-2').dataset.size).toBe('24')
 
@@ -398,7 +428,7 @@ describe('MapView', () => {
       ['internal-first', 'internal-first' as const],
       ['real-first', 'real-first' as const],
     ])(
-      'closes the tooltip and blurs the marker before selecting, and after Leaflet\'s own internal tooltip-open click handler — registration order: %s',
+      "closes the tooltip and blurs the marker before selecting, and after Leaflet's own internal tooltip-open click handler — registration order: %s",
       async (_label, order) => {
         clickListenerOrder.current = order
         const onSelect = vi.fn()
@@ -588,7 +618,9 @@ describe('MapView', () => {
     })
 
     it('moves the current-position marker when currentPosition changes, e.g. after a "Localiser" tap', () => {
-      const { rerender } = render(<MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} />)
+      const { rerender } = render(
+        <MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} />,
+      )
       expect(screen.getByTestId('marker-5-6')).toBeInTheDocument()
 
       rerender(<MapView markers={MARKERS} currentPosition={{ lat: 9, lng: 8 }} />)
@@ -598,9 +630,7 @@ describe('MapView', () => {
 
     it('renders the current-position marker with no click handler and no tooltip, unlike restaurant pins', () => {
       const onSelect = vi.fn()
-      render(
-        <MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} onSelect={onSelect} />,
-      )
+      render(<MapView markers={MARKERS} currentPosition={{ lat: 5, lng: 6 }} onSelect={onSelect} />)
 
       const marker = screen.getByTestId('marker-5-6')
       expect(within(marker).queryByTestId('tooltip')).not.toBeInTheDocument()
@@ -788,10 +818,7 @@ describe('MapView name labels (U3)', () => {
 
   it('never renders a label for a dimmed marker, even when it would otherwise be in the visible-label set', () => {
     mockZoom = LABEL_ZOOM_FLOOR
-    const dimmedMarkers: MapMarker[] = [
-      { ...MARKERS[0], dimmed: true },
-      MARKERS[1],
-    ]
+    const dimmedMarkers: MapMarker[] = [{ ...MARKERS[0], dimmed: true }, MARKERS[1]]
     // Force both ids into the "visible" set, simulating the upstream algorithm having (contrary
     // to its own guarantee) included the dimmed marker — MapView's own guard must still hide it.
     vi.mocked(computeLabelPlacement).mockReturnValueOnce(new Set(['a', 'b']))
@@ -812,7 +839,17 @@ describe('MapView name labels (U3)', () => {
     // exercises escapeHtml alone — while still covering all five characters it replaces.
     const dangerousName = `A&<B>"C'`
     const markers: MapMarker[] = [
-      { id: 'x', lat: 5, lng: 5, name: dangerousName, pending: false, visitCount: 0, latestVerdict: null, color: '#444444', dimmed: false },
+      {
+        id: 'x',
+        lat: 5,
+        lng: 5,
+        name: dangerousName,
+        pending: false,
+        visitCount: 0,
+        latestVerdict: null,
+        color: '#444444',
+        dimmed: false,
+      },
     ]
     vi.mocked(computeLabelPlacement).mockReturnValueOnce(new Set(['x']))
     const { getByTestId } = render(<MapView markers={markers} />)
@@ -885,7 +922,7 @@ describe('LabelVisibility', () => {
     expect(onChange).toHaveBeenLastCalledWith(new Set(['b']))
   })
 
-  it('feeds the hovered marker\'s larger icon radius into label placement, same as a selected marker (U2 KTD3 parity)', () => {
+  it("feeds the hovered marker's larger icon radius into label placement, same as a selected marker (U2 KTD3 parity)", () => {
     mockZoom = LABEL_ZOOM_FLOOR
     const onChange = vi.fn()
     const { rerender } = render(<LabelVisibility markers={MARKERS} onChange={onChange} />)
@@ -908,7 +945,9 @@ describe('LabelVisibility', () => {
   it('nudges Leaflet via invalidateSize before recomputing when `active` flips false -> true (mobile List pane switching back to Map, KTD10)', () => {
     mockZoom = LABEL_ZOOM_FLOOR
     const onChange = vi.fn()
-    const { rerender } = render(<LabelVisibility markers={MARKERS} active={false} onChange={onChange} />)
+    const { rerender } = render(
+      <LabelVisibility markers={MARKERS} active={false} onChange={onChange} />,
+    )
     expect(computeLabelPlacement).toHaveBeenCalledTimes(1)
     expect(mockInvalidateSize).not.toHaveBeenCalled()
 
@@ -930,7 +969,9 @@ describe('LabelVisibility', () => {
   it('does not re-nudge invalidateSize when the merged effect re-runs for a reason other than a rising edge (active stays true throughout, only markers change)', () => {
     mockZoom = LABEL_ZOOM_FLOOR
     const onChange = vi.fn()
-    const { rerender } = render(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)
+    const { rerender } = render(
+      <LabelVisibility markers={MARKERS} active={true} onChange={onChange} />,
+    )
     // Mounting already active is not a rising edge (wasActiveRef starts equal to `active`).
     expect(mockInvalidateSize).not.toHaveBeenCalled()
     expect(computeLabelPlacement).toHaveBeenCalledTimes(1)
@@ -940,7 +981,17 @@ describe('LabelVisibility', () => {
     // never changes -- this is exactly the scenario `wasActiveRef` must guard against a false nudge.
     const changedMarkers: MapMarker[] = [
       ...MARKERS,
-      { id: 'c', lat: 3, lng: 3, name: 'C', pending: false, visitCount: 0, latestVerdict: null, color: '#333333', dimmed: false },
+      {
+        id: 'c',
+        lat: 3,
+        lng: 3,
+        name: 'C',
+        pending: false,
+        visitCount: 0,
+        latestVerdict: null,
+        color: '#333333',
+        dimmed: false,
+      },
     ]
     rerender(<LabelVisibility markers={changedMarkers} active={true} onChange={onChange} />)
 
@@ -951,7 +1002,9 @@ describe('LabelVisibility', () => {
   it('fires invalidateSize again on a genuine second rising edge (true -> false -> true)', () => {
     mockZoom = LABEL_ZOOM_FLOOR
     const onChange = vi.fn()
-    const { rerender } = render(<LabelVisibility markers={MARKERS} active={false} onChange={onChange} />)
+    const { rerender } = render(
+      <LabelVisibility markers={MARKERS} active={false} onChange={onChange} />,
+    )
     expect(mockInvalidateSize).not.toHaveBeenCalled()
 
     rerender(<LabelVisibility markers={MARKERS} active={true} onChange={onChange} />)

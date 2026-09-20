@@ -41,7 +41,11 @@ export function DecidePanel({
   return (
     // Stays 100 above Modal's own default z-index (--z-modal-elevated, index.css) — unchanged
     // relative gap.
-    <Modal onClose={onClose} zIndexClassName="z-[var(--z-modal-elevated)]" panelClassName="flex max-h-[88vh] flex-col">
+    <Modal
+      onClose={onClose}
+      zIndexClassName="z-[var(--z-modal-elevated)]"
+      panelClassName="flex max-h-[88vh] flex-col"
+    >
       <ModalHeader title={t('decide.title')} onClose={onClose} />
 
       <div className="mb-3 flex items-center gap-2 text-sm">
@@ -85,7 +89,7 @@ export function DecidePanel({
             {candidates.map(({ restaurant, distanceM }) => (
               <li
                 key={restaurant.id}
-                className={pickedId === restaurant.id ? 'rounded-md bg-brand-soft' : ''}
+                className={pickedId === restaurant.id ? 'bg-brand-soft rounded-md' : ''}
               >
                 <div className="flex items-center justify-between gap-2 px-1 py-2">
                   <button
@@ -104,7 +108,7 @@ export function DecidePanel({
                       href={restaurant.mapsUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="shrink-0 text-xs font-medium text-brand underline"
+                      className="text-brand shrink-0 text-xs font-medium underline"
                     >
                       {t('decide.directions')}
                     </a>

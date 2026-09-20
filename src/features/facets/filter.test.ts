@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { activeFilterCount, emptyFilter, isEmptyFilter, matches, withToggled, UNCATEGORIZED } from './filter'
+import {
+  activeFilterCount,
+  emptyFilter,
+  isEmptyFilter,
+  matches,
+  withToggled,
+  UNCATEGORIZED,
+} from './filter'
 import type { Restaurant, Verdict } from '../../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
@@ -25,7 +32,11 @@ describe('matches', () => {
 
   it('ORs within a facet and ANDs across facets (AE3)', () => {
     // cuisine = Indian OR Thai AND status = to-try (filter cuisines are stored lowercased)
-    const filter = { ...emptyFilter(), cuisines: new Set(['indian', 'thai']), statuses: new Set(['to_try' as const]) }
+    const filter = {
+      ...emptyFilter(),
+      cuisines: new Set(['indian', 'thai']),
+      statuses: new Set(['to_try' as const]),
+    }
 
     expect(matches(r({ id: 'thai-totry', cuisine: 'Thai' }), filter)).toBe(true)
     expect(matches(r({ id: 'indian-totry', cuisine: 'Indian' }), filter)).toBe(true)
@@ -55,7 +66,12 @@ describe('matches', () => {
     expect(matches(place, { ...emptyFilter(), cuisines: new Set(['french']) })).toBe(false)
     expect(matches(place, { ...emptyFilter(), cuisines: new Set([UNCATEGORIZED]) })).toBe(true)
     // a categorized place does NOT match the uncategorized chip
-    expect(matches(r({ id: 'b', cuisine: 'French' }), { ...emptyFilter(), cuisines: new Set([UNCATEGORIZED]) })).toBe(false)
+    expect(
+      matches(r({ id: 'b', cuisine: 'French' }), {
+        ...emptyFilter(),
+        cuisines: new Set([UNCATEGORIZED]),
+      }),
+    ).toBe(false)
   })
 })
 

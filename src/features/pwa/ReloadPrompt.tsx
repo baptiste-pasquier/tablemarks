@@ -44,7 +44,7 @@ export function ReloadPrompt() {
       role="region"
       aria-live="polite"
       aria-label={t('pwa.appUpdateAria')}
-      className="fixed left-4 right-[6.5rem] z-[2000] flex items-center gap-3 rounded-full bg-gray-900 px-4 py-2.5 text-sm text-white shadow-lg bottom-[calc(var(--safe-area-floating-offset)+1rem)] md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2"
+      className="fixed right-[6.5rem] bottom-[calc(var(--safe-area-floating-offset)+1rem)] left-4 z-[2000] flex items-center gap-3 rounded-full bg-gray-900 px-4 py-2.5 text-sm text-white shadow-lg md:right-auto md:bottom-4 md:left-1/2 md:-translate-x-1/2"
     >
       {needRefresh ? (
         <>
@@ -52,7 +52,7 @@ export function ReloadPrompt() {
           <button
             type="button"
             onClick={reload}
-            className="rounded-full bg-brand px-3 py-1 font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong"
+            className="bg-brand hover:bg-brand-strong active:bg-brand-strong rounded-full px-3 py-1 font-semibold text-white shadow-sm transition"
           >
             {t('pwa.reload')}
           </button>

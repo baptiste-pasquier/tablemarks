@@ -109,6 +109,8 @@ export function statusOf(r: Pick<Restaurant, 'visitCount'>): RestaurantStatus {
  * everywhere, even for a record whose `pending`/coordinate fields could otherwise diverge (e.g. a
  * synced or imported record — nothing enforces the two staying in lockstep beyond convention).
  */
-export function hasResolvedCoordinates(r: Restaurant): r is Restaurant & { lat: number; lng: number } {
+export function hasResolvedCoordinates(
+  r: Restaurant,
+): r is Restaurant & { lat: number; lng: number } {
   return !r.pending && r.lat !== null && r.lng !== null
 }

@@ -121,7 +121,9 @@ describe('loadRuntimeConfig — timeout (R30)', () => {
       vi.fn(
         (_url: string, init?: { signal?: AbortSignal }) =>
           new Promise((_resolve, reject) => {
-            init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+            init?.signal?.addEventListener('abort', () =>
+              reject(new DOMException('aborted', 'AbortError')),
+            )
           }),
       ),
     )
@@ -131,7 +133,10 @@ describe('loadRuntimeConfig — timeout (R30)', () => {
 
   it('still settles when the request ignores the abort signal entirely', async () => {
     // Hard bound: the page must never be left unrendered by a promise that never settles.
-    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {})),
+    )
     const out = await loadRuntimeConfig({ timeoutMs: 20 })
     expect(out.status).toBe('unavailable')
   })
@@ -140,7 +145,9 @@ describe('loadRuntimeConfig — timeout (R30)', () => {
     const fetchMock = vi.fn(
       (_url: string, init?: { signal?: AbortSignal }) =>
         new Promise((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError')),
+          )
         }),
     )
     vi.stubGlobal('fetch', fetchMock)
@@ -158,14 +165,16 @@ describe('loadRuntimeConfig — transport safety (R1)', () => {
     expect(out).not.toHaveProperty('pocketbaseUrl')
   })
 
-  it.each([
-    'http://127.0.0.1:8090',
-    'http://localhost:8090',
-    'http://[::1]:8090',
-  ])('exempts the loopback origin %s so development is unaffected', async (url) => {
-    stubJson({ pocketbaseUrl: url })
-    await expect(loadRuntimeConfig()).resolves.toEqual({ status: 'configured', pocketbaseUrl: url })
-  })
+  it.each(['http://127.0.0.1:8090', 'http://localhost:8090', 'http://[::1]:8090'])(
+    'exempts the loopback origin %s so development is unaffected',
+    async (url) => {
+      stubJson({ pocketbaseUrl: url })
+      await expect(loadRuntimeConfig()).resolves.toEqual({
+        status: 'configured',
+        pocketbaseUrl: url,
+      })
+    },
+  )
 
   it('rejects a non-http(s) scheme', async () => {
     stubJson({ pocketbaseUrl: 'ws://pb.example.com' })

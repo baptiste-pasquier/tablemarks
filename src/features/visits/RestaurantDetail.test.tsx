@@ -210,7 +210,9 @@ describe('RestaurantDetail', () => {
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
 
     const destination = '48.85,2.35'
-    const mapsLink = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
+    const mapsLink = (await screen.findByRole('link', {
+      name: /google maps/i,
+    })) as HTMLAnchorElement
     const goToLink = screen.getByRole('link', { name: /go to/i }) as HTMLAnchorElement
 
     expect(mapsLink.href).toBe(
@@ -282,7 +284,7 @@ describe('RestaurantDetail', () => {
     expect(screen.queryByText(/\d+(\.\d+)? (m|km)$/)).not.toBeInTheDocument()
   })
 
-  it('shows the added date as the viewer\'s local calendar day, not the UTC slice (AE1)', async () => {
+  it("shows the added date as the viewer's local calendar day, not the UTC slice (AE1)", async () => {
     vi.stubEnv('TZ', 'America/Bogota') // UTC-5, no DST
     // 2026-08-30T23:30:00Z in UTC-5 is still local calendar day 2026-08-30, not 2026-08-31 — the
     // UTC slice of this instant would wrongly read 2026-08-31.

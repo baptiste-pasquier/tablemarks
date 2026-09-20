@@ -1,9 +1,5 @@
 import type { Restaurant, Visit } from '../types/models'
-import {
-  allRestaurantsForSync,
-  mutateRestaurant,
-  markRestaurantSynced,
-} from '../data/restaurants'
+import { allRestaurantsForSync, mutateRestaurant, markRestaurantSynced } from '../data/restaurants'
 import { allVisitsForSync, putVisitRaw, markVisitSynced } from '../data/visits'
 import { recomputeRollup } from '../data/rollup'
 import { onLocalChange, emitStoreChange } from '../data/events'
@@ -68,7 +64,8 @@ export async function fullSync(remote: RemoteStore): Promise<SyncOutcome> {
     // redundant read-modify-write and a second store-change emit for a record already in hand.
     const result = await mutateRestaurant(
       rec.id,
-      (current) => (current?.updated !== snapshotUpdated ? undefined : { ...rec, syncedUpdated: rec.updated }),
+      (current) =>
+        current?.updated !== snapshotUpdated ? undefined : { ...rec, syncedUpdated: rec.updated },
       'store',
     )
     if (result) {

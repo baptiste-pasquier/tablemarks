@@ -14,26 +14,26 @@ before creating or substantially extending anything under `docs/`.** Full rules:
 
 ### Where a paragraph goes
 
-Two axes. **Lifecycle first**: the four folders below are *maintained* and are the sources
-of truth; `docs/journal/` is *append-only*, dated, and **never cited as truth**. Then, for
+Two axes. **Lifecycle first**: the four folders below are _maintained_ and are the sources
+of truth; `docs/journal/` is _append-only_, dated, and **never cited as truth**. Then, for
 maintained text, the [Diátaxis](https://diataxis.fr/compass/) compass — run it on **the
 paragraph**, not on the file you have open.
 
-| The content… | …serves the reader… | …belongs in |
-| --- | --- | --- |
-| informs **action** | **applying** a skill (working) | `docs/how-to/` |
-| informs **action** | **acquiring** a skill (studying) | a tutorial — we have none, so `docs/how-to/` |
-| informs **cognition** | **applying** a skill (working) | `docs/reference/` |
-| informs **cognition** | **acquiring** a skill (studying) | `docs/explanation/` |
+| The content…          | …serves the reader…              | …belongs in                                  |
+| --------------------- | -------------------------------- | -------------------------------------------- |
+| informs **action**    | **applying** a skill (working)   | `docs/how-to/`                               |
+| informs **action**    | **acquiring** a skill (studying) | a tutorial — we have none, so `docs/how-to/` |
+| informs **cognition** | **applying** a skill (working)   | `docs/reference/`                            |
+| informs **cognition** | **acquiring** a skill (studying) | `docs/explanation/`                          |
 
 Four extensions, for text that is not about the product:
 
-| The paragraph… | belongs in |
-| --- | --- |
-| tells a future writer or agent what to do | `docs/conventions/` |
+| The paragraph…                                   | belongs in                |
+| ------------------------------------------------ | ------------------------- |
+| tells a future writer or agent what to do        | `docs/conventions/`       |
 | recounts what was tried, failed, or was measured | `docs/journal/solutions/` |
-| records a choice between options | `docs/journal/decisions/` |
-| names something not built yet | a GitHub issue |
+| records a choice between options                 | `docs/journal/decisions/` |
+| names something not built yet                    | a GitHub issue            |
 
 A maintained doc states the rule **once** and links the journal entry for the evidence. It
 does not retell the story.
@@ -57,7 +57,7 @@ does not retell the story.
   in the issue tracker and nowhere else — `gh issue list --label backlog` to read it,
   `gh issue create --label backlog` to add an item. **Link the issue** from the doc rather
   than describing the missing work. A `TODO` comment in a source file is fine, and a doc
-  may point at one; a *list* of unbuilt work in prose is not.
+  may point at one; a _list_ of unbuilt work in prose is not.
 - **Every maintained doc carries frontmatter** with `title`, `type` (equal to its folder
   name), `audience`, `status`, `stale_after`, and appears in `docs/README.md`. A key present
   but empty counts as missing. A passed `stale_after` **warns** rather than fails, so a
@@ -83,18 +83,18 @@ does not retell the story.
 
 ### What to update when
 
-| You changed | Update |
-| --- | --- |
-| the sync engine, data model, or a schema shape | `docs/reference/data-model.md` |
-| core behaviour or the local-first/sync design | `docs/explanation/architecture.md` |
-| setup, scripts, testing, or the PocketBase backend | `docs/how-to/development.md` |
-| user-facing behaviour, setup, local workflow | `README.md` |
-| what an agent must always know | this file |
+| You changed                                        | Update                             |
+| -------------------------------------------------- | ---------------------------------- |
+| the sync engine, data model, or a schema shape     | `docs/reference/data-model.md`     |
+| core behaviour or the local-first/sync design      | `docs/explanation/architecture.md` |
+| setup, scripts, testing, or the PocketBase backend | `docs/how-to/development.md`       |
+| user-facing behaviour, setup, local workflow       | `README.md`                        |
+| what an agent must always know                     | this file                          |
 
 ## Knowledge stores
 
-* `docs/journal/solutions/` — documented solutions to past problems (bugs, best practices, architecture patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
-* `CONCEPTS.md` — shared domain vocabulary (entities, named processes, status concepts). Relevant when orienting to the codebase or discussing domain terms.
+- `docs/journal/solutions/` — documented solutions to past problems (bugs, best practices, architecture patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
+- `CONCEPTS.md` — shared domain vocabulary (entities, named processes, status concepts). Relevant when orienting to the codebase or discussing domain terms.
 
 ## UI & Tailwind Directives
 

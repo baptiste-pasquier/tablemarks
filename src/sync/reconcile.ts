@@ -1,7 +1,10 @@
 import type { SyncFields } from '../types/models'
 
 /** Last-write-wins winner of two versions of one record. Newer `updated` wins; tie keeps local. */
-export function pickWinner<T extends SyncFields>(local: T | undefined, remote: T | undefined): T | undefined {
+export function pickWinner<T extends SyncFields>(
+  local: T | undefined,
+  remote: T | undefined,
+): T | undefined {
   if (!local) return remote
   if (!remote) return local
   return remote.updated > local.updated ? remote : local

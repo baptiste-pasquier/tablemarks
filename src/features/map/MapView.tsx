@@ -78,7 +78,12 @@ function pinHtml(color: string, selected: boolean): string {
  * this function builds a fresh wrapper + `L.divIcon` per call so per-restaurant `name`/`labelText`
  * never grows an unbounded cache.
  */
-function iconForColor(color: string, selected: boolean, name: string, labelText?: string): L.DivIcon {
+function iconForColor(
+  color: string,
+  selected: boolean,
+  name: string,
+  labelText?: string,
+): L.DivIcon {
   const size = selected ? 30 : 24
   const label = labelText
     ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;font-family:system-ui, sans-serif;color:#1f2937;white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
@@ -260,7 +265,8 @@ export function LabelVisibility({
     })
     const next = computeLabelPlacement(candidates, viewCenter, zoomFloorMet)
     const prev = lastReportedRef.current
-    const changed = prev === null || next.size !== prev.size || [...next].some((id) => !prev.has(id))
+    const changed =
+      prev === null || next.size !== prev.size || [...next].some((id) => !prev.has(id))
     if (changed) {
       lastReportedRef.current = next
       onChange?.(next)
@@ -413,7 +419,13 @@ export function MapView({
 
   return (
     <div className="relative h-full w-full">
-      <MapContainer ref={setMap} center={center} zoom={12} zoomControl={false} className="h-full w-full">
+      <MapContainer
+        ref={setMap}
+        center={center}
+        zoom={12}
+        zoomControl={false}
+        className="h-full w-full"
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -421,7 +433,11 @@ export function MapView({
           // responses — opaque responses are padded to ~7 MB each and would blow the cache bound.
           crossOrigin="anonymous"
         />
-        <Recenter markers={markers} fallbackCenter={fallbackCenter} currentPosition={currentPosition} />
+        <Recenter
+          markers={markers}
+          fallbackCenter={fallbackCenter}
+          currentPosition={currentPosition}
+        />
         <CenterReporter onChange={onCenterChange} />
         <LabelVisibility
           markers={markers}
@@ -512,11 +528,15 @@ export function MapView({
               }
             >
               <Tooltip direction="top" className="marker-tooltip" opacity={1}>
-                <span className="block font-display font-semibold text-gray-900">{m.name}</span>
+                <span className="font-display block font-semibold text-gray-900">{m.name}</span>
                 <span className="mt-0.5 block text-xs text-gray-600">
                   {metaParts.map((part, i) => (
                     <span key={i} className="inline-flex items-center gap-1 align-middle">
-                      {i > 0 && <span aria-hidden="true" className="mx-1">·</span>}
+                      {i > 0 && (
+                        <span aria-hidden="true" className="mx-1">
+                          ·
+                        </span>
+                      )}
                       {part}
                     </span>
                   ))}
@@ -550,7 +570,7 @@ export function MapView({
             own container and trigger its native doubleClickZoom/scrollWheelZoom handling. */}
         <div
           ref={controlStackRef}
-          className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-2 md:right-[var(--filter-overlay-gap)] md:top-[calc(var(--filter-overlay-height,0px)+2rem)]"
+          className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(var(--filter-overlay-height,0px)+2rem)] md:right-[var(--filter-overlay-gap)]"
         >
           <button
             type="button"
