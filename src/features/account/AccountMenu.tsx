@@ -164,7 +164,7 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t('shell.accountMenuAria')}
-        className="focus-visible:outline-brand relative rounded-full transition hover:ring-2 hover:ring-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="relative rounded-full transition hover:ring-2 hover:ring-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
       >
         {showImage ? (
           <img
@@ -174,7 +174,7 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             className="h-9 w-9 rounded-full object-cover ring-1 ring-black/5"
           />
         ) : (
-          <span className="bg-brand-soft text-brand-strong grid h-9 w-9 place-items-center rounded-full text-sm font-semibold ring-1 ring-black/5">
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-soft text-sm font-semibold text-brand-strong ring-1 ring-black/5">
             {initial}
           </span>
         )}

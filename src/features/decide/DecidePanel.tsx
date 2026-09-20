@@ -89,7 +89,7 @@ export function DecidePanel({
             {candidates.map(({ restaurant, distanceM }) => (
               <li
                 key={restaurant.id}
-                className={pickedId === restaurant.id ? 'bg-brand-soft rounded-md' : ''}
+                className={pickedId === restaurant.id ? 'rounded-md bg-brand-soft' : ''}
               >
                 <div className="flex items-center justify-between gap-2 px-1 py-2">
                   <button
@@ -108,7 +108,7 @@ export function DecidePanel({
                       href={restaurant.mapsUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-brand shrink-0 text-xs font-medium underline"
+                      className="shrink-0 text-xs font-medium text-brand underline"
                     >
                       {t('decide.directions')}
                     </a>

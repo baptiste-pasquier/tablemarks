@@ -200,7 +200,7 @@ export function RestaurantDetail({
                 href={googleMapsHref}
                 target="_blank"
                 rel="noreferrer"
-                className="bg-brand hover:bg-brand-strong flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
               >
                 <MapPin size={14} aria-hidden="true" />
                 {t('visitDetail.googleMaps')}
@@ -211,7 +211,7 @@ export function RestaurantDetail({
                 href={goToHref}
                 target="_blank"
                 rel="noreferrer"
-                className="bg-brand hover:bg-brand-strong flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
               >
                 <Navigation size={14} aria-hidden="true" />
                 {t('visitDetail.goTo')}
@@ -280,7 +280,7 @@ export function RestaurantDetail({
                 )}
                 <span
                   aria-hidden="true"
-                  className="bg-brand relative z-10 mt-0.5 h-2 w-2 shrink-0 rounded-full"
+                  className="relative z-10 mt-0.5 h-2 w-2 shrink-0 rounded-full bg-brand"
                 />
                 <div className="flex-1 text-sm">
                   <div className="flex items-center justify-between">

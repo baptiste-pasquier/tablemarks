@@ -528,7 +528,7 @@ export function MapView({
               }
             >
               <Tooltip direction="top" className="marker-tooltip" opacity={1}>
-                <span className="font-display block font-semibold text-gray-900">{m.name}</span>
+                <span className="block font-display font-semibold text-gray-900">{m.name}</span>
                 <span className="mt-0.5 block text-xs text-gray-600">
                   {metaParts.map((part, i) => (
                     <span key={i} className="inline-flex items-center gap-1 align-middle">

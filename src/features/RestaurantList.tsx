@@ -62,7 +62,7 @@ export function RestaurantList({
               }}
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="font-display min-w-0 truncate text-base font-semibold text-gray-900">
+                <span className="min-w-0 truncate font-display text-base font-semibold text-gray-900">
                   {r.name}
                 </span>
                 <Badge

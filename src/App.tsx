@@ -93,7 +93,7 @@ function FiltersPill({ count, onOpen }: { count: number; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="bg-brand hover:bg-brand-strong active:bg-brand-strong fixed bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-xl ring-1 ring-black/10 transition active:shadow-md md:hidden"
+      className="fixed bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-xl ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
     >
       {t('filters.mobilePillLabel', { count })}
     </button>
@@ -356,12 +356,12 @@ export default function App() {
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="bg-brand ring-brand-strong/20 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg shadow-sm ring-1"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand text-lg shadow-sm ring-1 ring-brand-strong/20"
           >
             🍴
           </span>
           <div className="min-w-0 leading-none">
-            <h1 className="font-display truncate text-2xl font-semibold tracking-tight text-gray-900">
+            <h1 className="truncate font-display text-2xl font-semibold tracking-tight text-gray-900">
               {t('app.title')}
             </h1>
             <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">{t('shell.tagline')}</p>
@@ -424,7 +424,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setDeciding(true)}
-              className="border-brand/30 text-brand hover:bg-brand-soft active:bg-brand-soft w-full rounded-xl border px-3 py-2.5 text-sm font-semibold transition"
+              className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand transition hover:bg-brand-soft active:bg-brand-soft"
             >
               {t('shell.whereToEat')}
             </button>
@@ -515,7 +515,7 @@ export default function App() {
               type="button"
               onClick={() => setAdding(true)}
               aria-label={t('shell.addPlaceAria')}
-              className="bg-brand hover:bg-brand-strong active:bg-brand-strong absolute right-5 bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] z-[1000] grid h-14 w-14 place-items-center rounded-full text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition active:shadow-md md:hidden"
+              className="absolute right-5 bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
               +
             </button>

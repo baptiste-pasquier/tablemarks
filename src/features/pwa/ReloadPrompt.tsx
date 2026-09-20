@@ -52,7 +52,7 @@ export function ReloadPrompt() {
           <button
             type="button"
             onClick={reload}
-            className="bg-brand hover:bg-brand-strong active:bg-brand-strong rounded-full px-3 py-1 font-semibold text-white shadow-sm transition"
+            className="rounded-full bg-brand px-3 py-1 font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong"
           >
             {t('pwa.reload')}
           </button>

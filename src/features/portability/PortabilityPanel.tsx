@@ -166,7 +166,7 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
       {error && <p className="mt-3 text-sm text-red-600">{resolvePanelError(t, error)}</p>}
 
       {pending && (
-        <div className="bg-brand-soft mt-3 rounded-md p-3 text-sm">
+        <div className="mt-3 rounded-md bg-brand-soft p-3 text-sm">
           <p>
             {t('portability.confirm.question', {
               places: t('portability.confirm.place', { count: pending.restaurants.length }),
