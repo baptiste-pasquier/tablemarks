@@ -15,7 +15,7 @@ The demo runs with no backend, so there is no sign-in and no sync — and short 
 
 ## Prerequisites
 
-- Node.js ≥ 20.19
+- Node.js 24 (the version in `.nvmrc` — `nvm use` picks it up)
 - npm
 - (Optional) A [PocketBase](https://pocketbase.io) binary for Google sign-in and cross-device sync
 
