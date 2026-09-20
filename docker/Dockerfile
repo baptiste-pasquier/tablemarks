@@ -12,9 +12,11 @@
 # ---------------------------------------------------------------------------
 # Build stage
 #
-# The major is named explicitly: package.json declares no `engines` field and the repo has no
-# .nvmrc, so there is no floor to align with and CI and this image would otherwise be free to
-# land on different majors.
+# The major is an ARG rather than a literal in the FROM line. `.nvmrc` is what pins it for local
+# development and for both workflows, but a Dockerfile cannot read that file — so the one copy
+# this repository cannot avoid lives where its other pinned version already does, next to
+# Dockerfile.pocketbase's POCKETBASE_VERSION. Bumping the major means editing `.nvmrc`,
+# `package.json`'s `engines` and the default below together.
 #
 # Pinned to the *build* platform, not the target. The multi-arch publish builds this Dockerfile
 # once per target architecture, and without this the whole Node build -- `npm ci` plus the
@@ -25,7 +27,9 @@
 # This requires BuildKit, which predefines BUILDPLATFORM. The legacy builder does not, and
 # fails here with an empty-platform error -- install the buildx component to build locally.
 # ---------------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+ARG NODE_VERSION=24
+
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-alpine AS build
 
 WORKDIR /app
 

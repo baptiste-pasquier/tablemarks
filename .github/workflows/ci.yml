@@ -27,13 +27,13 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Pinned to 22 deliberately: the repository declares no `engines` and carries no `.nvmrc`,
-      # so nothing else keeps CI aligned with the container image's Node 22 build stage, and a
-      # green run on another major would prove nothing about the image.
-      - name: Set up Node 22
+      # The major comes from `.nvmrc`, the repository's single source of truth for it: the same
+      # value `package.json`'s `engines` declares and `docker/Dockerfile` defaults NODE_VERSION
+      # to. A green run here is therefore a green run on the major the image is built with.
+      - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: npm
 
       # scripts/check_docs.py is standard library only, so any modern CPython will do.

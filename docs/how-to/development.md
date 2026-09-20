@@ -10,7 +10,11 @@ stale_after: 2027-05-01
 
 ## Prerequisites
 
-- Node.js ≥ 20.19 (Vite 7 requirement)
+- Node.js 24 — the major in [`.nvmrc`](../../.nvmrc). `nvm use` in the repository root picks it
+  up. It is the one value `package.json`'s `engines` declares, both workflows read through
+  `node-version-file`, and `docker/Dockerfile` defaults its `NODE_VERSION` to; nothing is built
+  or tested on another major. Vite 7 itself runs on ≥ 20.19, so an older major will usually
+  work — it is simply not what CI proves.
 - npm
 
 ## Setup
