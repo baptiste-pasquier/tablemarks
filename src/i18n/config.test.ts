@@ -66,7 +66,7 @@ describe('i18n config', () => {
     expect(i18n.resolvedLanguage).toBe('fr')
   })
 
-  it('does not let one simulated device\'s stored preference affect a second device\'s own empty storage (AE3)', async () => {
+  it("does not let one simulated device's stored preference affect a second device's own empty storage (AE3)", async () => {
     // Device 1: a manual choice was made and persisted.
     setBrowserLanguage('en-US', 'en')
     const device1 = await loadI18n()

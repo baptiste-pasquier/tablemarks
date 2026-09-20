@@ -51,11 +51,11 @@ Why, with the measurements: [`docs/journal/solutions/database-issues/pocketbase-
 
 The client model and the PocketBase schema differ in three places; the sync engine (U4) maps between them:
 
-| Local (IndexedDB) | Remote (PocketBase) | Why |
-|---|---|---|
-| `updated` | `syncedAt` | PocketBase reserves `updated` as a system autodate field it overwrites on save; the last-write-wins key must be a client-controlled field. |
-| `restaurantId` (on visits) | `restaurant` (relation) | PocketBase models the link as a relation field. |
-| — | `owner` | Set on push to the signed-in user; absent locally (no-account mode has no owner). |
+| Local (IndexedDB)          | Remote (PocketBase)     | Why                                                                                                                                        |
+| -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `updated`                  | `syncedAt`              | PocketBase reserves `updated` as a system autodate field it overwrites on save; the last-write-wins key must be a client-controlled field. |
+| `restaurantId` (on visits) | `restaurant` (relation) | PocketBase models the link as a relation field.                                                                                            |
+| —                          | `owner`                 | Set on push to the signed-in user; absent locally (no-account mode has no owner).                                                          |
 
 The client-generated `id` (15-char `[a-z0-9]`) is reused as the PocketBase record `id`, so the same record reconciles by id across devices.
 

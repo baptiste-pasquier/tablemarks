@@ -21,7 +21,13 @@ import {
   googleMapsDirectionsUrl,
 } from '../../lib/mapsLinks'
 
-function VerdictButtons({ onPick, disabled }: { onPick: (v: Verdict) => void; disabled?: boolean }) {
+function VerdictButtons({
+  onPick,
+  disabled,
+}: {
+  onPick: (v: Verdict) => void
+  disabled?: boolean
+}) {
   return (
     <div className="flex flex-wrap gap-2">
       {VERDICTS.map((v) => (
@@ -255,9 +261,13 @@ export function RestaurantDetail({
       <div className="mt-5">
         <h3 className="text-sm font-semibold text-gray-700">
           {t('visitDetail.visitsHeading')}{' '}
-          {visits.length > 0 && <span className="font-normal text-gray-400">({visits.length})</span>}
+          {visits.length > 0 && (
+            <span className="font-normal text-gray-400">({visits.length})</span>
+          )}
         </h3>
-        {visits.length === 0 && <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>}
+        {visits.length === 0 && (
+          <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>
+        )}
         {visits.length > 0 && (
           <ul className="mt-2">
             {visits.map((v, i) => (
@@ -293,7 +303,7 @@ export function RestaurantDetail({
           </ul>
         )}
         <details className="mt-2 rounded-lg border border-dashed border-gray-300 p-2 text-center">
-          <summary className="list-none cursor-pointer text-sm font-semibold text-gray-400">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-gray-400">
             {t('visitDetail.addPastVisit')}
           </summary>
           <div className="mt-2 space-y-2 text-left">

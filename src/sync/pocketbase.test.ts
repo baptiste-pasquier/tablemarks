@@ -5,7 +5,9 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('resolveShortLink', () => {
   it('returns coordinates from the resolver route', async () => {
-    const send = vi.spyOn(pb, 'send').mockResolvedValue({ lat: 48.8566, lng: 2.3522, name: 'Chez Marcel' })
+    const send = vi
+      .spyOn(pb, 'send')
+      .mockResolvedValue({ lat: 48.8566, lng: 2.3522, name: 'Chez Marcel' })
     const out = await resolveShortLink('https://maps.app.goo.gl/abc')
     expect(out).toEqual({ lat: 48.8566, lng: 2.3522, name: 'Chez Marcel' })
     expect(send).toHaveBeenCalledWith(
@@ -18,7 +20,9 @@ describe('resolveShortLink', () => {
   // status never becomes one the whole permanent-refusal path is dead and nothing else notices.
   it.each([422])('turns a %i into a refusal the caller must not retry', async (status) => {
     vi.spyOn(pb, 'send').mockRejectedValue(Object.assign(new Error('refused'), { status }))
-    await expect(resolveShortLink('https://maps.app.goo.gl/abc')).rejects.toBeInstanceOf(UnresolvableShortLink)
+    await expect(resolveShortLink('https://maps.app.goo.gl/abc')).rejects.toBeInstanceOf(
+      UnresolvableShortLink,
+    )
   })
 
   // PocketBase turns ANY exception thrown inside a hook handler into a generic 400 (stated in the

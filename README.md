@@ -3,7 +3,7 @@
 Save your favorite and to-try restaurants on a map. Tablemarks is **local-first**: it works fully in your browser with no account, and signing in with Google backs up and syncs your places across devices.
 
 - Paste a Google Maps link (or search by name) to add a place in seconds
-- Track visits with a simple returnability verdict — *Go back · Worth a detour · Once was enough · Never again*
+- Track visits with a simple returnability verdict — _Go back · Worth a detour · Once was enough · Never again_
 - Filter by cuisine and status, all on a map
 - Your data lives in your browser; the cloud is an optional mirror
 
@@ -32,18 +32,20 @@ This starts the app with **no backend**, the same as the demo. To enable Google 
 
 ## Usage
 
-- **Add a place:** click *+ Add a place*, paste a Google Maps link or type a name, and save.
-- **Log a visit:** open a place and tap *I'm here now*, then pick a verdict.
-- **Sign in (optional):** use *Sign in with Google* to back up and sync; signing out keeps your local data.
+- **Add a place:** click _+ Add a place_, paste a Google Maps link or type a name, and save.
+- **Log a visit:** open a place and tap _I'm here now_, then pick a verdict.
+- **Sign in (optional):** use _Sign in with Google_ to back up and sync; signing out keeps your local data.
 
 ## Scripts
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Start the dev server |
-| `npm test` | Run the test suite |
-| `npm run build` | Type-check and build for production |
-| `npm run lint` | Type-check only |
+| Command              | What it does                        |
+| -------------------- | ----------------------------------- |
+| `npm run dev`        | Start the dev server                |
+| `npm test`           | Run the test suite                  |
+| `npm run build`      | Type-check and build for production |
+| `npm run type-check` | Type-check only                     |
+| `npm run lint`       | Lint and auto-fix                   |
+| `npm run format`     | Format with Prettier                |
 
 ## Documentation
 

@@ -1,0 +1,11 @@
+# Build output and the lockfile: generated, never hand-edited.
+dist
+package-lock.json
+
+# PocketBase runtime data: a secret archive, and not ours to format.
+pocketbase/pb_data*
+
+# `docs/journal/` is append-only. Every entry is dated and settled, and reformatting one
+# rewrites a record that is read as it was written. The maintained folders under `docs/`
+# are living documents and are formatted.
+docs/journal/

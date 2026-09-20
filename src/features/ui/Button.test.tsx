@@ -6,7 +6,11 @@ import { Button } from './Button'
 describe('Button', () => {
   it('renders its children and forwards onClick', async () => {
     const onClick = vi.fn()
-    render(<Button variant="primary" onClick={onClick}>Go</Button>)
+    render(
+      <Button variant="primary" onClick={onClick}>
+        Go
+      </Button>,
+    )
     const user = userEvent.setup()
 
     const button = screen.getByRole('button', { name: 'Go' })
@@ -21,7 +25,10 @@ describe('Button', () => {
 
   it('applies the pill/border class for the secondary variant', () => {
     render(<Button variant="secondary">Go</Button>)
-    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('rounded-full', 'border-gray-300')
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(
+      'rounded-full',
+      'border-gray-300',
+    )
   })
 
   it('defaults the secondary variant to text-sm', () => {
@@ -53,12 +60,18 @@ describe('Button', () => {
 
   it('carries the canonical hover/active states on the primary variant regardless of call site', () => {
     render(<Button variant="primary">Go</Button>)
-    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('hover:bg-brand-strong', 'active:bg-brand-strong')
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(
+      'hover:bg-brand-strong',
+      'active:bg-brand-strong',
+    )
   })
 
   it('carries the canonical hover/active states on the secondary variant regardless of call site', () => {
     render(<Button variant="secondary">Go</Button>)
-    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('hover:bg-gray-100', 'active:bg-gray-200')
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(
+      'hover:bg-gray-100',
+      'active:bg-gray-200',
+    )
   })
 
   it('carries the canonical hover/active states on the icon-only secondary sizing too', () => {
@@ -67,7 +80,10 @@ describe('Button', () => {
         ✕
       </Button>,
     )
-    expect(screen.getByRole('button', { name: 'icon' })).toHaveClass('hover:bg-gray-100', 'active:bg-gray-200')
+    expect(screen.getByRole('button', { name: 'icon' })).toHaveClass(
+      'hover:bg-gray-100',
+      'active:bg-gray-200',
+    )
   })
 
   it('merges a caller-supplied className alongside the variant base classes', () => {

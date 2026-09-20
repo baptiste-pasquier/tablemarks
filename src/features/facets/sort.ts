@@ -29,7 +29,11 @@ function dateKey(r: Pick<Restaurant, 'added' | 'latestVisitDate' | 'visitCount'>
  * original relative order (KTD6) via `Array.prototype.sort`'s spec-guaranteed stability
  * (ES2019+). Never mutates `items`.
  */
-function stableSortByKey<T>(items: readonly T[], key: (item: T) => number, ascending: boolean): T[] {
+function stableSortByKey<T>(
+  items: readonly T[],
+  key: (item: T) => number,
+  ascending: boolean,
+): T[] {
   return items
     .map((item) => ({ item, key: key(item) }))
     .sort((a, b) => (ascending ? a.key - b.key : b.key - a.key))

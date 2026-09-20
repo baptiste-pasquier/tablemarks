@@ -24,7 +24,11 @@ describe('visit repository', () => {
   it('lists a restaurant visits most-recent-first and excludes deleted', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2025-01-01', verdict: 'go_back' })
-    const mid = await createVisit({ restaurantId: r.id, date: '2025-06-01', verdict: 'worth_a_detour' })
+    const mid = await createVisit({
+      restaurantId: r.id,
+      date: '2025-06-01',
+      verdict: 'worth_a_detour',
+    })
     await createVisit({ restaurantId: r.id, date: '2026-01-01', verdict: 'never_again' })
     await removeVisit(mid.id)
     const dates = (await visitsForRestaurant(r.id)).map((v) => v.date)

@@ -10,7 +10,12 @@ import { FilterBar } from './features/facets/FilterBar'
 import { activeFilterCount, emptyFilter, matches } from './features/facets/filter'
 import { SortBar } from './features/facets/SortBar'
 import { sortRestaurants } from './features/facets/sort'
-import { readSortPreference, writeSortPreference, type SortPreference, type SortCriterion } from './lib/sortPreference'
+import {
+  readSortPreference,
+  writeSortPreference,
+  type SortPreference,
+  type SortCriterion,
+} from './lib/sortPreference'
 import { AddPlace } from './features/capture/AddPlace'
 import { RestaurantDetail } from './features/visits/RestaurantDetail'
 import { DecidePanel } from './features/decide/DecidePanel'
@@ -216,7 +221,10 @@ export default function App() {
   )
   // App re-renders on every map pan/zoom (anchor state); memoize so the list and markers
   // aren't recomputed against every restaurant on each move.
-  const visible = useMemo(() => restaurants.filter((r) => matches(r, filter)), [restaurants, filter])
+  const visible = useMemo(
+    () => restaurants.filter((r) => matches(r, filter)),
+    [restaurants, filter],
+  )
   // Drives the mobile "Filtres · N" pill badge (U4, KTD5) — reuses U2's activeFilterCount rather
   // than re-deriving the count from `filter` here.
   const activeCount = activeFilterCount(filter)
@@ -224,9 +232,13 @@ export default function App() {
   // criterion falls back to Date regardless of what's persisted — this is what AE1 and AE6 render
   // as "active" and what R11's sort step actually uses.
   const distanceSelectable = currentPosition !== null
-  const effectiveSortCriterion: SortCriterion = distanceSelectable ? sortPreference.criterion : 'date'
+  const effectiveSortCriterion: SortCriterion = distanceSelectable
+    ? sortPreference.criterion
+    : 'date'
   const effectiveSortDirection =
-    effectiveSortCriterion === 'distance' ? sortPreference.directions.distance : sortPreference.directions.date
+    effectiveSortCriterion === 'distance'
+      ? sortPreference.directions.distance
+      : sortPreference.directions.date
   // Only the Distance path reads `position` (KTD7's date-rule branch ignores it entirely), so
   // don't re-run the sort every time it changes while Date is active.
   const positionForSort = effectiveSortCriterion === 'distance' ? currentPosition : null
@@ -259,7 +271,10 @@ export default function App() {
   }
 
   function handleSortDirectionToggle() {
-    const next = { ...sortPreference, directions: toggledDirections(effectiveSortCriterion, sortPreference.directions) }
+    const next = {
+      ...sortPreference,
+      directions: toggledDirections(effectiveSortCriterion, sortPreference.directions),
+    }
     writeSortPreference(next)
     setSortPreference(next)
   }
@@ -430,11 +445,17 @@ export default function App() {
           <div
             ref={filterOverlayRef}
             className={cn(
-              'hidden md:block md:fixed md:z-[900] md:top-[var(--filter-overlay-top)] md:left-[var(--filter-overlay-left)] md:right-[var(--filter-overlay-right)] md:max-h-[50vh] md:overflow-y-auto',
-              restaurants.length > 0 && 'md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg',
+              'hidden md:fixed md:top-[var(--filter-overlay-top)] md:right-[var(--filter-overlay-right)] md:left-[var(--filter-overlay-left)] md:z-[900] md:block md:max-h-[50vh] md:overflow-y-auto',
+              restaurants.length > 0 &&
+                'md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg',
             )}
           >
-            <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="inline" />
+            <FilterBar
+              restaurants={restaurants}
+              filter={filter}
+              onChange={setFilter}
+              layout="inline"
+            />
           </div>
           <div className="hidden md:block">
             <SortBar
@@ -473,7 +494,9 @@ export default function App() {
             box MapView fills, leaving a plain gap between the map and the bottom nav. The map has
             no scrollable content to move the padding into — it just fills <main> fully, and the
             "+" FAB/nav bar float above it via their own fixed/absolute positioning regardless. */}
-        <main className={cn('relative min-h-0 flex-1', view === 'map' ? 'block' : 'hidden', 'md:block')}>
+        <main
+          className={cn('relative min-h-0 flex-1', view === 'map' ? 'block' : 'hidden', 'md:block')}
+        >
           <MapView
             markers={markers}
             onSelect={setSelectedId}
@@ -492,7 +515,7 @@ export default function App() {
               type="button"
               onClick={() => setAdding(true)}
               aria-label={t('shell.addPlaceAria')}
-              className="absolute bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] right-5 z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+              className="absolute right-5 bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
               +
             </button>
@@ -524,8 +547,9 @@ export default function App() {
             type="button"
             onClick={() => setView(v)}
             aria-pressed={view === v}
-            className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition ${view === v ? 'bg-brand text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
-              }`}
+            className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition ${
+              view === v ? 'bg-brand text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+            }`}
           >
             {t(`shell.view.${v}`)}
           </button>
@@ -581,7 +605,12 @@ export default function App() {
           initialFocus="panel"
         >
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <FilterBar restaurants={restaurants} filter={filter} onChange={setFilter} layout="stacked" />
+            <FilterBar
+              restaurants={restaurants}
+              filter={filter}
+              onChange={setFilter}
+              layout="stacked"
+            />
             <SortBar
               criterion={effectiveSortCriterion}
               direction={effectiveSortDirection}
@@ -591,7 +620,11 @@ export default function App() {
               divider={false}
             />
           </div>
-          <Button variant="primary" className="mt-2 w-full shrink-0" onClick={() => setFiltersOpen(false)}>
+          <Button
+            variant="primary"
+            className="mt-2 w-full shrink-0"
+            onClick={() => setFiltersOpen(false)}
+          >
             {t('filters.seeResults')}
           </Button>
         </Modal>

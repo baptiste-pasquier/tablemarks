@@ -12,8 +12,16 @@ describe('syncStatusPresentation (U2)', () => {
       [{ state: 'synced', pendingCount: 0 }, /all synced/i, /backed up/i],
       [{ state: 'pending', pendingCount: 3 }, /3 pending/i, /3/],
       [{ state: 'offline', pendingCount: 0 }, /^offline$/i, /offline/i],
-      [{ state: 'problem', pendingCount: 0, cause: 'sign-in-needed' }, /sign in again/i, /sign in again/i],
-      [{ state: 'problem', pendingCount: 0, cause: 'server-unreachable' }, /can't reach the server/i, /can't reach/i],
+      [
+        { state: 'problem', pendingCount: 0, cause: 'sign-in-needed' },
+        /sign in again/i,
+        /sign in again/i,
+      ],
+      [
+        { state: 'problem', pendingCount: 0, cause: 'server-unreachable' },
+        /can't reach the server/i,
+        /can't reach/i,
+      ],
     ]
     for (const [status, labelPattern, detailPattern] of cases) {
       expect(label(status, t)).toMatch(labelPattern)

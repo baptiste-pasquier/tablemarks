@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  restaurantToRemote,
-  restaurantFromRemote,
-  visitToRemote,
-  visitFromRemote,
-} from './mappers'
+import { restaurantToRemote, restaurantFromRemote, visitToRemote, visitFromRemote } from './mappers'
 import type { Restaurant, Visit } from '../types/models'
 
 const restaurant: Restaurant = {
@@ -67,7 +62,10 @@ describe('mappers', () => {
   })
 
   it('normalizes a PocketBase space-separated syncedAt to the canonical T-separated shape', () => {
-    const remote = { ...restaurantToRemote(restaurant, 'user1'), syncedAt: '2026-02-01 10:00:00.000Z' }
+    const remote = {
+      ...restaurantToRemote(restaurant, 'user1'),
+      syncedAt: '2026-02-01 10:00:00.000Z',
+    }
     const back = restaurantFromRemote(remote)
     expect(back.updated).toBe('2026-02-01T10:00:00.000Z')
   })

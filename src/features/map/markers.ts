@@ -67,7 +67,8 @@ export function pickMostRecentRestaurantCenter(restaurants: Restaurant[]): GeoPo
     // field retype — treat it the same as `undefined` rather than a real (and always-losing) key.
     const addedKey = r.added || undefined
     const visitKey = r.latestVisitDate ? localDayToInstantRange(r.latestVisitDate).end : undefined
-    const key = addedKey && visitKey ? (addedKey > visitKey ? addedKey : visitKey) : (addedKey ?? visitKey)
+    const key =
+      addedKey && visitKey ? (addedKey > visitKey ? addedKey : visitKey) : (addedKey ?? visitKey)
     if (key === undefined) continue
     if (bestPoint === null || key > bestKey || (key === bestKey && r.updated > bestUpdated)) {
       bestPoint = { lat: r.lat, lng: r.lng }

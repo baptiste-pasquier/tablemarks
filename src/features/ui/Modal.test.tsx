@@ -38,7 +38,7 @@ describe('Modal', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the user\'s current focus across a re-render that passes a new onClose reference', () => {
+  it("keeps the user's current focus across a re-render that passes a new onClose reference", () => {
     // Every real caller passes an inline arrow (a fresh function each render), matching App.tsx's
     // `onClose={() => setAdding(false)}`. The mount effect must not key off it, or an unrelated
     // parent re-render (map pan, background sync) would tear it down and steal focus back in.

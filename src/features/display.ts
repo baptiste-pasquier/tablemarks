@@ -10,7 +10,9 @@ export type BadgeState =
   | { kind: 'to_try' }
   | { kind: 'visited'; verdict: Verdict | null }
 
-export function badgeState(r: Pick<Restaurant, 'pending' | 'visitCount' | 'latestVerdict'>): BadgeState {
+export function badgeState(
+  r: Pick<Restaurant, 'pending' | 'visitCount' | 'latestVerdict'>,
+): BadgeState {
   if (r.pending) return { kind: 'pending' }
   if (r.visitCount === 0) return { kind: 'to_try' }
   return { kind: 'visited', verdict: r.latestVerdict }

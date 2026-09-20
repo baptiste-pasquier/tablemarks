@@ -39,10 +39,12 @@ describe('RestaurantList', () => {
     expect(screen.getByText('Resolving…')).toBeInTheDocument()
   })
 
-  it('renders each verdict\'s own assigned icon as a separate aria-hidden node from the label text', () => {
+  it("renders each verdict's own assigned icon as a separate aria-hidden node from the label text", () => {
     render(
       <RestaurantList
-        items={VERDICTS.map((v, i) => r({ id: `v${i}`, name: `Place ${i}`, visitCount: 1, latestVerdict: v }))}
+        items={VERDICTS.map((v, i) =>
+          r({ id: `v${i}`, name: `Place ${i}`, visitCount: 1, latestVerdict: v }),
+        )}
       />,
     )
 
@@ -58,7 +60,15 @@ describe('RestaurantList', () => {
   it('shows a cuisine-tinted card with a top-right cuisine badge, and the verdict chip plus visit count in the card body, not beside the name', () => {
     render(
       <RestaurantList
-        items={[r({ id: 'a', name: 'Baan Thaï', cuisine: 'Thai', visitCount: 3, latestVerdict: 'go_back' })]}
+        items={[
+          r({
+            id: 'a',
+            name: 'Baan Thaï',
+            cuisine: 'Thai',
+            visitCount: 3,
+            latestVerdict: 'go_back',
+          }),
+        ]}
       />,
     )
 
@@ -86,7 +96,9 @@ describe('RestaurantList', () => {
   it('shows a pending/provisional restaurant with no visit count, regardless of its stored visit count', () => {
     render(
       <RestaurantList
-        items={[r({ id: 'a', name: 'Pending place', pending: true, lat: null, lng: null, visitCount: 5 })]}
+        items={[
+          r({ id: 'a', name: 'Pending place', pending: true, lat: null, lng: null, visitCount: 5 }),
+        ]}
       />,
     )
     expect(screen.getByText('Resolving…')).toBeInTheDocument()
@@ -119,7 +131,9 @@ describe('RestaurantList', () => {
   })
 
   it('shows "Uncategorized" (not a blank label) for a whitespace-only cuisine', () => {
-    render(<RestaurantList items={[r({ id: 'a', name: 'Whitespace cuisine place', cuisine: '   ' })]} />)
+    render(
+      <RestaurantList items={[r({ id: 'a', name: 'Whitespace cuisine place', cuisine: '   ' })]} />,
+    )
     expect(screen.getByText('Uncategorized')).toBeInTheDocument()
   })
 
@@ -167,9 +181,9 @@ describe('RestaurantList', () => {
     const namesWithout = screen.getAllByRole('button').map((btn) => btn.textContent)
 
     rerender(<RestaurantList items={items} currentPosition={{ lat: 48.8566, lng: 2.3522 }} />)
-    const namesWith = screen.getAllByRole('button').map((btn) =>
-      btn.textContent?.replace(/\d+(\.\d+)? (m|km)$/, ''),
-    )
+    const namesWith = screen
+      .getAllByRole('button')
+      .map((btn) => btn.textContent?.replace(/\d+(\.\d+)? (m|km)$/, ''))
 
     expect(namesWithout.map((t) => t?.replace(/\d+(\.\d+)? (m|km)$/, ''))).toEqual(namesWith)
   })
@@ -209,7 +223,13 @@ describe('RestaurantList', () => {
   it('calls both onSelect and onHover(null) when a card is clicked', () => {
     const onSelect = vi.fn()
     const onHover = vi.fn()
-    render(<RestaurantList items={[r({ id: 'a', name: 'Place A' })]} onSelect={onSelect} onHover={onHover} />)
+    render(
+      <RestaurantList
+        items={[r({ id: 'a', name: 'Place A' })]}
+        onSelect={onSelect}
+        onHover={onHover}
+      />,
+    )
 
     fireEvent.click(screen.getByRole('button', { name: /Place A/ }))
 

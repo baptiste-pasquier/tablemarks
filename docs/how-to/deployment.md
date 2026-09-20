@@ -10,10 +10,10 @@ stale_after: 2027-06-01
 
 One source tree, two targets.
 
-| Target | What runs | Backend |
-|---|---|---|
-| **Private stack** | Two containers on your own host — the app image and the PocketBase image — brought up with `docker/docker-compose.prod.yml` | PocketBase, over the URL you configure |
-| **Public demo** | The static build published to GitHub Pages at <https://baptiste-pasquier.github.io/tablemarks/> | None. `config.json` ships an empty URL, and the app runs local-only |
+| Target            | What runs                                                                                                                   | Backend                                                             |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Private stack** | Two containers on your own host — the app image and the PocketBase image — brought up with `docker/docker-compose.prod.yml` | PocketBase, over the URL you configure                              |
+| **Public demo**   | The static build published to GitHub Pages at <https://baptiste-pasquier.github.io/tablemarks/>                             | None. `config.json` ships an empty URL, and the app runs local-only |
 
 The app reads its backend location at runtime from a served `config.json`, so **one image serves
 any deployment** — see [ADR-0001](../journal/decisions/0001-read-the-backend-location-at-runtime.md).
@@ -39,7 +39,7 @@ out where they apply.
 
    **Configure Settings → Mail in that first session.**
    `pb_migrations/1789808500_superusers_enable_mfa_otp.js` turns MFA and OTP on for
-   `_superusers`, so every *later* login answers your password with an emailed code instead of a
+   `_superusers`, so every _later_ login answers your password with an emailed code instead of a
    session. The claim itself is exempt — the installer link authenticates directly — which makes
    this the one session that does not need working mail. When mail is broken, the way back in is a
    shell on the host (`--dir` because `exec` bypasses the image's `CMD`, and the default path is
@@ -84,13 +84,13 @@ out where they apply.
 8. **Close account creation.** Console → **Collections → users → API Rules → Create rule**, set to
    **superusers only** (the lock).
 
-   `pb_migrations/1788897820_users_close_anonymous_create.js` already closed *anonymous* creation,
-   but the rule it installs gates on the sign-in *mechanism*, not on identity: every Google account
+   `pb_migrations/1788897820_users_close_anonymous_create.js` already closed _anonymous_ creation,
+   but the rule it installs gates on the sign-in _mechanism_, not on identity: every Google account
    on the internet satisfies `@request.context = "oauth2"`. Without this step, opening the route in
    step 9 lets any stranger click **Sign in with Google** and get an account on your instance, with
    write access to their own records.
 
-   Locking the rule does not affect *your* sign-in: signing in to an account that already exists is
+   Locking the rule does not affect _your_ sign-in: signing in to an account that already exists is
    an authentication, not a create. It blocks only new accounts — so if you ever need to add one,
    unlock the rule, sign in with that account, and lock it again.
 
@@ -104,11 +104,11 @@ out where they apply.
 Every setting in steps 2 to 5, and the locked create rule from step 8, is stored in the `pb_data`
 volume — not in the image and not in an environment variable. Three consequences follow.
 
-| Consequence | What it means |
-|---|---|
-| The volume holds secrets | The OAuth **client secret** and PocketBase's **token signing keys** are in it, alongside restaurant data |
-| Destroying the volume destroys the hardening | Every one of these settings is gone, and the instance returns to an unclaimed installer screen |
-| A backup of the volume is a copy of those secrets | It is not a data-only archive, and must be handled as a secret rather than as a database dump |
+| Consequence                                       | What it means                                                                                            |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| The volume holds secrets                          | The OAuth **client secret** and PocketBase's **token signing keys** are in it, alongside restaurant data |
+| Destroying the volume destroys the hardening      | Every one of these settings is gone, and the instance returns to an unclaimed installer screen           |
+| A backup of the volume is a copy of those secrets | It is not a data-only archive, and must be handled as a secret rather than as a database dump            |
 
 ## Roll back a bad release
 
@@ -121,10 +121,10 @@ TABLEMARKS_IMAGE_TAG=<previous-commit-sha> docker compose -f docker/docker-compo
 The two containers do **not** roll back symmetrically, and the asymmetry decides what a rollback
 can fix.
 
-| Container | Rolls back cleanly? | Why |
-|---|---|---|
-| App | Yes | It is stateless. The older image serves the older assets and reads the same `config.json` |
-| PocketBase | **No** | Pulling an older image does not un-apply a migration already recorded in the volume |
+| Container  | Rolls back cleanly? | Why                                                                                       |
+| ---------- | ------------------- | ----------------------------------------------------------------------------------------- |
+| App        | Yes                 | It is stateless. The older image serves the older assets and reads the same `config.json` |
+| PocketBase | **No**              | Pulling an older image does not un-apply a migration already recorded in the volume       |
 
 A schema change is therefore not recoverable by rolling the tag back. **Schema recovery is
 restore-from-backup**, and nothing else.
@@ -150,7 +150,6 @@ restore-from-backup**, and nothing else.
 
 3. **Check the result in the console, with no SQL.** Open **Collections → restaurants** and
    **Collections → visits** and confirm two things:
-
    - the **record count** matches what it was before the upgrade;
    - **no record shows a blank timestamp where one was populated** — filter `syncedAt = ""` in the
      collection's filter box and expect zero rows.
@@ -189,9 +188,9 @@ beforehand is the only copy of the pre-merge state.
 Two settings cannot be set from a workflow file. Both fail visibly and both are fixed by changing
 the setting and re-running the workflow — never by editing a workflow.
 
-| Setting | Symptom if skipped | Fix |
-|---|---|---|
-| Pages source | The first Pages deploy fails | **Settings → Pages → Source → GitHub Actions**, then re-run the workflow |
+| Setting            | Symptom if skipped                                                                       | Fix                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Pages source       | The first Pages deploy fails                                                             | **Settings → Pages → Source → GitHub Actions**, then re-run the workflow                      |
 | Package visibility | The published images are private, so `docker compose pull` on the host cannot reach them | Make each package public from its page under the account's **Packages**, then re-run the pull |
 
 ## Monitoring
@@ -221,10 +220,10 @@ not a bad release you can roll back.
 The public demo has no backend of its own, and it reaches two third parties directly from the
 visitor's browser.
 
-| Host | What it receives | What breaks if it is blocked or down |
-|---|---|---|
-| `nominatim.openstreetmap.org` | The visitor's **search text**, and reverse-geocode lookups for coordinates | **Name search**, entirely |
-| `tile.openstreetmap.org` | The visitor's **map viewport** — which areas they are looking at | Map tiles; already-cached areas still render |
+| Host                          | What it receives                                                           | What breaks if it is blocked or down         |
+| ----------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- |
+| `nominatim.openstreetmap.org` | The visitor's **search text**, and reverse-geocode lookups for coordinates | **Name search**, entirely                    |
+| `tile.openstreetmap.org`      | The visitor's **map viewport** — which areas they are looking at           | Map tiles; already-cached areas still render |
 
 **Neither has a fallback provider.**
 
@@ -242,13 +241,13 @@ or paste the full Maps URL from the address bar.
 Set in `docker/.env` (copy `docker/.env.example`). Compose reads that file automatically, because
 the project directory is the directory of the first `-f` file.
 
-| Variable | Default | What it is |
-|---|---|---|
-| `TABLEMARKS_POCKETBASE_URL` | none in `docker-compose.prod.yml`; the deploy stops without it | The URL the **browser** uses to reach PocketBase |
-| `TABLEMARKS_IMAGE_TAG` | `latest` | The single tag **both** images are addressed by; set a commit SHA to pin or roll back |
-| `TABLEMARKS_IMAGE_REPOSITORY` | `ghcr.io/baptiste-pasquier` | The registry namespace both images are pulled from |
-| `TABLEMARKS_APP_PORT` | `8080` | Host-side port for the app container (container port 80) |
-| `TABLEMARKS_POCKETBASE_PORT` | `8090` | Host-side port for the PocketBase container (container port 8090) |
+| Variable                      | Default                                                        | What it is                                                                            |
+| ----------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `TABLEMARKS_POCKETBASE_URL`   | none in `docker-compose.prod.yml`; the deploy stops without it | The URL the **browser** uses to reach PocketBase                                      |
+| `TABLEMARKS_IMAGE_TAG`        | `latest`                                                       | The single tag **both** images are addressed by; set a commit SHA to pin or roll back |
+| `TABLEMARKS_IMAGE_REPOSITORY` | `ghcr.io/baptiste-pasquier`                                    | The registry namespace both images are pulled from                                    |
+| `TABLEMARKS_APP_PORT`         | `8080`                                                         | Host-side port for the app container (container port 80)                              |
+| `TABLEMARKS_POCKETBASE_PORT`  | `8090`                                                         | Host-side port for the PocketBase container (container port 8090)                     |
 
 `TABLEMARKS_APP_PORT` and `TABLEMARKS_POCKETBASE_PORT` are read only by the two Compose files;
 `docker/.env.example` does not list them. **Changing the PocketBase port means changing
@@ -271,7 +270,7 @@ container's.
 
 ### `TABLEMARKS_IMAGE_TAG` in detail
 
-Both images are published under the same commit SHA *and* under `latest`, and both Compose services
+Both images are published under the same commit SHA _and_ under `latest`, and both Compose services
 read this one variable, so **the app and PocketBase cannot be rolled forward separately**. A new app
 talking to an old PocketBase is a bug nobody can reproduce, and a single shared tag is what makes
 that state unreachable.
@@ -293,7 +292,7 @@ no build in it. Pin a SHA when that is not a risk you want at all.
 ## The PocketBase image depends on `curl` at runtime
 
 `curl` is a **load-bearing dependency** of the PocketBase image, not a convenience. The
-short-link resolver hook shells out to it because it needs an HTTP client that does *not* follow
+short-link resolver hook shells out to it because it needs an HTTP client that does _not_ follow
 redirects, and PocketBase's own `$http.send` always does.
 
 Removing `curl` from the image makes the resolver **fail closed**: the route returns `502`, and

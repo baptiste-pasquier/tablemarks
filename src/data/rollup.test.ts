@@ -22,7 +22,11 @@ describe('rollupOf (pure)', () => {
       visit('2026-02-11', 'once_was_enough'),
       visit('2025-11-03', 'worth_a_detour'),
     ])
-    expect(r).toEqual({ latestVerdict: 'once_was_enough', latestVisitDate: '2026-02-11', visitCount: 3 })
+    expect(r).toEqual({
+      latestVerdict: 'once_was_enough',
+      latestVisitDate: '2026-02-11',
+      visitCount: 3,
+    })
   })
 
   it('ignores deleted visits', () => {

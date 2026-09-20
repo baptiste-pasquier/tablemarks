@@ -3,8 +3,13 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Settings, LogOut } from 'lucide-react'
 import { useSyncStatus } from '../../sync/useSyncStatus'
-import { label as syncLabel, detail as syncDetail, pillToneClassName, badgeColorClassName } from '../sync/syncStatusPresentation'
-import { trapTabFocus } from '../ui/Modal'
+import {
+  label as syncLabel,
+  detail as syncDetail,
+  pillToneClassName,
+  badgeColorClassName,
+} from '../sync/syncStatusPresentation'
+import { trapTabFocus } from '../ui/focusTrap'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Eyebrow } from '../ui/Eyebrow'
@@ -205,21 +210,11 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             </div>
             <p className="mt-2 px-2 text-xs text-gray-500">{syncDetail(status, t)}</p>
             <div className="my-2 border-t border-gray-100" />
-            <Button
-              variant="menu-item"
-              tone="neutral"
-              role="menuitem"
-              onClick={handleOpenSettings}
-            >
+            <Button variant="menu-item" tone="neutral" role="menuitem" onClick={handleOpenSettings}>
               <Settings className="h-4 w-4 text-gray-500" aria-hidden="true" />
               {t('settings.title')}
             </Button>
-            <Button
-              variant="menu-item"
-              tone="destructive"
-              role="menuitem"
-              onClick={handleSignOut}
-            >
+            <Button variant="menu-item" tone="destructive" role="menuitem" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" aria-hidden="true" />
               {t('shell.signOut')}
             </Button>

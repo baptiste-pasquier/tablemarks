@@ -30,7 +30,12 @@ afterEach(() => {
 describe('useAuth avatarUrl (U1)', () => {
   it('builds a URL via pb.files.getURL when the signed-in user has an avatar set', () => {
     mockAuth.isSignedIn = true
-    mockAuth.user = { id: 'user1', collectionId: 'users', collectionName: 'users', avatar: 'photo.jpg' }
+    mockAuth.user = {
+      id: 'user1',
+      collectionId: 'users',
+      collectionName: 'users',
+      avatar: 'photo.jpg',
+    }
 
     const { result } = renderHook(() => useAuth())
 

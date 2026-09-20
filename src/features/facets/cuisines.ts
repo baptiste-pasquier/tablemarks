@@ -69,7 +69,10 @@ function normalize(cuisine: string | null | undefined): string | null {
 export function colorForCuisine(cuisine: string | null | undefined): string {
   const key = normalize(cuisine)
   if (!key) return UNCATEGORIZED_COLOR
-  return CURATED_BY_KEY.get(key.toLowerCase()) ?? CUSTOM_PALETTE[hashString(key.toLowerCase()) % CUSTOM_PALETTE.length]
+  return (
+    CURATED_BY_KEY.get(key.toLowerCase()) ??
+    CUSTOM_PALETTE[hashString(key.toLowerCase()) % CUSTOM_PALETTE.length]
+  )
 }
 
 /** The one cuisine-to-emoji source, mirroring `colorForCuisine`'s normalize-then-lookup shape. */
@@ -80,7 +83,10 @@ export function emojiForCuisine(cuisine: string | null | undefined): string {
 }
 
 /** The one cuisine-to-display-name source: its own trimmed name, or the given uncategorized label. */
-export function cuisineDisplayName(cuisine: string | null | undefined, uncategorizedLabel: string): string {
+export function cuisineDisplayName(
+  cuisine: string | null | undefined,
+  uncategorizedLabel: string,
+): string {
   return cuisine?.trim() || uncategorizedLabel
 }
 

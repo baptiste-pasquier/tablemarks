@@ -1,8 +1,8 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-sans: 'Work Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
 
   --color-brand: #d4561f;
   --color-brand-soft: #fbe7da;
@@ -21,9 +21,7 @@
   --spacing-toggle-bar: 3.75rem;
 
   /* Clearance for floating elements above the toggle bar / safe area (R8). */
-  --safe-area-floating-offset: calc(
-    var(--spacing-toggle-bar) + env(safe-area-inset-bottom)
-  );
+  --safe-area-floating-offset: calc(var(--spacing-toggle-bar) + env(safe-area-inset-bottom));
 
   /* Desktop-only (>=768px) fixed offsets for the floating filter overlay pinned atop the map
      (KTD2). FilterBar stays authored inside <aside> (R7's tab-order requirement) but must render

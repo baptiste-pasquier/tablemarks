@@ -29,14 +29,16 @@ other feature works. To attach a local PocketBase, see
 
 ## Scripts
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Vite dev server with HMR |
-| `npm test` | Run the Vitest suite once |
-| `npm run test:watch` | Vitest in watch mode |
-| `npm run lint` | Type-check (`tsc --noEmit`) |
-| `npm run build` | Type-check, then build for production |
-| `npm run check:docs` | Documentation gate — the same one the pre-commit hook and CI run |
+| Command              | What it does                                                                                                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`        | Vite dev server with HMR                                                                                                                                                |
+| `npm test`           | Run the Vitest suite once                                                                                                                                               |
+| `npm run test:watch` | Vitest in watch mode                                                                                                                                                    |
+| `npm run type-check` | Type-check (`tsc --noEmit`)                                                                                                                                             |
+| `npm run lint`       | ESLint over the repository, fixing what it can (`eslint . --fix`)                                                                                                       |
+| `npm run format`     | Prettier over the repository (`prettier . --write`)                                                                                                                     |
+| `npm run build`      | Type-check, then build for production                                                                                                                                   |
+| `npm run check:docs` | Documentation gate — the same one the pre-commit hook and CI run                                                                                                        |
 | `npm run check:demo` | Refuse a tree that would put a service worker or manifest on the Pages origin. Add a build directory (`sh scripts/check-demo-target.sh dist`) to check the artifact too |
 
 ## Project structure
@@ -95,3 +97,5 @@ Deploying to a real host — the PocketBase console sequence, upgrades, rollback
 ## Conventions
 
 TypeScript strict with `erasableSyntaxOnly` (no parameter properties, enums, or namespaces), conventional commit messages, repo-relative paths. See [AGENTS.md](../../AGENTS.md) for the full list.
+
+Style is not a matter of taste here: Prettier (100 columns, no semicolons, single quotes) and ESLint run over the staged files at every commit through `lint-staged`, and again in check mode in CI, so a commit that skips the hook still does not get past review. `docs/journal/` is excluded from formatting — its entries are append-only, and reformatting one rewrites a record read as it was written.

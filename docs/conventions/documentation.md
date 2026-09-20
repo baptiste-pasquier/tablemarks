@@ -122,9 +122,9 @@ Every maintained doc:
 ```yaml
 ---
 title: Title
-type: explanation | how-to | reference | conventions   # must equal the parent folder
+type: explanation | how-to | reference | conventions # must equal the parent folder
 audience: [human, agent]
-status: stable                                          # draft | stable | deprecated
+status: stable # draft | stable | deprecated
 stale_after: YYYY-MM-DD
 ---
 ```

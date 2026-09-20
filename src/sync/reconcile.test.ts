@@ -65,7 +65,10 @@ describe('pickWinner', () => {
 
 describe('reconcile', () => {
   it('newer remote wins and is queued to write locally', () => {
-    const { merged, toWriteLocal, toPush } = reconcile([rec('a', '2026-01-01')], [rec('a', '2026-02-01')])
+    const { merged, toWriteLocal, toPush } = reconcile(
+      [rec('a', '2026-01-01')],
+      [rec('a', '2026-02-01')],
+    )
     expect(merged).toHaveLength(1)
     expect(toWriteLocal.map((r) => r.updated)).toEqual(['2026-02-01'])
     expect(toPush).toEqual([])
@@ -105,7 +108,10 @@ describe('reconcile', () => {
   })
 
   it('a newer remote tombstone is written locally (delete propagates, not resurrects)', () => {
-    const { merged, toWriteLocal } = reconcile([rec('a', '2026-01-01', false)], [rec('a', '2026-02-01', true)])
+    const { merged, toWriteLocal } = reconcile(
+      [rec('a', '2026-01-01', false)],
+      [rec('a', '2026-02-01', true)],
+    )
     expect(merged[0].deleted).toBe(true)
     expect(toWriteLocal[0].deleted).toBe(true)
   })

@@ -4,9 +4,7 @@ import type { Restaurant, Verdict } from '../../types/models'
 
 const ANCHOR: Anchor = { lat: 48.8566, lng: 2.3522 }
 
-function r(
-  over: Partial<Restaurant> & Pick<Restaurant, 'id'>,
-): Restaurant {
+function r(over: Partial<Restaurant> & Pick<Restaurant, 'id'>): Restaurant {
   return {
     name: over.id,
     lat: 48.8566,
@@ -52,7 +50,11 @@ describe('decideCandidates', () => {
 
   it('excludes provisional records and ones without coordinates', () => {
     const out = decideCandidates(
-      [r({ id: 'pending', pending: true }), r({ id: 'nocoord', lat: null, lng: null }), r({ id: 'ok' })],
+      [
+        r({ id: 'pending', pending: true }),
+        r({ id: 'nocoord', lat: null, lng: null }),
+        r({ id: 'ok' }),
+      ],
       ANCHOR,
       5000,
     )

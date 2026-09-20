@@ -123,7 +123,13 @@ describe('SortBar', () => {
       />,
     )
 
-    expect(container.firstChild).toHaveClass('flex', 'flex-wrap', 'items-center', 'gap-2', 'border-b')
+    expect(container.firstChild).toHaveClass(
+      'flex',
+      'flex-wrap',
+      'items-center',
+      'gap-2',
+      'border-b',
+    )
     expect(container.firstChild).not.toHaveClass('flex-nowrap')
   })
 
@@ -193,6 +199,9 @@ describe('SortBar', () => {
     expect(screen.getByRole('button', { name: 'Distance' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Date' })).toHaveAttribute('aria-pressed', 'false')
     // farthest is the reversed direction for Distance.
-    expect(screen.getByRole('button', { name: 'Farthest first' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Farthest first' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 })

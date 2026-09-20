@@ -49,7 +49,12 @@ export function parseMapsUrl(input: string): ParsedMapsUrl {
   const text = input.trim()
   const coord = text.match(COORD)
   if (coord) {
-    return { kind: 'coords', lat: parseFloat(coord[1]), lng: parseFloat(coord[2]), name: placeName(text) }
+    return {
+      kind: 'coords',
+      lat: parseFloat(coord[1]),
+      lng: parseFloat(coord[2]),
+      name: placeName(text),
+    }
   }
   if (SHORT.test(text)) return { kind: 'short' }
   // A Maps URL we got this far without parsing is one we cannot use: a legacy `goo.gl` link, a

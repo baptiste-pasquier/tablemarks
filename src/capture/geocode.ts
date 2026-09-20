@@ -24,7 +24,10 @@ interface NominatimRow {
 export const nominatim: GeocodeProvider = {
   async search(query, signal) {
     const url = `${NOMINATIM}/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`
-    const res = await fetch(url, { headers: { Accept: 'application/json' }, signal: signal ?? AbortSignal.timeout(10_000) })
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: signal ?? AbortSignal.timeout(10_000),
+    })
     if (!res.ok) throw new Error(`Geocoding search failed (${res.status})`)
     const rows = (await res.json()) as NominatimRow[]
     return rows.map((row) => ({
@@ -37,7 +40,10 @@ export const nominatim: GeocodeProvider = {
 
   async reverse(lat, lng, signal) {
     const url = `${NOMINATIM}/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
-    const res = await fetch(url, { headers: { Accept: 'application/json' }, signal: signal ?? AbortSignal.timeout(10_000) })
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: signal ?? AbortSignal.timeout(10_000),
+    })
     if (!res.ok) return undefined
     const data = (await res.json()) as { display_name?: string }
     return data.display_name
@@ -55,6 +61,10 @@ export function searchPlaces(query: string, signal?: AbortSignal): Promise<GeoCa
   return provider.search(query, signal)
 }
 
-export function reverseGeocode(lat: number, lng: number, signal?: AbortSignal): Promise<string | undefined> {
+export function reverseGeocode(
+  lat: number,
+  lng: number,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
   return provider.reverse(lat, lng, signal)
 }

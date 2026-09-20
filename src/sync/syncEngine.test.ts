@@ -63,7 +63,9 @@ class FailingRemote extends FakeRemote {
   }
 }
 
-function remoteRestaurant(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'updated'>): Restaurant {
+function remoteRestaurant(
+  over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'updated'>,
+): Restaurant {
   return {
     name: 'Remote',
     lat: 0,
@@ -83,7 +85,9 @@ describe('fullSync', () => {
   it('unions local-only and remote-only records with no duplicates', async () => {
     const local = await createRestaurant({ name: 'Local', lat: 1, lng: 1 })
     const remote = new FakeRemote()
-    remote.restaurants.push(remoteRestaurant({ id: 'remoteonly0001', updated: '2026-01-01T00:00:00Z' }))
+    remote.restaurants.push(
+      remoteRestaurant({ id: 'remoteonly0001', updated: '2026-01-01T00:00:00Z' }),
+    )
 
     const out = await fullSync(remote)
 
@@ -103,7 +107,14 @@ describe('fullSync', () => {
     // Remote carries a NEWER r1 row whose serialized rollup is stale (0 visits), and no visits for r1.
     const remote = new FakeRemote()
     remote.restaurants.push(
-      remoteRestaurant({ id: 'r1', name: 'Remote newer', updated: '2999-01-01T00:00:00Z', visitCount: 0, latestVerdict: null, latestVisitDate: null }),
+      remoteRestaurant({
+        id: 'r1',
+        name: 'Remote newer',
+        updated: '2999-01-01T00:00:00Z',
+        visitCount: 0,
+        latestVerdict: null,
+        latestVisitDate: null,
+      }),
     )
 
     await fullSync(remote)
@@ -177,7 +188,9 @@ describe('fullSync', () => {
   it('marks pushed and written-local records synced immediately after each write', async () => {
     const local = await createRestaurant({ name: 'Local', lat: 1, lng: 1 })
     const remote = new FakeRemote()
-    remote.restaurants.push(remoteRestaurant({ id: 'remoteonly0001', updated: '2026-01-01T00:00:00Z' }))
+    remote.restaurants.push(
+      remoteRestaurant({ id: 'remoteonly0001', updated: '2026-01-01T00:00:00Z' }),
+    )
 
     await fullSync(remote)
 
@@ -196,7 +209,9 @@ describe('fullSync', () => {
     expect((await getRestaurant('r1'))?.syncedUpdated).toBeUndefined()
 
     const remote = new FakeRemote()
-    remote.restaurants.push(remoteRestaurant({ id: 'r1', name: 'Already synced', updated: r.updated }))
+    remote.restaurants.push(
+      remoteRestaurant({ id: 'r1', name: 'Already synced', updated: r.updated }),
+    )
 
     await fullSync(remote)
 
@@ -264,7 +279,9 @@ describe('fullSync', () => {
 
   it('U2: the pulled-restaurant write emits emitStoreChange(), not emitLocalChange()', async () => {
     const remote = new FakeRemote()
-    remote.restaurants.push(remoteRestaurant({ id: 'remoteonly0001', updated: '2026-01-01T00:00:00Z' }))
+    remote.restaurants.push(
+      remoteRestaurant({ id: 'remoteonly0001', updated: '2026-01-01T00:00:00Z' }),
+    )
     const localFired = vi.fn()
     const storeFired = vi.fn()
     const offLocal = onLocalChange(localFired)
@@ -450,7 +467,7 @@ describe('SyncController', () => {
     expect(getSyncStatus()).toMatchObject({ state: 'offline', cause: undefined })
   })
 
-  it('a reused SyncController does not inherit the prior session\'s failure count across stop()/start() (review #1)', async () => {
+  it("a reused SyncController does not inherit the prior session's failure count across stop()/start() (review #1)", async () => {
     await createRestaurant({ name: 'A', lat: 1, lng: 1 })
     stubRealtime()
     const remote = new FailingRemote()

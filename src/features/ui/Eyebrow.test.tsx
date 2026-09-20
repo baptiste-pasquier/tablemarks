@@ -7,7 +7,13 @@ describe('Eyebrow', () => {
     render(<Eyebrow>Language</Eyebrow>)
 
     const el = screen.getByText('Language')
-    expect(el).toHaveClass('text-xs', 'font-semibold', 'uppercase', 'tracking-wide', 'text-gray-400')
+    expect(el).toHaveClass(
+      'text-xs',
+      'font-semibold',
+      'uppercase',
+      'tracking-wide',
+      'text-gray-400',
+    )
   })
 
   it('renders a span by default', () => {
@@ -21,6 +27,12 @@ describe('Eyebrow', () => {
 
     const el = screen.getByText('Language')
     expect(el.tagName).toBe('H3')
-    expect(el).toHaveClass('text-xs', 'font-semibold', 'uppercase', 'tracking-wide', 'text-gray-400')
+    expect(el).toHaveClass(
+      'text-xs',
+      'font-semibold',
+      'uppercase',
+      'tracking-wide',
+      'text-gray-400',
+    )
   })
 })

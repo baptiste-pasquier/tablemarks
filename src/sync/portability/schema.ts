@@ -88,7 +88,9 @@ function isLocalDayOrNull(x: unknown): x is string | null {
 
 /** Coerce an unknown verdict to a known value rather than reject the file (mirrors remote ingest). */
 function coerceVerdict(x: unknown): Verdict {
-  return isString(x) && (VERDICTS as readonly string[]).includes(x) ? (x as Verdict) : DEFAULT_VERDICT
+  return isString(x) && (VERDICTS as readonly string[]).includes(x)
+    ? (x as Verdict)
+    : DEFAULT_VERDICT
 }
 
 function asRestaurant(x: unknown): Restaurant | null {
@@ -99,7 +101,14 @@ function asRestaurant(x: unknown): Restaurant | null {
   if (!isNumberOrNull(r.lat) || !isNumberOrNull(r.lng)) return null
   if (typeof r.pending !== 'boolean') return null
   if (!isValidTimestamp(r.updated) || typeof r.deleted !== 'boolean') return null
-  if (!isOptionalString(r.address) || !isOptionalString(r.mapsUrl) || !isOptionalString(r.cuisine) || !isOptionalString(r.note) || !isOptionalTimestamp(r.added)) return null
+  if (
+    !isOptionalString(r.address) ||
+    !isOptionalString(r.mapsUrl) ||
+    !isOptionalString(r.cuisine) ||
+    !isOptionalString(r.note) ||
+    !isOptionalTimestamp(r.added)
+  )
+    return null
   if (!isLocalDayOrNull(r.latestVisitDate)) return null
   if (typeof r.visitCount !== 'number') return null
   return {
@@ -145,7 +154,10 @@ function asVisit(x: unknown): Visit | null {
  * Forward-migrate raw records of a known older `schemaVersion` to the current shape.
  * Identity at v1 — the hook exists so future versions add ordered transforms here.
  */
-function migrateToCurrent(records: { restaurants: unknown[]; visits: unknown[] }, _fromVersion: number) {
+function migrateToCurrent(
+  records: { restaurants: unknown[]; visits: unknown[] },
+  _fromVersion: number,
+) {
   return records
 }
 
@@ -155,20 +167,27 @@ function migrateToCurrent(records: { restaurants: unknown[]; visits: unknown[] }
  * malformed records — returning a structured error so the caller can leave the store untouched.
  */
 export function validateEnvelope(parsed: unknown): ValidationResult {
-  if (typeof parsed !== 'object' || parsed === null) return { ok: false, error: { code: 'not_an_object' } }
+  if (typeof parsed !== 'object' || parsed === null)
+    return { ok: false, error: { code: 'not_an_object' } }
   const env = parsed as Record<string, unknown>
   if (env.format !== EXPORT_FORMAT) return { ok: false, error: { code: 'wrong_format' } }
-  if (typeof env.schemaVersion !== 'number' || !Number.isInteger(env.schemaVersion) || env.schemaVersion < 1) {
+  if (
+    typeof env.schemaVersion !== 'number' ||
+    !Number.isInteger(env.schemaVersion) ||
+    env.schemaVersion < 1
+  ) {
     return { ok: false, error: { code: 'invalid_schema_version' } }
   }
   if (env.schemaVersion > EXPORT_SCHEMA_VERSION) {
     return { ok: false, error: { code: 'schema_too_new', schemaVersion: env.schemaVersion } }
   }
   const records = env.records
-  if (typeof records !== 'object' || records === null) return { ok: false, error: { code: 'no_records' } }
+  if (typeof records !== 'object' || records === null)
+    return { ok: false, error: { code: 'no_records' } }
   const rawR = (records as Record<string, unknown>).restaurants
   const rawV = (records as Record<string, unknown>).visits
-  if (!Array.isArray(rawR) || !Array.isArray(rawV)) return { ok: false, error: { code: 'invalid_records_shape' } }
+  if (!Array.isArray(rawR) || !Array.isArray(rawV))
+    return { ok: false, error: { code: 'invalid_records_shape' } }
 
   const migrated = migrateToCurrent({ restaurants: rawR, visits: rawV }, env.schemaVersion)
 

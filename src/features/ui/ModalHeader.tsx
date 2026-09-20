@@ -33,7 +33,12 @@ export function ModalHeader({
   return (
     <div className={styles.wrapper}>
       <h2 className={styles.title}>{title}</h2>
-      <Button variant="icon-dismiss" tone="neutral" onClick={onClose} aria-label={t('common.close')}>
+      <Button
+        variant="icon-dismiss"
+        tone="neutral"
+        onClick={onClose}
+        aria-label={t('common.close')}
+      >
         ✕
       </Button>
     </div>

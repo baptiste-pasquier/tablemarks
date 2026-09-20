@@ -86,10 +86,7 @@ describe('toMarkers', () => {
   })
 
   it('always produces pending: false, since pending restaurants are filtered out beforehand', () => {
-    const markers = toMarkers([
-      r({ id: 'a', pending: false }),
-      r({ id: 'b', pending: true }),
-    ])
+    const markers = toMarkers([r({ id: 'a', pending: false }), r({ id: 'b', pending: true })])
     expect(markers.map((m) => m.id)).toEqual(['a'])
     expect(markers.every((m) => m.pending === false)).toBe(true)
   })
@@ -111,10 +108,7 @@ describe('pickMostRecentRestaurantCenter', () => {
   })
 
   it('returns null when no restaurant has an added timestamp or a visit', () => {
-    const restaurants = [
-      r({ id: 'a', lat: 1, lng: 1 }),
-      r({ id: 'b', lat: 2, lng: 2 }),
-    ]
+    const restaurants = [r({ id: 'a', lat: 1, lng: 1 }), r({ id: 'b', lat: 2, lng: 2 })]
     expect(pickMostRecentRestaurantCenter(restaurants)).toBeNull()
   })
 
@@ -192,12 +186,18 @@ describe('pickMostRecentRestaurantCenter', () => {
     expect(pickMostRecentRestaurantCenter(restaurants)).toEqual({ lat: 3, lng: 3 })
   })
 
-  it('treats a synced `added: \'\'` sentinel as absent, not as a real (always-losing) key', () => {
+  it("treats a synced `added: ''` sentinel as absent, not as a real (always-losing) key", () => {
     // `added: ''` is a deliberate "absent" state reachable after a PocketBase field-retype sync
     // (see sync/portability/schema.ts's isOptionalTimestamp) — it must not shadow a real
     // latestVisitDate signal on the same restaurant.
     const restaurants = [
-      r({ id: 'synced-empty-added-recent-visit', lat: 1, lng: 1, added: '', latestVisitDate: '2026-08-30' }),
+      r({
+        id: 'synced-empty-added-recent-visit',
+        lat: 1,
+        lng: 1,
+        added: '',
+        latestVisitDate: '2026-08-30',
+      }),
       r({ id: 'older-added', lat: 2, lng: 2, added: '2026-08-01T00:00:00.000Z' }),
     ]
     expect(pickMostRecentRestaurantCenter(restaurants)).toEqual({ lat: 1, lng: 1 })

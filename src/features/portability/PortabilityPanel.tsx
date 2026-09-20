@@ -42,7 +42,8 @@ const IMPORT_ERROR_KEYS = {
 function resolvePanelError(t: TFunction, error: PanelError): string {
   if (error.kind === 'local') return t(error.key)
   const key = IMPORT_ERROR_KEYS[error.error.code]
-  if (error.error.code === 'schema_too_new') return t(key, { schemaVersion: error.error.schemaVersion })
+  if (error.error.code === 'schema_too_new')
+    return t(key, { schemaVersion: error.error.schemaVersion })
   return t(key)
 }
 
@@ -135,7 +136,12 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
 
       <p className="text-sm text-gray-600">{t('portability.description')}</p>
 
-      <Button variant="primary" className="mt-3 w-full" onClick={() => void exportNow()} disabled={busy}>
+      <Button
+        variant="primary"
+        className="mt-3 w-full"
+        onClick={() => void exportNow()}
+        disabled={busy}
+      >
         {exportBusy ? t('portability.exportBusy') : t('portability.exportAction')}
       </Button>
 
@@ -167,7 +173,12 @@ export function PortabilityPanel({ onClose }: { onClose: () => void }) {
               visits: t('portability.confirm.visit', { count: pending.visits.length }),
             })}
           </p>
-          <Button variant="primary" className="mt-3" onClick={() => void confirmImport()} disabled={busy}>
+          <Button
+            variant="primary"
+            className="mt-3"
+            onClick={() => void confirmImport()}
+            disabled={busy}
+          >
             {importBusy ? t('portability.importBusy') : t('portability.confirmImport')}
           </Button>
         </div>

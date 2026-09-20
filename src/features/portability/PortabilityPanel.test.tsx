@@ -14,7 +14,18 @@ const validEnvelope = {
   exportedAt: '2026-06-13T00:00:00Z',
   records: {
     restaurants: [
-      { id: 'r1', name: 'Imported', lat: 1, lng: 2, pending: false, latestVerdict: null, latestVisitDate: null, visitCount: 0, updated: '2026-05-01T00:00:00Z', deleted: false },
+      {
+        id: 'r1',
+        name: 'Imported',
+        lat: 1,
+        lng: 2,
+        pending: false,
+        latestVerdict: null,
+        latestVisitDate: null,
+        visitCount: 0,
+        updated: '2026-05-01T00:00:00Z',
+        deleted: false,
+      },
     ],
     visits: [],
   },
@@ -35,7 +46,10 @@ describe('PortabilityPanel', () => {
     )
 
     await user.upload(screen.getByLabelText(/import a backup file/i), jsonFile(validEnvelope))
-    expect(await screen.findByRole('button', { name: /confirm import/i })).toHaveClass('py-2.5', 'mt-3')
+    expect(await screen.findByRole('button', { name: /confirm import/i })).toHaveClass(
+      'py-2.5',
+      'mt-3',
+    )
   })
 
   it('exports the collection as a downloadable JSON envelope and revokes the URL (AE1)', async () => {
@@ -70,7 +84,11 @@ describe('PortabilityPanel', () => {
     // validEnvelope carries 1 restaurant and 0 visits — assert the nested-interpolation
     // confirmation copy (place/visit pluralization composed into the question) renders correctly
     // before confirming, so a broken plural key or a leaked raw `{{places}}` token is caught (#4).
-    expect(await screen.findByText('Import 1 place and 0 visits? Existing entries merge by last edit; nothing is deleted.')).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        'Import 1 place and 0 visits? Existing entries merge by last edit; nothing is deleted.',
+      ),
+    ).toBeInTheDocument()
 
     await user.click(await screen.findByRole('button', { name: /confirm import/i }))
 
@@ -82,7 +100,10 @@ describe('PortabilityPanel', () => {
     render(<PortabilityPanel onClose={vi.fn()} />)
     const user = userEvent.setup()
 
-    await user.upload(screen.getByLabelText(/import a backup file/i), new File(['{not valid json'], 'bad.json', { type: 'application/json' }))
+    await user.upload(
+      screen.getByLabelText(/import a backup file/i),
+      new File(['{not valid json'], 'bad.json', { type: 'application/json' }),
+    )
 
     expect(await screen.findByText(/valid json/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /confirm import/i })).toBeNull()

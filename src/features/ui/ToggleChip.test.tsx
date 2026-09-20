@@ -38,7 +38,12 @@ describe('ToggleChip', () => {
         </ToggleChip>,
       )
       const button = screen.getByRole('button', { name: 'Thai' })
-      expect(button).toHaveClass('border-gray-300', 'text-gray-600', 'hover:border-gray-400', 'hover:bg-gray-50')
+      expect(button).toHaveClass(
+        'border-gray-300',
+        'text-gray-600',
+        'hover:border-gray-400',
+        'hover:bg-gray-50',
+      )
       expect(button).not.toHaveClass('border-brand')
     })
 
@@ -71,7 +76,14 @@ describe('ToggleChip', () => {
         </ToggleChip>,
       )
       const button = screen.getByRole('button', { name: 'Distance' })
-      expect(button).toHaveClass('min-h-10', 'px-3', 'py-1.5', 'text-xs', 'font-medium', 'transition')
+      expect(button).toHaveClass(
+        'min-h-10',
+        'px-3',
+        'py-1.5',
+        'text-xs',
+        'font-medium',
+        'transition',
+      )
       expect(button).toHaveClass('bg-brand-soft', 'font-semibold', 'text-brand-strong')
       expect(button).not.toHaveClass('rounded-full', 'border', 'border-gray-300')
     })
@@ -95,7 +107,15 @@ describe('ToggleChip', () => {
       )
       const button = screen.getByRole('button', { name: 'Distance' })
       expect(button).toBeDisabled()
-      expect(button).toHaveClass('min-h-10', 'px-3', 'py-1.5', 'text-xs', 'font-medium', 'text-gray-300', 'cursor-not-allowed')
+      expect(button).toHaveClass(
+        'min-h-10',
+        'px-3',
+        'py-1.5',
+        'text-xs',
+        'font-medium',
+        'text-gray-300',
+        'cursor-not-allowed',
+      )
       expect(button).not.toHaveClass('transition', 'hover:bg-gray-50')
     })
 
@@ -105,12 +125,20 @@ describe('ToggleChip', () => {
           Distance
         </ToggleChip>,
       )
-      expect(screen.getByRole('button', { name: 'Distance' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: 'Distance' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
     })
 
     it('merges a caller-supplied className (e.g. a divider) alongside the segment base classes', () => {
       render(
-        <ToggleChip shape="segment" active={false} className="border-r border-gray-300" onClick={vi.fn()}>
+        <ToggleChip
+          shape="segment"
+          active={false}
+          className="border-r border-gray-300"
+          onClick={vi.fn()}
+        >
           Distance
         </ToggleChip>,
       )

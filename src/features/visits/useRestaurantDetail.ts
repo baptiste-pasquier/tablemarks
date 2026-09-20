@@ -20,9 +20,11 @@ export function useRestaurantDetail(id: string | null): RestaurantDetail {
     }
     let active = true
     const load = () => {
-      void Promise.all([getRestaurant(id), visitsForRestaurant(id)]).then(([restaurant, visits]) => {
-        if (active) setDetail({ restaurant: restaurant ?? null, visits })
-      })
+      void Promise.all([getRestaurant(id), visitsForRestaurant(id)]).then(
+        ([restaurant, visits]) => {
+          if (active) setDetail({ restaurant: restaurant ?? null, visits })
+        },
+      )
     }
     load()
     const off = onStoreChange(load)

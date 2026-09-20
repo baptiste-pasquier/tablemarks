@@ -5,7 +5,12 @@ import { startPendingResolver } from '../capture/resolvePending'
 import { createRestaurant } from '../data/restaurants'
 import { setGeocodeProvider } from '../capture/geocode'
 import { bootstrap } from './bootstrap'
-import { backendIsAbsent, backendIsUnreachable, getBackendStatus, setBackendPresence } from './backendStatus'
+import {
+  backendIsAbsent,
+  backendIsUnreachable,
+  getBackendStatus,
+  setBackendPresence,
+} from './backendStatus'
 import { loadRuntimeConfig } from './runtimeConfig'
 import { getSyncStatus, setSyncState } from './syncStatus'
 import { pb } from './pocketbase'
@@ -28,7 +33,10 @@ const CONFIGURED_URL = 'https://pb.example.test'
 const SHORT_LINK = 'https://maps.app.goo.gl/abc'
 
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  })
 }
 
 interface Routes {
@@ -47,9 +55,12 @@ interface Routes {
 function installFetch(routes: Routes = {}) {
   const mock = vi.fn(async (input: unknown, init?: RequestInit): Promise<Response> => {
     const url = String(input)
-    if (url.endsWith('config.json')) return routes.config ? routes.config() : json({ pocketbaseUrl: '' })
+    if (url.endsWith('config.json'))
+      return routes.config ? routes.config() : json({ pocketbaseUrl: '' })
     if (url.includes('/api/health')) {
-      return routes.health ? routes.health(init) : json({ code: 200, message: 'API is healthy.', data: {} })
+      return routes.health
+        ? routes.health(init)
+        : json({ code: 200, message: 'API is healthy.', data: {} })
     }
     throw new TypeError(`Failed to fetch: ${url}`)
   })
@@ -94,10 +105,19 @@ function seedSignedInSession(): void {
     btoa(JSON.stringify(value)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
   const token = [
     b64url({ alg: 'HS256', typ: 'JWT' }),
-    b64url({ id: 'user1', type: 'auth', collectionId: 'users', exp: Math.floor(Date.now() / 1000) + 3600 }),
+    b64url({
+      id: 'user1',
+      type: 'auth',
+      collectionId: 'users',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    }),
     'not-verified-client-side',
   ].join('.')
-  pb.authStore.save(token, { id: 'user1', email: 'someone@example.test', collectionName: 'users' } as never)
+  pb.authStore.save(token, {
+    id: 'user1',
+    email: 'someone@example.test',
+    collectionName: 'users',
+  } as never)
 }
 
 /** Backend calls a startup must never make — excludes the configuration file itself. */
@@ -255,7 +275,9 @@ describe('bootstrap — backend configured', () => {
       ...configured(),
       health: (init) =>
         new Promise<Response>((_, reject) => {
-          init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('Aborted', 'AbortError')),
+          )
         }),
     })
     installEventSource()
@@ -280,7 +302,9 @@ describe('bootstrap — backend configured', () => {
         if (call === 1) {
           // Still hanging when the reconnect fires; aborts later, after the second has answered.
           return new Promise<Response>((_, reject) => {
-            init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+            init?.signal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError')),
+            )
           })
         }
         return Promise.resolve(json({ code: 200, message: 'API is healthy.', data: {} }))
@@ -504,7 +528,11 @@ describe('bootstrap — configuration that cannot be read (R30)', () => {
 
   it('stops re-reading once the configuration is disposed', async () => {
     // A tab that never recovers must not poll config.json until it is closed.
-    const fetchMock = installFetch({ config: async () => { throw new TypeError('Failed to fetch') } })
+    const fetchMock = installFetch({
+      config: async () => {
+        throw new TypeError('Failed to fetch')
+      },
+    })
     installEventSource()
 
     dispose = await bootstrap(render, { healthTimeoutMs: 40, recheckIntervalMs: 20 })

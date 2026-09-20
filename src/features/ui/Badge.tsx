@@ -26,7 +26,9 @@ function luminance(hex: string): number {
     const s = c / 255
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
   }
-  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
+  return (
+    0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
+  )
 }
 
 /**
@@ -58,7 +60,9 @@ export function Badge({ text, icon, tone, color, tint, dotClassName, labelClassN
       )}
       style={style}
     >
-      {tint && dotClassName && <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', dotClassName)} />}
+      {tint && dotClassName && (
+        <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', dotClassName)} />
+      )}
       {icon && <span aria-hidden="true">{icon}</span>}
       <span className={labelClassName}>{text}</span>
     </span>
