@@ -9,10 +9,16 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --fix",
+    "format": "prettier . --write",
     "check:docs": "python3 scripts/check_docs.py",
     "check:demo": "sh scripts/check-demo-target.sh",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint --cache --fix",
+    "**/*": "prettier --write --ignore-unknown"
   },
   "dependencies": {
     "i18next": "^26.4.0",
@@ -45,6 +51,7 @@
     "husky": "^9.1.7",
     "jiti": "^2.7.0",
     "jsdom": "^27.0.0",
+    "lint-staged": "^17.5.1",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.1.13",

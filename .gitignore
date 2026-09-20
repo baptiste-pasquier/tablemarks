@@ -35,3 +35,6 @@ pocketbase/pocketbase
 
 # Compound Engineering scratch space
 .context/compound-engineering/
+
+# ESLint cache (pre-commit hook)
+.eslintcache

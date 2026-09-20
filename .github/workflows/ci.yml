@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   ci:
-    name: Type check, tests, docs, both builds
+    name: Type check, lint, tests, docs, both builds
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -54,7 +54,15 @@ jobs:
       # target: the composition below is exactly what the container image's `npm run build`
       # executes, plus the second target.
       - name: Type check
-        run: npm run lint
+        run: npm run type-check
+
+      # Both run in check mode: CI reports, it never rewrites. `npm run format` and
+      # `npm run lint` are the local commands that fix what these two flag.
+      - name: Formatting
+        run: npx prettier . --check
+
+      - name: Lint
+        run: npx eslint .
 
       - name: Unit tests
         run: npm test
