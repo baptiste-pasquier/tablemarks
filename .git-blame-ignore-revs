@@ -5,3 +5,6 @@
 
 # style: format the whole repository with Prettier
 31cf04c3fb0dc3ae6539429b91cf8318785bafb9
+
+# style: re-sort the Tailwind class lists against the theme
+a69a27f7b42b0eccbca0536dfbd268f0dbe24305
