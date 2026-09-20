@@ -9,7 +9,7 @@ import {
   pillToneClassName,
   badgeColorClassName,
 } from '../sync/syncStatusPresentation'
-import { trapTabFocus } from '../ui/Modal'
+import { trapTabFocus } from '../ui/focusTrap'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Eyebrow } from '../ui/Eyebrow'
