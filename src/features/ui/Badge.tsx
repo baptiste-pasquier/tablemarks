@@ -11,6 +11,13 @@ type BadgeProps = {
    */
   tint?: boolean
   dotClassName?: string
+  /**
+   * Classes for the text span alone, for a call site that needs the label responsive while the
+   * pill itself stays visible — e.g. the header's backend indicator, which must not widen the
+   * `shrink-0` right-hand group on a narrow viewport. Keeps that gate here rather than letting a
+   * call site reach into this markup with a descendant selector.
+   */
+  labelClassName?: string
 } & (
   | { tone: string; pastel?: never }
   /**
@@ -28,7 +35,15 @@ type BadgeProps = {
  * surface; both share the same size/padding/font so a future style change touches this file
  * instead of every call site.
  */
-export function Badge({ text, icon, tone, pastel, tint, dotClassName }: BadgeProps) {
+export function Badge({
+  text,
+  icon,
+  tone,
+  pastel,
+  tint,
+  dotClassName,
+  labelClassName,
+}: BadgeProps) {
   const style = pastel ? { background: pastel.background, color: pastel.color } : undefined
   const colorClass = tint ? (tone ?? '') : tone ? `${tone} text-white` : ''
 
@@ -45,7 +60,7 @@ export function Badge({ text, icon, tone, pastel, tint, dotClassName }: BadgePro
         <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', dotClassName)} />
       )}
       {icon && <span aria-hidden="true">{icon}</span>}
-      <span>{text}</span>
+      <span className={labelClassName}>{text}</span>
     </span>
   )
 }
