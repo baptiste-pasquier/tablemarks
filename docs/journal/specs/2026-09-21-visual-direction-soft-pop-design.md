@@ -134,21 +134,69 @@ distinction, so whether a place has been visited is legible without reading the 
 | `src/features/map/markers.ts`, `MapView.tsx` | New marker hues; `.marker-tooltip` realigned; `font-display` removed |
 | `src/App.tsx`, `src/features/facets/FilterBar.tsx` | `font-display` removed; header and overlay chrome retokenized |
 | `src/index.css`, `index.html`, `vite.config.ts` | Tokens, one font family, `theme-color` and manifest `theme_color` to `#00A97A` |
-| `public/logo.svg`, `scripts/generate-icons.mjs` | Green mark; a new `npm run icons` regenerates the five PNGs from the SVG |
+| `public/logo.svg`, `public/logo-mark.svg`, `scripts/generate-icons.mjs` | The constellation mark, plus its single-pin reduction; a new `npm run icons` regenerates the six raster icons from the two sources |
 
 No component crosses the 250-line limit as a result, and no user-facing string is added, so
 the i18n catalogues are untouched.
 
-## Icons
+## Logo and icons
 
-`public/logo.svg` carries the brand color twice, and the five PNGs derive from it with no
-generator in the repo - which is why they would otherwise be left orange. A
+The mark is redrawn, not recolored. Today's mark is a white map pin on a terracotta square:
+a generic pin that says neither "restaurants" nor "Tablemarks". The new mark - **the
+constellation** - is three pins on a pale street plan, one brand-colored pin in front and
+two smaller ones behind in cuisine hues. It says what the others could not: not *a* place,
+a **collection**, which is what the app is.
+
+Eleven alternatives were drawn and compared at size before this one, from a plain recolor
+to a gingham tablecloth. The constellation was chosen for saying "collection", and its pin
+scales were then calibrated over three steps.
+
+### Geometry
+
+The canvas is 512 with a 114 corner radius. Coordinates are absolute; each pin is the same
+base path placed by translate and scale.
+
+| Element | Placement | Fill |
+| --- | --- | --- |
+| Background | full bleed | `#F4F8F6` |
+| Avenues | horizontal at y=118 and y=350, vertical at x=132 and x=390, stroke 15, round caps | `#E4EEE9` |
+| Park | rounded rect at (-20, 366), 176 by 180, radius 26 | `#DEEEE6` |
+| Pin, back left | translate(146, 196) scale(1.15) | `oklch(0.48 0.15 25)` |
+| Pin, back right | translate(366, 180) scale(1.15) | `oklch(0.48 0.15 313)` |
+| Pin, front | translate(256, 250) scale(1.60) | linear gradient `#00C48D` to `#00815E`, diagonal |
+
+The base pin is centered on its own origin, its head 62 across and its tip 97 below, with a
+white counter-circle of radius 23 at (0, -2). Back pins carry a drop shadow of `#04372A` at
+26 percent, dy 8, blur 9; the front pin dy 12, blur 15, 32 percent.
+
+Every element stays inside the maskable safe circle - radius 205 from the center - so
+Android's mask cannot clip a pin. That constraint is what kept the pins at 1.60 and 1.15
+rather than larger.
+
+### Two sources, not one
+
+Three overlapping pins on a street plan cannot resolve at 16 or 32 pixels. Rather than
+compromise the icon for the favicon, the repo carries **two** SVG sources and the generator
+picks by target size:
+
+| Source | Feeds | Content |
+| --- | --- | --- |
+| `public/logo.svg` | `apple-touch-icon-180x180.png`, `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png` | The full constellation |
+| `public/logo-mark.svg` | `favicon.ico`, `pwa-64x64.png` | The front pin alone, same gradient and background, scaled to fill |
+
+Both read as the same icon because the front pin dominates the full version.
+
+### Generation
+
 `scripts/generate-icons.mjs` using `sharp` (new devDependency) becomes the source of truth
-for `favicon.ico`, `apple-touch-icon-180x180.png`, `pwa-64x64.png`, `pwa-192x192.png`,
-`pwa-512x512.png` and `maskable-icon-512x512.png`, exposed as `npm run icons`.
+for all six raster files, exposed as `npm run icons`. It is what stops a future color change
+from leaving orphaned icons behind, which is the state the repo is in today.
 `@vite-pwa/assets-generator` covers the same ground and pairs with the PWA plugin already
 installed; `sharp` was chosen because it adds one dependency rather than a second build
-pipeline.
+pipeline, and because the two-source rule above needs a script either way.
+
+`theme_color` stays `#00A97A`. It colors the browser and OS chrome, which follows the app's
+accent, not the icon's pale background.
 
 ## Documentation
 
@@ -186,13 +234,15 @@ place, account menu, filter and sort bars, at both the mobile and desktop breakp
 
 Each step leaves the app working.
 
-1. Tokens: `src/index.css`, `index.html`, `vite.config.ts`, `public/logo.svg`, the icon
-   script. The app retints whole, with no component touched.
-2. `src/features/facets/cuisines.ts`: hue system, the 24-hue fallback wheel, and its tests.
-3. `Badge` pastel mode, then `StatusBadge`.
-4. `RestaurantList`: the tint comes out, its two tests are rewritten.
-5. The remaining primitives and screens.
-6. ADR, `docs/reference/design-tokens.md`, and the two routing-table edits.
+1. Tokens: `src/index.css`, `index.html`, `vite.config.ts`. The app retints whole, with no
+   component touched.
+2. The two SVG sources, `scripts/generate-icons.mjs`, and the six regenerated rasters,
+   checked on a phone home screen and in a browser tab rather than only in a file viewer.
+3. `src/features/facets/cuisines.ts`: hue system, the 22-hue fallback wheel, and its tests.
+4. `Badge` pastel mode, then `StatusBadge`.
+5. `RestaurantList`: the tint comes out, its two tests are rewritten.
+6. The remaining primitives and screens.
+7. ADR, `docs/reference/design-tokens.md`, and the two routing-table edits.
 
 ## Scope boundaries
 
