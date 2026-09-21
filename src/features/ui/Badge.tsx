@@ -6,49 +6,30 @@ type BadgeProps = {
   /**
    * Tinted-pill mode (light background/dark text + a leading color dot, e.g. the account
    * dropdown's sync-status chip) instead of the default solid-background/white-text mode. In
-   * this mode `tone`/`color` supply the *full* background+text pairing (already tinted) rather
-   * than a solid surface color, and `dotClassName` supplies the leading dot's fill.
+   * this mode `tone` supplies the *full* background+text pairing (already tinted) rather than
+   * a solid surface color, and `dotClassName` supplies the leading dot's fill.
    */
   tint?: boolean
   dotClassName?: string
+} & (
+  | { tone: string; pastel?: never }
   /**
-   * Classes for the text span alone, for a call site that needs the label responsive while the
-   * pill itself stays visible — e.g. the header's backend indicator, which must not widen the
-   * `shrink-0` right-hand group on a narrow viewport. Keeps that gate here rather than letting a
-   * call site reach into this markup with a descendant selector.
+   * Pastel mode: an explicit background/text pair, contrast-guaranteed by whoever computed it
+   * (`cuisinePillTokens` for a cuisine, a fixed gray pair for a status). Replaces the former
+   * `color` mode, which took one solid color and picked its text color by luminance — a
+   * guess the hue system makes unnecessary.
    */
-  labelClassName?: string
-} & ({ tone: string; color?: never } | { color: string; tone?: never })
-
-function luminance(hex: string): number {
-  const n = parseInt(hex.slice(1), 16)
-  const channel = (c: number) => {
-    const s = c / 255
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
-  }
-  return (
-    0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
-  )
-}
+  | { pastel: { background: string; color: string }; tone?: never }
+)
 
 /**
- * White or near-black text for a solid color-mode surface, picked from the relative-luminance
- * crossover point where black-on-color and white-on-color contrast ratios are equal — curated
- * and hashed colors (e.g. per-cuisine) span too wide a luminance range for one fixed text color
- * (KTD3).
+ * Shared badge primitive: exactly one of `tone` (a Tailwind class, for the closed status/verdict
+ * set — fixed white text) or `pastel` (an explicit pair, for per-cuisine values) picks the
+ * surface; both share the same size/padding/font so a future style change touches this file
+ * instead of every call site.
  */
-function textColorFor(bgHex: string): string {
-  return luminance(bgHex) > 0.179 ? '#000000' : '#ffffff'
-}
-
-/**
- * Shared badge primitive (R3/R4, KTD3): exactly one of `tone` (a Tailwind class, for the closed
- * status/verdict set — fixed white text) or `color` (a raw CSS color, for per-cuisine values —
- * text color computed internally via the same luminance rule) picks the surface; both share the
- * same size/padding/font so a future style change touches this file instead of every call site.
- */
-export function Badge({ text, icon, tone, color, tint, dotClassName, labelClassName }: BadgeProps) {
-  const style = !tint && color ? { background: color, color: textColorFor(color) } : undefined
+export function Badge({ text, icon, tone, pastel, tint, dotClassName }: BadgeProps) {
+  const style = pastel ? { background: pastel.background, color: pastel.color } : undefined
   const colorClass = tint ? (tone ?? '') : tone ? `${tone} text-white` : ''
 
   return (
@@ -64,7 +45,7 @@ export function Badge({ text, icon, tone, color, tint, dotClassName, labelClassN
         <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', dotClassName)} />
       )}
       {icon && <span aria-hidden="true">{icon}</span>}
-      <span className={labelClassName}>{text}</span>
+      <span>{text}</span>
     </span>
   )
 }

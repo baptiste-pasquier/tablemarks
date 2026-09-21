@@ -20,23 +20,22 @@ describe('Badge', () => {
     expect(within(badge).getByText('🎉')).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('renders color mode with the given inline background at the same sizing', () => {
-    render(<Badge text="Thai" color="#7c3aed" icon="🍜" />)
+  it('renders pastel mode with the given background/text pair at the same sizing', () => {
+    render(
+      <Badge
+        text="Thai"
+        pastel={{ background: 'oklch(0.96 0.045 281)', color: 'oklch(0.4 0.13 281)' }}
+        icon="🍜"
+      />,
+    )
 
     const label = screen.getByText('Thai')
     const badge = label.parentElement as HTMLElement
     expect(badge).toHaveClass('rounded-full', 'px-2', 'py-0.5', 'text-[11px]', 'font-semibold')
-    expect(badge).toHaveStyle({ background: '#7c3aed' })
-  })
-
-  it('picks white text for a low-luminance color, matching the luminance rule used across the app', () => {
-    render(<Badge text="Thai" color="#7c3aed" />)
-    expect(screen.getByText('Thai').parentElement).toHaveStyle({ color: '#ffffff' })
-  })
-
-  it('picks near-black text for a high-luminance color, matching the luminance rule used across the app', () => {
-    render(<Badge text="Mexican" color="#ca8a04" />)
-    expect(screen.getByText('Mexican').parentElement).toHaveStyle({ color: '#000000' })
+    expect(badge).not.toHaveClass('text-white')
+    expect(badge.getAttribute('style')).toContain('oklch(0.96 0.045 281)')
+    expect(badge.getAttribute('style')).toContain('oklch(0.4 0.13 281)')
+    expect(within(badge).getByText('🍜')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('renders without an icon element when none is given', () => {
