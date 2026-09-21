@@ -30,7 +30,7 @@ coverage
 .compound-engineering
 .context
 .docs-taxonomy
---help
+
 
 # ---------------------------------------------------------------------------
 # Documentation and repo-maintenance files — never read by the build

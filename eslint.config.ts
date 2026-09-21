@@ -10,7 +10,11 @@ import pluginReactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig([
-  globalIgnores(['dist', 'pb_data', 'pb_migrations', '--help']),
+  // Gitignore-style bare names would match at any depth; these are minimatch patterns, so
+  // `pb_data` only ever matched a root-level directory and left `pocketbase/pb_data*/types.d.ts`
+  // — 1386 errors' worth of generated definitions — in the lint. `**/` is what makes a nested
+  // path match, and `.claude` keeps the agent worktrees (full checkouts of this repo) out.
+  globalIgnores(['dist', '**/pb_data*', '**/pb_migrations', '.claude']),
 
   {
     name: 'app/files-to-lint',
