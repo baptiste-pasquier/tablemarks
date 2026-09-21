@@ -588,7 +588,7 @@ describe('desktop filter overlay (U3)', () => {
     )
     expect(overlayWrapper).toBeDefined()
     expect(overlayWrapper?.className).not.toMatch(
-      /md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-2xl/,
+      /md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-card/,
     )
     expect(overlayWrapper?.textContent).toBe('')
   })
