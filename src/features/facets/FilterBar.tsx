@@ -198,7 +198,7 @@ export function FilterBar({
                   aria-expanded={expanded}
                   aria-controls={cuisineGroupId}
                   onClick={() => setExpanded((e) => !e)}
-                  className="inline-flex min-h-10 items-center rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 transition hover:border-gray-400 hover:bg-gray-50"
+                  className="inline-flex min-h-10 items-center rounded-full bg-white px-3 py-1.5 text-xs text-gray-600 shadow-sm transition hover:bg-gray-50"
                 >
                   {expanded
                     ? t('filters.collapse')

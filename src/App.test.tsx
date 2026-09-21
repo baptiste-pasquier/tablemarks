@@ -587,9 +587,7 @@ describe('desktop filter overlay (U3)', () => {
       el.className.includes('md:top-[var(--filter-overlay-top)]'),
     )
     expect(overlayWrapper).toBeDefined()
-    expect(overlayWrapper?.className).not.toMatch(
-      /md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-card/,
-    )
+    expect(overlayWrapper?.className).not.toMatch(/md:bg-white|md:shadow-lg|md:rounded-card/)
     expect(overlayWrapper?.textContent).toBe('')
   })
 

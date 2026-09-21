@@ -194,7 +194,7 @@ export function AccountMenu({ email, avatarUrl, onOpenSettings, onSignOut }: Acc
             role="menu"
             tabIndex={-1}
             style={{ position: 'fixed', top: position.top, right: position.right }}
-            className="z-[var(--z-dropdown)] w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-lg outline-none"
+            className="z-[var(--z-dropdown)] w-72 rounded-card bg-white p-3 shadow-lg outline-none"
           >
             <div className="px-2">
               <Eyebrow>{t('shell.accountMenuSignedInAs')}</Eyebrow>

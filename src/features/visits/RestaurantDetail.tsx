@@ -130,7 +130,7 @@ export function RestaurantDetail({
       <ModalHeader title={restaurant.name} onClose={onClose} variant="detail" />
 
       {/* Info block (R4): identity + location detail grouped into one visually distinct container. */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+      <div className="rounded-card bg-gray-50 p-3">
         <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
           <StatusBadge restaurant={restaurant} />
           {restaurant.address && (

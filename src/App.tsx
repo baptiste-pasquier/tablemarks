@@ -354,12 +354,17 @@ export default function App() {
             screens) keeps the row within the viewport instead; the right group stays `shrink-0`
             since its buttons shouldn't truncate. */}
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <span
+          {/* The app's own mark, not a stand-in for it: this tile is the one piece of brand on
+              screen at all times, and a generic emoji on a brand-colored square said nothing the
+              installed icon says. Served from BASE_URL because the demo lives on a repo subpath. */}
+          <img
+            src={`${import.meta.env.BASE_URL}logo.svg`}
+            alt=""
             aria-hidden="true"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand text-lg shadow-sm ring-1 ring-brand-strong/20"
-          >
-            🍴
-          </span>
+            width={36}
+            height={36}
+            className="h-9 w-9 shrink-0"
+          />
           <div className="min-w-0 leading-none">
             <h1 className="truncate text-2xl font-bold tracking-tight text-gray-900">
               {t('app.title')}
@@ -446,8 +451,7 @@ export default function App() {
             ref={filterOverlayRef}
             className={cn(
               'hidden md:fixed md:top-[var(--filter-overlay-top)] md:right-[var(--filter-overlay-right)] md:left-[var(--filter-overlay-left)] md:z-[900] md:block md:max-h-[50vh] md:overflow-y-auto',
-              restaurants.length > 0 &&
-                'md:rounded-card md:border md:border-gray-200 md:bg-white md:shadow-lg',
+              restaurants.length > 0 && 'md:rounded-card md:bg-white md:shadow-lg',
             )}
           >
             <FilterBar
