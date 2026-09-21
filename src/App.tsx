@@ -361,7 +361,7 @@ export default function App() {
             🍴
           </span>
           <div className="min-w-0 leading-none">
-            <h1 className="truncate font-display text-2xl font-semibold tracking-tight text-gray-900">
+            <h1 className="truncate text-2xl font-bold tracking-tight text-gray-900">
               {t('app.title')}
             </h1>
             <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">{t('shell.tagline')}</p>

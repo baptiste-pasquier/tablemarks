@@ -1,20 +1,17 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Work Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand: #d4561f;
-  --color-brand-soft: #fbe7da;
-  --color-brand-strong: #b8431a;
-  --color-teal: #1f6f68;
-  --color-teal-strong: #154d48;
+  --color-brand: #00a97a;
+  --color-brand-soft: #e6f7f1;
+  --color-brand-strong: #00875f;
 
-  --color-verdict-go-back: var(--color-teal);
-  --color-verdict-detour: #8c692b;
-  --color-verdict-once: #a85423;
-  --color-verdict-never: #8b3a3a;
-  --color-verdict-neutral: #837463;
+  --color-verdict-go-back: #00875f;
+  --color-verdict-detour: #f59e0b;
+  --color-verdict-once: #9aa3b2;
+  --color-verdict-never: #f43f5e;
+  --color-verdict-neutral: #9aa3b2;
 
   /* Base height of the mobile List/Map toggle bar (KTD4); safe-area inset is added
      on top of this wherever the bar itself or clearance for it is computed. */
@@ -74,19 +71,23 @@
   --z-modal: 1200;
   --z-modal-elevated: 1300;
 
-  /* Carnet culinaire ramp — warm, sepia-tinted parchment neutrals replacing
-     Tailwind's default cool grays, for the paper-editorial identity. */
-  --color-gray-50: #fbf6ee;
-  --color-gray-100: #f3e9da;
-  --color-gray-200: #e7d9c2;
-  --color-gray-300: #d6c4a5;
-  --color-gray-400: #b8a184;
-  --color-gray-500: #8a7a68;
-  --color-gray-600: #6b5d4f;
-  --color-gray-700: #4a3f35;
-  --color-gray-800: #362d26;
-  --color-gray-900: #2b2420;
-  --color-gray-950: #1a1512;
+  /* Soft Pop ramp - neutral grays with no warm cast, replacing the sepia parchment scale. */
+  --color-gray-50: #f8fafb;
+  --color-gray-100: #f1f4f7;
+  --color-gray-200: #e4e8ee;
+  --color-gray-300: #d0d6df;
+  --color-gray-400: #a8b0bc;
+  --color-gray-500: #78808f;
+  --color-gray-600: #5a6472;
+  --color-gray-700: #3f4855;
+  --color-gray-800: #29303b;
+  --color-gray-900: #111820;
+  --color-gray-950: #070b11;
+
+  /* Soft Pop shape language: cards carry a shadow instead of a border. */
+  --radius-card: 1.125rem;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 8px 22px rgb(16 24 40 / 0.06);
+  --shadow-brand: 0 6px 16px rgb(0 169 122 / 0.28);
 }
 
 html,
@@ -100,7 +101,7 @@ body {
   -webkit-font-smoothing: antialiased;
   font-family: var(--font-sans);
   color: var(--color-gray-900);
-  background: #fdfaf6;
+  background: #f5f7f9;
 }
 
 /* KTD5: Leaflet's default .leaflet-tooltip sets white-space: nowrap, which would let the
