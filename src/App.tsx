@@ -447,7 +447,7 @@ export default function App() {
             className={cn(
               'hidden md:fixed md:top-[var(--filter-overlay-top)] md:right-[var(--filter-overlay-right)] md:left-[var(--filter-overlay-left)] md:z-[900] md:block md:max-h-[50vh] md:overflow-y-auto',
               restaurants.length > 0 &&
-                'md:rounded-2xl md:border md:border-gray-200 md:bg-white md:shadow-lg',
+                'md:rounded-card md:border md:border-gray-200 md:bg-white md:shadow-lg',
             )}
           >
             <FilterBar

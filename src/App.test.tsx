@@ -837,7 +837,7 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
    *  the sheet carries no title/heading of its own — see the design revision note in App.tsx). */
   function sheetPanel() {
     const seeResults = screen.getByRole('button', { name: /see results/i })
-    const panel = seeResults.closest('[class*="rounded-t-2xl"]')
+    const panel = seeResults.closest('[class*="rounded-t-card"]')
     if (!panel) throw new Error('Modal panel not found')
     return within(panel as HTMLElement)
   }
@@ -982,7 +982,7 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
 
     const seeResults = screen.getByRole('button', { name: /see results/i })
     const scrollBox = seeResults
-      .closest('[class*="rounded-t-2xl"]')
+      .closest('[class*="rounded-t-card"]')
       ?.querySelector('.overflow-y-auto')
     expect(seeResults).toHaveClass('shrink-0')
     expect(scrollBox).not.toBeNull()

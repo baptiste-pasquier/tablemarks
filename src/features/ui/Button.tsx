@@ -23,7 +23,7 @@ type StyledVariant = Exclude<ButtonVariant, 'icon-dismiss' | 'menu-item'>
 // (see TEXT_SIZE below) rather than baked in here.
 const VARIANT_STYLES: Record<StyledVariant, string> = {
   primary:
-    'rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50',
+    'rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-brand transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50',
   secondary:
     'rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200 disabled:opacity-50',
   link: 'font-medium text-brand underline',

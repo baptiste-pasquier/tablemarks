@@ -21,6 +21,7 @@ describe('Button', () => {
   it('applies the brand-background class for the primary variant', () => {
     render(<Button variant="primary">Go</Button>)
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('bg-brand')
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('rounded-full', 'shadow-brand')
   })
 
   it('applies the pill/border class for the secondary variant', () => {
