@@ -13,12 +13,13 @@ below is defined anywhere else, and no component hardcodes a value one of these 
 
 ## Brand and neutrals
 
-| Token                                  | Value                 | Used for                                                    |
-| -------------------------------------- | --------------------- | ----------------------------------------------------------- |
-| `--color-brand`                        | `#00a97a`             | Primary actions, the active chip, the front pin of the mark |
-| `--color-brand-strong`                 | `#00875f`             | Hover and active states of a primary action                 |
-| `--color-brand-soft`                   | `#e6f7f1`             | The fill of an active toggle chip                           |
-| `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                        |
+| Token                                  | Value                 | Used for                                                                                     |
+| -------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------- |
+| `--color-brand`                        | `#00a97a`             | Primary actions, the active chip, the front pin of the mark                                  |
+| `--color-brand-strong`                 | `#00875f`             | Hover and active states of a primary action                                                  |
+| `--color-brand-soft`                   | `#e6f7f1`             | The fill of an active toggle chip                                                            |
+| `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                                                         |
+| `--color-canvas`                       | `#f5f7f9`             | The page behind the cards, a half-step below `--color-gray-50` so white cards read as raised |
 
 ## Verdicts and statuses
 
