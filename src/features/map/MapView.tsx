@@ -88,7 +88,7 @@ function iconForColor(
 ): L.DivIcon {
   const size = selected ? 30 : 24
   const label = labelText
-    ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;font-family:system-ui, sans-serif;color:#1f2937;white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
+    ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;font-family:var(--font-sans);color:var(--color-gray-800);white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
     : ''
   return L.divIcon({
     className: '',

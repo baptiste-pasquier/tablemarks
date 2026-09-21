@@ -40,6 +40,10 @@ Changing one of these values means re-measuring its pairing: badge text is 11px,
 AA's 4.5:1 for normal text, and nothing in the suite checks these four the way
 `cuisines.test.ts` checks the derived palette.
 
+Every cuisine color is an `oklch()` value, so the palette needs a browser that parses it
+(Baseline since mid-2023). An older engine drops the declaration and renders the badge
+unstyled rather than mis-tinted.
+
 ## Shape
 
 | Token            | Value                                                             |
