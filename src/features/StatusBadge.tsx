@@ -9,11 +9,18 @@ import {
   type Verdict,
 } from '../types/models'
 
+/**
+ * Surface *and* text color per verdict, because Soft Pop's verdict fills do not share one
+ * readable text color: white sits on the dark green, and would land at 2.15:1 on the amber and
+ * 2.54:1 on the gray -- unreadable outdoors, which is where the app is used. Measured against
+ * `--color-gray-900`: detour 8.32:1, once 7.02:1, never 4.87:1; go-back keeps white at 4.53:1.
+ * `docs/reference/design-tokens.md` carries the same figures.
+ */
 const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
-  go_back: 'bg-verdict-go-back',
-  worth_a_detour: 'bg-verdict-detour',
-  once_was_enough: 'bg-verdict-once',
-  never_again: 'bg-verdict-never',
+  go_back: 'bg-verdict-go-back text-white',
+  worth_a_detour: 'bg-verdict-detour text-gray-900',
+  once_was_enough: 'bg-verdict-once text-gray-900',
+  never_again: 'bg-verdict-never text-gray-900',
 }
 
 /**

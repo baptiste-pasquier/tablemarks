@@ -23,15 +23,22 @@ below is defined anywhere else, and no component hardcodes a value one of these 
 
 ## Verdicts and statuses
 
-A verdict renders solid with white text. A status renders as a pastel pill with dark text.
-Shape carries the distinction; color alone does not.
+A verdict renders solid. A status renders as a pastel pill with dark text. Shape carries the
+distinction; color alone does not.
 
-| Token                     | Value     |
-| ------------------------- | --------- |
-| `--color-verdict-go-back` | `#00875f` |
-| `--color-verdict-detour`  | `#f59e0b` |
-| `--color-verdict-once`    | `#9aa3b2` |
-| `--color-verdict-never`   | `#f43f5e` |
+These four are picked values, not derived ones, so each carries its own measured pairing. Text
+color is chosen per fill rather than fixed: white clears AA only on the dark green.
+
+| Token                     | Value     | Text               | Contrast |
+| ------------------------- | --------- | ------------------ | -------- |
+| `--color-verdict-go-back` | `#00875f` | white              | 4.53:1   |
+| `--color-verdict-detour`  | `#f59e0b` | `--color-gray-900` | 8.32:1   |
+| `--color-verdict-once`    | `#9aa3b2` | `--color-gray-900` | 7.02:1   |
+| `--color-verdict-never`   | `#f43f5e` | `--color-gray-900` | 4.87:1   |
+
+Changing one of these values means re-measuring its pairing: badge text is 11px, so the floor is
+AA's 4.5:1 for normal text, and nothing in the suite checks these four the way
+`cuisines.test.ts` checks the derived palette.
 
 ## Shape
 

@@ -18,21 +18,27 @@ type BadgeProps = {
    * call site reach into this markup with a descendant selector.
    */
   labelClassName?: string
-} & (
-  | { tone: string; pastel?: never }
+} &
   /**
-   * Pastel mode: an explicit background/text pair, contrast-guaranteed by whoever computed it
-   * (`cuisinePillTokens` for a cuisine, a fixed gray pair for a status). Replaces the former
-   * `color` mode, which took one solid color and picked its text color by luminance — a
-   * guess the hue system makes unnecessary.
+   * Solid mode: Tailwind classes for the surface *and* its text color. The text color belongs
+   * with the fill rather than being fixed to white here, because which one is readable depends
+   * on the fill -- the Soft Pop verdict colors include bright ambers and roses that white text
+   * cannot sit on. See `VERDICT_BADGE_CLASS` in `StatusBadge.tsx` for the measured pairings.
    */
-  | { pastel: { background: string; color: string }; tone?: never }
-)
+  (| { tone: string; pastel?: never }
+    /**
+     * Pastel mode: an explicit background/text pair, contrast-guaranteed by whoever computed it
+     * (`cuisinePillTokens` for a cuisine, a fixed gray pair for a status). Replaces the former
+     * `color` mode, which took one solid color and picked its text color by luminance — a
+     * guess the hue system makes unnecessary.
+     */
+    | { pastel: { background: string; color: string }; tone?: never }
+  )
 
 /**
- * Shared badge primitive: exactly one of `tone` (a Tailwind class, for the closed status/verdict
- * set — fixed white text) or `pastel` (an explicit pair, for per-cuisine values) picks the
- * surface; both share the same size/padding/font so a future style change touches this file
+ * Shared badge primitive: exactly one of `tone` (Tailwind classes, for the closed status/verdict
+ * set) or `pastel` (an explicit pair, for per-cuisine values) picks the surface and its text
+ * color; both share the same size/padding/font so a future style change touches this file
  * instead of every call site.
  */
 export function Badge({
@@ -45,7 +51,7 @@ export function Badge({
   labelClassName,
 }: BadgeProps) {
   const style = pastel ? { background: pastel.background, color: pastel.color } : undefined
-  const colorClass = tint ? (tone ?? '') : tone ? `${tone} text-white` : ''
+  const colorClass = tone ?? ''
 
   return (
     <span

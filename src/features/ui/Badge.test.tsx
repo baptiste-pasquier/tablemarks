@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest'
 import { Badge } from './Badge'
 
 describe('Badge', () => {
-  it('renders tone mode with the given Tailwind class, shared sizing, and fixed white text', () => {
-    render(<Badge text="Go back" tone="bg-verdict-go-back" icon="🎉" />)
+  it('renders tone mode with the given surface and text classes at the shared sizing', () => {
+    render(<Badge text="Go back" tone="bg-verdict-go-back text-white" icon="🎉" />)
 
     const label = screen.getByText('Go back')
     const badge = label.parentElement as HTMLElement
@@ -36,6 +36,14 @@ describe('Badge', () => {
     expect(badge.getAttribute('style')).toContain('oklch(0.96 0.045 281)')
     expect(badge.getAttribute('style')).toContain('oklch(0.4 0.13 281)')
     expect(within(badge).getByText('🍜')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('does not impose white text on a tone, so a light surface can pair with dark text', () => {
+    render(<Badge text="Worth a detour" tone="bg-verdict-detour text-gray-900" />)
+
+    const badge = screen.getByText('Worth a detour').parentElement as HTMLElement
+    expect(badge).toHaveClass('bg-verdict-detour', 'text-gray-900')
+    expect(badge).not.toHaveClass('text-white')
   })
 
   it('renders without an icon element when none is given', () => {
