@@ -119,24 +119,21 @@ describe('FilterBar', () => {
 
   it('shows each verdict chip with its own icon and keeps the fixed best-to-worst order', () => {
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
-    const verdictIcons: Record<string, string> = {
-      'Go back': '↩️',
-      'Worth a detour': '🧭',
-      'Once was enough': '🤷',
-      'Never again': '🚫',
-    }
+    const labels = ['Go back', 'Worth a detour', 'Once was enough', 'Never again']
     const group = screen.getByText('Status & verdict').parentElement as HTMLElement
-    const buttons = Object.keys(verdictIcons).map((label) =>
-      within(group).getByRole('button', { name: label }),
-    )
+    const buttons = labels.map((label) => within(group).getByRole('button', { name: label }))
     const order = buttons.map((b) => within(group).getAllByRole('button').indexOf(b))
     expect(order).toEqual([...order].sort((a, b) => a - b))
-    for (const [label, icon] of Object.entries(verdictIcons)) {
-      expect(within(screen.getByRole('button', { name: label })).getByText(icon)).toHaveAttribute(
-        'aria-hidden',
-        'true',
-      )
-    }
+
+    // Each chip draws its own icon, and no two verdicts share one. The glyphs are hidden from
+    // assistive tech, so the accessible name above stays the label alone.
+    const drawn = buttons.map((b) => {
+      const icon = b.querySelector('svg')
+      expect(icon).not.toBeNull()
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      return (icon as SVGElement).outerHTML
+    })
+    expect(new Set(drawn).size).toBe(labels.length)
   })
 
   it('collapses cuisines beyond 6 behind a "+N more" control, expandable via "Collapse"', async () => {

@@ -4,10 +4,10 @@ import {
   VERDICTS,
   translateVerdict,
   translateStatus,
-  VERDICT_ICON,
   type RestaurantStatus,
   type Restaurant,
 } from '../../types/models'
+import { VERDICT_ICON } from '../display'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
 import { Button } from '../ui/Button'
@@ -198,7 +198,7 @@ export function FilterBar({
                   aria-expanded={expanded}
                   aria-controls={cuisineGroupId}
                   onClick={() => setExpanded((e) => !e)}
-                  className="inline-flex min-h-10 items-center rounded-full bg-white px-3 py-1.5 text-xs text-gray-600 shadow-sm transition hover:bg-gray-50"
+                  className="inline-flex min-h-10 items-center rounded-full bg-gray-200 px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-300"
                 >
                   {expanded
                     ? t('filters.collapse')
@@ -222,17 +222,20 @@ export function FilterBar({
                 {translateStatus(s)}
               </ToggleChip>
             ))}
-            {VERDICTS.map((v) => (
-              <ToggleChip
-                key={v}
-                shape="pill"
-                active={filter.verdicts.has(v)}
-                onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}
-              >
-                <span aria-hidden="true">{VERDICT_ICON[v]}</span>
-                {translateVerdict(v)}
-              </ToggleChip>
-            ))}
+            {VERDICTS.map((v) => {
+              const Icon = VERDICT_ICON[v]
+              return (
+                <ToggleChip
+                  key={v}
+                  shape="pill"
+                  active={filter.verdicts.has(v)}
+                  onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}
+                >
+                  <Icon size={13} strokeWidth={2.4} aria-hidden="true" />
+                  {translateVerdict(v)}
+                </ToggleChip>
+              )
+            })}
           </div>
         </div>
       </div>

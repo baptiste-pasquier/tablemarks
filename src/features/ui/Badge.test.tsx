@@ -11,9 +11,9 @@ describe('Badge', () => {
     expect(badge).toHaveClass('bg-verdict-go-back')
     expect(badge).toHaveClass(
       'rounded-full',
-      'px-2',
-      'py-0.5',
-      'text-[11px]',
+      'px-2.5',
+      'py-1',
+      'text-xs',
       'font-semibold',
       'text-white',
     )
@@ -31,7 +31,7 @@ describe('Badge', () => {
 
     const label = screen.getByText('Thai')
     const badge = label.parentElement as HTMLElement
-    expect(badge).toHaveClass('rounded-full', 'px-2', 'py-0.5', 'text-[11px]', 'font-semibold')
+    expect(badge).toHaveClass('rounded-full', 'px-2.5', 'py-1', 'text-xs', 'font-semibold')
     expect(badge).not.toHaveClass('text-white')
     expect(badge.getAttribute('style')).toContain('oklch(0.96 0.045 281)')
     expect(badge.getAttribute('style')).toContain('oklch(0.4 0.13 281)')

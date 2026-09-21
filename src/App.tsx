@@ -341,7 +341,7 @@ export default function App() {
   }, [filtersOpen])
 
   return (
-    <div className="flex h-full flex-col bg-gray-50 text-gray-900">
+    <div className="flex h-full flex-col bg-canvas text-gray-900">
       <header
         ref={headerRef}
         className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/85 px-4 py-3 backdrop-blur"
@@ -418,11 +418,13 @@ export default function App() {
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside
           className={cn(
-            'min-h-0 flex-1 flex-col border-gray-200 bg-white md:flex md:w-[var(--sidebar-width)] md:flex-none md:border-r',
+            // The list pane carries the canvas, not white: a white card on a white pane has no
+            // edge, and `--shadow-card` alone cannot invent one.
+            'min-h-0 flex-1 flex-col border-gray-200 bg-canvas md:flex md:w-[var(--sidebar-width)] md:flex-none md:border-r',
             view === 'list' ? 'flex' : 'hidden',
           )}
         >
-          <div className="space-y-2 border-b border-gray-100 p-3">
+          <div className="space-y-2 border-b border-gray-200 p-3">
             <Button variant="primary" className="w-full" onClick={() => setAdding(true)}>
               {t('shell.addPlace')}
             </Button>

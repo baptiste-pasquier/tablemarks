@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { RestaurantList } from './RestaurantList'
-import { VERDICT_ICON, VERDICTS, translateVerdict, type Restaurant } from '../types/models'
+import { VERDICTS, translateVerdict, type Restaurant } from '../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'name'>): Restaurant {
   return {
@@ -48,13 +48,19 @@ describe('RestaurantList', () => {
       />,
     )
 
+    // Asserts the invariant rather than the glyph: four verdicts, four distinct drawn icons, each
+    // hidden from assistive tech and none of them part of the label's text.
+    const drawn = new Set<string>()
     for (const v of VERDICTS) {
       const label = screen.getByText(translateVerdict(v))
       const badge = label.parentElement
       expect(badge).not.toBeNull()
-      const icon = within(badge as HTMLElement).getByText(VERDICT_ICON[v])
-      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      const icon = (badge as HTMLElement).querySelector('[aria-hidden="true"]')
+      expect(icon).not.toBeNull()
+      expect(icon?.textContent).toBe('')
+      drawn.add((icon as HTMLElement).innerHTML)
     }
+    expect(drawn.size).toBe(VERDICTS.length)
   })
 
   it('shows a cuisine-tinted card with a top-right cuisine badge, and the verdict chip plus visit count in the card body, not beside the name', () => {

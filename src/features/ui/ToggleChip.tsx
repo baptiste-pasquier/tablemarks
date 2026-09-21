@@ -13,12 +13,12 @@ function chipClass(shape: ToggleChipShape, active: boolean, disabled: boolean): 
       active ? 'bg-brand-soft font-semibold text-brand-strong' : 'text-gray-600 hover:bg-gray-50'
     }`
   }
-  // Soft Pop is borderless: a chip separates from the page by its shadow, and an active chip by
-  // its brand-soft fill. The former `border`/`border-brand` pair is gone, not merely recolored.
+  // Soft Pop is borderless, so a chip is told apart by its fill. An inactive chip cannot be white:
+  // these sit inside a white filter card, where a shadow alone left them invisible.
   return `inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition ${
     active
-      ? 'bg-brand-soft font-semibold text-brand-strong shadow-sm'
-      : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
+      ? 'bg-brand-soft font-semibold text-brand-strong'
+      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
   }`
 }
 

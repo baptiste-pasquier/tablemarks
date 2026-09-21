@@ -10,7 +10,7 @@ describe('StatusBadge', () => {
     render(<StatusBadge restaurant={base} />)
     const badge = screen.getByText(translateStatus('to_try')).parentElement as HTMLElement
     expect(badge).not.toHaveClass('text-white')
-    expect(badge.getAttribute('style')).toContain('var(--color-gray-100)')
+    expect(badge.getAttribute('style')).toContain('var(--color-gray-200)')
   })
 
   it('renders a verdict as a solid pill with white text, so shape tells them apart', () => {

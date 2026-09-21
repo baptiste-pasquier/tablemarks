@@ -13,32 +13,37 @@ below is defined anywhere else, and no component hardcodes a value one of these 
 
 ## Brand and neutrals
 
-| Token                                  | Value                 | Used for                                                                                     |
-| -------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------- |
-| `--color-brand`                        | `#00a97a`             | Primary actions, the active chip, the front pin of the mark                                  |
-| `--color-brand-strong`                 | `#00875f`             | Hover and active states of a primary action                                                  |
-| `--color-brand-soft`                   | `#e6f7f1`             | The fill of an active toggle chip                                                            |
-| `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                                                         |
-| `--color-canvas`                       | `#f5f7f9`             | The page behind the cards, a half-step below `--color-gray-50` so white cards read as raised |
+| Token                                  | Value                 | Used for                                                                                                 |
+| -------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
+| `--color-brand`                        | `#00a97a`             | Primary actions, the active chip, the front pin of the mark                                              |
+| `--color-brand-strong`                 | `#00875f`             | Hover and active states of a primary action                                                              |
+| `--color-brand-soft`                   | `#e6f7f1`             | The fill of an active toggle chip                                                                        |
+| `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                                                                     |
+| `--color-canvas`                       | `#e9edf2`             | The page behind the cards. At 1.18:1 against white, which is what makes a borderless card read as a card |
 
 ## Verdicts and statuses
 
-A verdict renders solid. A status renders as a pastel pill with dark text. Shape carries the
-distinction; color alone does not.
+A verdict renders solid with white text. A status renders as a pastel gray pill with dark text.
+Shape carries the distinction; color alone does not.
 
-These four are picked values, not derived ones, so each carries its own measured pairing. Text
-color is chosen per fill rather than fixed: white clears AA only on the dark green.
+These four are picked values, not derived ones, so each carries its own measured figure. They are
+deep enough that one text color serves all four — bright fills with dark text measured fine and
+still read badly, two strong colors competing inside one pill.
 
-| Token                     | Value     | Text               | Contrast |
-| ------------------------- | --------- | ------------------ | -------- |
-| `--color-verdict-go-back` | `#00875f` | white              | 4.53:1   |
-| `--color-verdict-detour`  | `#f59e0b` | `--color-gray-900` | 8.32:1   |
-| `--color-verdict-once`    | `#9aa3b2` | `--color-gray-900` | 7.02:1   |
-| `--color-verdict-never`   | `#f43f5e` | `--color-gray-900` | 4.87:1   |
+| Token                     | Value     | White text on it |
+| ------------------------- | --------- | ---------------- |
+| `--color-verdict-go-back` | `#00734f` | 5.89:1           |
+| `--color-verdict-detour`  | `#b45309` | 5.02:1           |
+| `--color-verdict-once`    | `#546174` | 6.29:1           |
+| `--color-verdict-never`   | `#be123c` | 6.29:1           |
 
-Changing one of these values means re-measuring its pairing: badge text is 11px, so the floor is
-AA's 4.5:1 for normal text, and nothing in the suite checks these four the way
-`cuisines.test.ts` checks the derived palette.
+Changing one of these means re-measuring it: badge text is 12px, so the floor is AA's 4.5:1 for
+normal text, and nothing in the suite checks these four the way `cuisines.test.ts` checks the
+derived palette.
+
+A verdict's leading glyph is a Lucide icon (`VERDICT_ICON` in `src/features/display.ts`), never an
+emoji: an emoji carries fixed colors and turns into a smudge on a solid fill, while a line icon
+inherits `currentColor`. Cuisines keep emoji — on a pastel pill the color is an asset.
 
 Every cuisine color is an `oklch()` value, so the palette needs a browser that parses it
 (Baseline since mid-2023). An older engine drops the declaration and renders the badge
@@ -49,7 +54,7 @@ unstyled rather than mis-tinted.
 | Token            | Value                                                             |
 | ---------------- | ----------------------------------------------------------------- |
 | `--radius-card`  | `1.125rem`                                                        |
-| `--shadow-card`  | `0 1px 2px rgb(16 24 40 / 0.05), 0 8px 22px rgb(16 24 40 / 0.06)` |
+| `--shadow-card`  | `0 1px 2px rgb(16 24 40 / 0.06), 0 10px 24px rgb(16 24 40 / 0.1)` |
 | `--shadow-brand` | `0 6px 16px rgb(0 169 122 / 0.28)`                                |
 
 Cards carry a shadow and no border. Buttons and chips are `rounded-full`.

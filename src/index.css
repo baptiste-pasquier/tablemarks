@@ -7,10 +7,10 @@
   --color-brand-soft: #e6f7f1;
   --color-brand-strong: #00875f;
 
-  --color-verdict-go-back: #00875f;
-  --color-verdict-detour: #f59e0b;
-  --color-verdict-once: #9aa3b2;
-  --color-verdict-never: #f43f5e;
+  --color-verdict-go-back: #00734f;
+  --color-verdict-detour: #b45309;
+  --color-verdict-once: #546174;
+  --color-verdict-never: #be123c;
 
   /* Base height of the mobile List/Map toggle bar (KTD4); safe-area inset is added
      on top of this wherever the bar itself or clearance for it is computed. */
@@ -85,12 +85,13 @@
 
   /* Soft Pop shape language: cards carry a shadow instead of a border. */
   --radius-card: 1.125rem;
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 8px 22px rgb(16 24 40 / 0.06);
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 10px 24px rgb(16 24 40 / 0.1);
   --shadow-brand: 0 6px 16px rgb(0 169 122 / 0.28);
 
-  /* The page behind the cards. A half-step below `--color-gray-50` on purpose: cards are
-     white, and at gray-50 they stop reading as raised surfaces. */
-  --color-canvas: #f5f7f9;
+  /* The page behind the cards. Measured against the white card it sits under: the first
+     attempt (#f5f7f9) landed at 1.07:1, which reads as one flat white surface. This is 1.18:1 --
+     enough for the card edge to register without a border. */
+  --color-canvas: #e9edf2;
 }
 
 html,

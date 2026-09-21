@@ -1,26 +1,24 @@
 import { Badge } from './ui/Badge'
-import { badgeState } from './display'
+import { badgeState, VERDICT_ICON } from './display'
 import {
   translatePending,
   translateStatus,
   translateVerdict,
-  VERDICT_ICON,
   type Restaurant,
   type Verdict,
 } from '../types/models'
 
 /**
- * Surface *and* text color per verdict, because Soft Pop's verdict fills do not share one
- * readable text color: white sits on the dark green, and would land at 2.15:1 on the amber and
- * 2.54:1 on the gray -- unreadable outdoors, which is where the app is used. Measured against
- * `--color-gray-900`: detour 8.32:1, once 7.02:1, never 4.87:1; go-back keeps white at 4.53:1.
- * `docs/reference/design-tokens.md` carries the same figures.
+ * Surface *and* text color per verdict. The fills are deep enough that white clears AA on all
+ * four (5.02:1 to 6.29:1), which is what lets the set share one text color -- an earlier pass
+ * used bright fills with dark text, and two strong colors fighting in one pill read worse than
+ * the measurement suggested. `docs/reference/design-tokens.md` carries the figures.
  */
 const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
   go_back: 'bg-verdict-go-back text-white',
-  worth_a_detour: 'bg-verdict-detour text-gray-900',
-  once_was_enough: 'bg-verdict-once text-gray-900',
-  never_again: 'bg-verdict-never text-gray-900',
+  worth_a_detour: 'bg-verdict-detour text-white',
+  once_was_enough: 'bg-verdict-once text-white',
+  never_again: 'bg-verdict-never text-white',
 }
 
 /**
@@ -28,15 +26,16 @@ const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
  * the pastel pill shape the cuisine badges use, while the four verdicts stay solid. The shape
  * carries the distinction, which is what makes "has this been visited" readable at a glance.
  */
-const STATUS_PILL = { background: 'var(--color-gray-100)', color: 'var(--color-gray-700)' }
+const STATUS_PILL = { background: 'var(--color-gray-200)', color: 'var(--color-gray-700)' }
 
 /** One visit's own verdict badge, always in "verdict" mode — used per entry in the visit history. */
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {
+  const Icon = VERDICT_ICON[verdict]
   return (
     <Badge
       text={translateVerdict(verdict)}
       tone={VERDICT_BADGE_CLASS[verdict]}
-      icon={VERDICT_ICON[verdict]}
+      icon={<Icon size={13} strokeWidth={2.4} />}
     />
   )
 }

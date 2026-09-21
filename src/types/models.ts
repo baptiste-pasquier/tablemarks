@@ -28,13 +28,6 @@ export const VERDICT_RANK: Record<Verdict, number> = {
 }
 
 /** Icon distinguishing each verdict from its color alone (R6). */
-export const VERDICT_ICON: Record<Verdict, string> = {
-  go_back: '↩️',
-  worth_a_detour: '🧭',
-  once_was_enough: '🤷',
-  never_again: '🚫',
-}
-
 /** Fields every synced record carries, keyed by a stable client-generated id. */
 export interface SyncFields {
   id: string

@@ -1,8 +1,15 @@
+import type { ReactNode } from 'react'
+
 import { cn } from '../../lib/cn'
 
 type BadgeProps = {
   text: string
-  icon?: string
+  /**
+   * A leading glyph: an emoji string for a cuisine, or a rendered icon element for a verdict.
+   * Both are decorative -- the label beside them carries the meaning -- so this is wrapped in
+   * `aria-hidden` either way.
+   */
+  icon?: ReactNode
   /**
    * Tinted-pill mode (light background/dark text + a leading color dot, e.g. the account
    * dropdown's sync-status chip) instead of the default solid-background/white-text mode. In
@@ -56,8 +63,10 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full font-semibold',
-        tint ? 'px-2.5 py-1 text-xs shadow-sm transition' : 'px-2 py-0.5 text-[11px]',
+        // One size for every badge: at 11px with 2px of padding, a two-word verdict was the
+        // hardest thing on the card to read, and the tinted variant was already at this size.
+        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold',
+        tint && 'shadow-sm transition',
         colorClass,
       )}
       style={style}

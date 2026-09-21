@@ -25,20 +25,20 @@ describe('ToggleChip', () => {
         'bg-brand-soft',
         'font-semibold',
         'text-brand-strong',
-        'shadow-sm',
       )
       expect(button).not.toHaveClass('border', 'border-brand')
     })
 
-    it('applies the inactive pill classes (white, shadow, hover states) matching FilterBar', () => {
+    it('gives an inactive pill a filled surface, since these sit inside a white card', () => {
       render(
         <ToggleChip shape="pill" active={false} onClick={vi.fn()}>
           Thai
         </ToggleChip>,
       )
       const button = screen.getByRole('button', { name: 'Thai' })
-      expect(button).toHaveClass('bg-white', 'text-gray-600', 'shadow-sm', 'hover:bg-gray-50')
-      expect(button).not.toHaveClass('border', 'border-gray-300')
+      expect(button).toHaveClass('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300')
+      // A white chip on a white filter card was invisible, and no shadow was enough to fix it.
+      expect(button).not.toHaveClass('bg-white', 'border', 'border-gray-300')
     })
 
     it('reflects active in aria-pressed', () => {
