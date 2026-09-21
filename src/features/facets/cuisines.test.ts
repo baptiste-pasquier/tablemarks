@@ -149,3 +149,75 @@ describe('cuisineOptions', () => {
     expect(options).toEqual([...options].sort((a, b) => a.localeCompare(b)))
   })
 })
+
+/**
+ * The palette's promise is a *measured* floor, not a chosen one: every tone -- the twelve curated
+ * hues and the twenty-two fallbacks alike -- must clear WCAG AA on both rendered forms. Without
+ * this, a thirteenth cuisine or a tweak to a recipe's lightness silently drops a badge below
+ * legibility, since nothing else in the suite reads a color as a color.
+ *
+ * It measures what the module returns, never a copy of the recipes: a test holding its own
+ * lightness/chroma numbers would keep passing after someone changed the real ones.
+ */
+describe('cuisine palette contrast floors', () => {
+  /** OKLCH -> linear sRGB, clipped to gamut the way a browser clips before painting. */
+  function linearRgb(color: string): number[] {
+    const [lightness, chroma, hue] = color.match(/[\d.]+/g)!.map(Number)
+    const h = (hue * Math.PI) / 180
+    const a = chroma * Math.cos(h)
+    const b = chroma * Math.sin(h)
+    const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3
+    return [
+      4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+      -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+    ].map((c) => Math.min(1, Math.max(0, c)))
+  }
+
+  function luminance(color: string): number {
+    const [r, g, b] = linearRgb(color)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+
+  function contrast(foreground: string, background: string): number {
+    const [hi, lo] = [luminance(foreground), luminance(background)].sort((x, y) => y - x)
+    return (hi + 0.05) / (lo + 0.05)
+  }
+
+  /**
+   * Curated cuisines answer to their own name; the fallback wheel is only reachable through the
+   * hash, so probe names are drawn until every tone in `CUSTOM_TONES` has been seen. Failing to
+   * reach them all is itself a failure -- it would mean a tone nothing can ever be assigned.
+   */
+  function everyPaintedName(): string[] {
+    const names = CURATED_CUISINES.map(({ name }) => name)
+    const unseen = new Set(CUSTOM_TONES.map(({ hue, chroma }) => `${hue}:${chroma}`))
+    for (let i = 0; unseen.size > 0 && i < 5000; i += 1) {
+      const probe = `probe-${i}`
+      const { hue, chroma } = toneForCuisine(probe)
+      const key = `${hue}:${chroma}`
+      if (unseen.delete(key)) names.push(probe)
+    }
+    expect(unseen, 'every fallback tone must be reachable by some cuisine name').toEqual(new Set())
+    return names
+  }
+
+  const PAINTED = everyPaintedName()
+
+  it.each(PAINTED)('%s: pill text clears AA on its pill background', (name) => {
+    const { background, color } = cuisinePillTokens(name)
+    expect(contrast(color, background)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it.each(PAINTED)('%s: white clears AA on the solid form', (name) => {
+    expect(contrast('oklch(1 0 0)', colorForCuisine(name))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('holds the same floors for the uncategorized tone', () => {
+    expect(contrast('oklch(1 0 0)', UNCATEGORIZED_COLOR)).toBeGreaterThanOrEqual(4.5)
+    const { background, color } = cuisinePillTokens(null)
+    expect(contrast(color, background)).toBeGreaterThanOrEqual(4.5)
+  })
+})
