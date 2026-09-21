@@ -383,6 +383,17 @@ describe('MapView', () => {
     expect(getByTestId('marker-2-2').dataset.size).toBe('30')
   })
 
+  it('gives the selected marker a glow the browser can actually parse', () => {
+    const { getByTestId } = render(<MapView markers={MARKERS} selectedId="a" onSelect={vi.fn()} />)
+    const selected = getByTestId('marker-1-1').dataset.iconHtml ?? ''
+    const unselected = getByTestId('marker-2-2').dataset.iconHtml ?? ''
+
+    expect(selected).toContain('box-shadow:0 0 0 5px color-mix(')
+    expect(unselected).not.toContain('0 0 0 5px')
+    // Hex alpha suffixes silently void the whole declaration once colors are `oklch(...)`.
+    expect(selected).not.toMatch(/oklch\([^)]*\)[0-9a-f]{2}/)
+  })
+
   describe('hovered marker halo (U2 R1-R3, KTD3)', () => {
     it('renders the hovered marker with the same halo/size as a selected marker, and moves it when hoveredId changes', () => {
       const { getByTestId, rerender } = render(<MapView markers={MARKERS} hoveredId="a" />)

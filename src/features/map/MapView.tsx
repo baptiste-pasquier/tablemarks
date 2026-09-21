@@ -57,7 +57,9 @@ function pinHtml(color: string, selected: boolean): string {
   let html = pinHtmlCache.get(key)
   if (!html) {
     const shadow = selected
-      ? `box-shadow:0 0 0 5px ${color}33, 0 3px 6px rgba(0,0,0,.4);`
+      ? // `${color}33` would append hex alpha, which only parses on a hex color; cuisine colors
+        // are `oklch(...)` now, and one invalid value drops the whole box-shadow declaration.
+        `box-shadow:0 0 0 5px color-mix(in oklab, ${color} 20%, transparent), 0 3px 6px rgba(0,0,0,.4);`
       : `box-shadow:0 2px 4px rgba(0,0,0,.35);`
     html = `<span style="position:absolute;inset:0;display:block;border-radius:50% 50% 50% 0;background:${color};border:2px solid #fff;transform:rotate(-45deg);${shadow}"><span style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:9999px;background:rgba(255,255,255,.92)"></span></span>`
     pinHtmlCache.set(key, html)
