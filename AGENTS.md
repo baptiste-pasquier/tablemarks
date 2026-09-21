@@ -109,14 +109,15 @@ frontmatter, and cite a repo file as a backticked path, not a link.
 
 ## You changed X → update Y
 
-| Changed                                            | Update                                                   |
-| -------------------------------------------------- | -------------------------------------------------------- |
-| the sync engine, the data model, or a schema       | `docs/reference/data-model.md` + a migration             |
-| core behaviour or the local-first/sync design      | `docs/explanation/architecture.md`                       |
-| setup, scripts, testing, or the PocketBase backend | `docs/how-to/development.md`                             |
-| a deployment target, the images, or the proxy      | `docs/how-to/deployment.md`                              |
-| a non-obvious fix, or something you measured       | `docs/journal/solutions/<category>/`                     |
-| a lasting architectural choice                     | a new ADR in `docs/journal/decisions/`                   |
-| a domain term                                      | `CONCEPTS.md`                                            |
-| user-facing behaviour, setup, local workflow       | `README.md`                                              |
-| what an agent must always know                     | this file — and remove a line, or say why none had to go |
+| Changed                                             | Update                                                   |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| the sync engine, the data model, or a schema        | `docs/reference/data-model.md` + a migration             |
+| core behaviour or the local-first/sync design       | `docs/explanation/architecture.md`                       |
+| setup, scripts, testing, or the PocketBase backend  | `docs/how-to/development.md`                             |
+| a deployment target, the images, or the proxy       | `docs/how-to/deployment.md`                              |
+| a non-obvious fix, or something you measured        | `docs/journal/solutions/<category>/`                     |
+| a lasting architectural choice                      | a new ADR in `docs/journal/decisions/`                   |
+| a color, a radius, a shadow, or the cuisine palette | `docs/reference/design-tokens.md`                        |
+| a domain term                                       | `CONCEPTS.md`                                            |
+| user-facing behaviour, setup, local workflow        | `README.md`                                              |
+| what an agent must always know                      | this file — and remove a line, or say why none had to go |

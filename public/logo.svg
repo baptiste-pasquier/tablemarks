@@ -29,6 +29,7 @@
   <g filter="url(#shSm)" transform="translate(146 196) scale(1.15)">
     <use href="#pin" fill="#A12F2F"/>
   </g>
+  <!-- Farthest pin from centre: must stay inside the maskable safe-zone radius (205 from 256,256) — re-measure this transform before changing it. -->
   <g filter="url(#shSm)" transform="translate(366 180) scale(1.15)">
     <use href="#pin" fill="#7A3E98"/>
   </g>
