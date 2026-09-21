@@ -1,14 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
-import { colorForCuisine, cuisineDisplayName, emojiForCuisine } from './facets/cuisines'
+import { cuisineDisplayName, cuisinePillTokens, emojiForCuisine } from './facets/cuisines'
 import { Badge } from './ui/Badge'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
 import { distanceLabelFor } from '../lib/geo'
-
-/** Cream base the cuisine tint mixes into, matching the shipped "Carnet culinaire" page background. */
-const CARD_TINT_BASE = '#fdfaf6'
 
 export function RestaurantList({
   items,
@@ -40,7 +37,6 @@ export function RestaurantList({
   return (
     <ul className="space-y-2 p-3">
       {items.map((r) => {
-        const cuisineColor = colorForCuisine(r.cuisine)
         const visited = badgeState(r).kind === 'visited'
         const distanceLabel = distanceLabelFor(currentPosition, r)
         return (
@@ -55,11 +51,7 @@ export function RestaurantList({
               onMouseLeave={() => onHover?.(null)}
               onFocus={() => onHover?.(r.id)}
               onBlur={() => onHover?.(null)}
-              className="block w-full rounded-2xl p-3 text-left shadow-sm transition hover:shadow-md"
-              style={{
-                background: `color-mix(in srgb, ${cuisineColor} 16%, ${CARD_TINT_BASE})`,
-                border: `1px solid color-mix(in srgb, ${cuisineColor} 35%, ${CARD_TINT_BASE})`,
-              }}
+              className="block w-full rounded-card bg-white p-3 text-left shadow-card transition hover:shadow-lg"
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="min-w-0 truncate text-base font-bold tracking-tight text-gray-900">
@@ -68,7 +60,7 @@ export function RestaurantList({
                 <Badge
                   text={cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
                   icon={emojiForCuisine(r.cuisine)}
-                  color={cuisineColor}
+                  pastel={cuisinePillTokens(r.cuisine)}
                 />
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">

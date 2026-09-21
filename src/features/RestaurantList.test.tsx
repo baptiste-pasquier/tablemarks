@@ -73,11 +73,14 @@ describe('RestaurantList', () => {
     )
 
     const card = screen.getByRole('button', { name: /Baan Thaï/ })
-    expect(card).toHaveStyle({ background: 'color-mix(in srgb, #7c3aed 16%, #fdfaf6)' })
+    expect(card).toHaveClass('bg-white', 'rounded-card', 'shadow-card')
+    expect(card.getAttribute('style')).toBeNull()
 
     const name = screen.getByText('Baan Thaï')
     const cuisineBadge = screen.getByText('Thai').parentElement as HTMLElement
     expect(within(cuisineBadge).getByText('🍜')).toHaveAttribute('aria-hidden', 'true')
+    // Thai is hue 281 on the wheel; the tint now lives on the badge, not on the card.
+    expect(cuisineBadge.getAttribute('style')).toContain('oklch(0.96 0.045 281)')
     // The cuisine badge shares the header row with the name (R10) ...
     expect(name.parentElement).toBe(cuisineBadge.parentElement)
 
@@ -105,29 +108,15 @@ describe('RestaurantList', () => {
     expect(screen.queryByText(/visits?$/)).not.toBeInTheDocument()
   })
 
-  it('renders the uncategorized tint and emoji for a restaurant with no cuisine, not a blank badge', () => {
+  it('renders the uncategorized pill and emoji for a restaurant with no cuisine, not a blank badge', () => {
     render(<RestaurantList items={[r({ id: 'a', name: 'No cuisine place' })]} />)
 
     const badge = screen.getByText('Uncategorized').parentElement as HTMLElement
     expect(within(badge).getByText('🍽️')).toHaveAttribute('aria-hidden', 'true')
 
     const card = screen.getByRole('button', { name: /No cuisine place/ })
-    expect(card).toHaveStyle({ background: 'color-mix(in srgb, #9ca3af 16%, #fdfaf6)' })
-  })
-
-  it('renders white badge text against a low-luminance cuisine color and near-black against a high-luminance one', () => {
-    render(
-      <RestaurantList
-        items={[
-          // Thai (#7c3aed) is low-luminance -> white badge text.
-          r({ id: 'a', name: 'Dark cuisine', cuisine: 'Thai' }),
-          // Mexican (#ca8a04) is high-luminance -> near-black badge text.
-          r({ id: 'b', name: 'Light cuisine', cuisine: 'Mexican' }),
-        ]}
-      />,
-    )
-    expect(screen.getByText('Thai')).toHaveStyle({ color: '#ffffff' })
-    expect(screen.getByText('Mexican')).toHaveStyle({ color: '#000000' })
+    expect(card).toHaveClass('bg-white')
+    expect(badge.getAttribute('style')).toContain('oklch(0.96 0 0)')
   })
 
   it('shows "Uncategorized" (not a blank label) for a whitespace-only cuisine', () => {
