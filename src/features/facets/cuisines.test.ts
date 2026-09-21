@@ -1,19 +1,21 @@
 import { describe, it, expect } from 'vitest'
 import {
   colorForCuisine,
+  cuisinePillTokens,
   cuisineOptions,
   emojiForCuisine,
+  toneForCuisine,
   CURATED_CUISINES,
+  CUSTOM_TONES,
   UNCATEGORIZED_COLOR,
   UNCATEGORIZED_EMOJI,
   GENERIC_CUISINE_EMOJI,
 } from './cuisines'
 
 describe('colorForCuisine', () => {
-  it('returns the fixed color for a curated cuisine (case-insensitive)', () => {
-    const french = CURATED_CUISINES.find((c) => c.name === 'French')!.color
-    expect(colorForCuisine('French')).toBe(french)
-    expect(colorForCuisine('french')).toBe(french)
+  it('derives the solid form from the cuisine hue, case-insensitively', () => {
+    expect(colorForCuisine('French')).toBe('oklch(0.48 0.15 249)')
+    expect(colorForCuisine('french')).toBe(colorForCuisine('French'))
   })
 
   it('returns the neutral color for empty/undefined', () => {
@@ -24,7 +26,7 @@ describe('colorForCuisine', () => {
 
   it('assigns a stable, non-neutral color to a custom cuisine', () => {
     const a = colorForCuisine('Ethiopian')
-    expect(a).toBe(colorForCuisine('Ethiopian')) // deterministic
+    expect(a).toBe(colorForCuisine('Ethiopian'))
     expect(a).not.toBe(UNCATEGORIZED_COLOR)
   })
 
@@ -32,6 +34,58 @@ describe('colorForCuisine', () => {
     for (const c of [...CURATED_CUISINES.map((x) => x.name), 'Ethiopian', 'Peruvian', 'Ramen']) {
       expect(colorForCuisine(c)).not.toBe(UNCATEGORIZED_COLOR)
     }
+  })
+})
+
+describe('the cuisine hue wheel', () => {
+  it('spaces the eleven wheel cuisines 32 degrees apart, Café excepted', () => {
+    const wheel = CURATED_CUISINES.filter((c) => c.chroma === 1).map((c) => c.hue)
+    expect(wheel).toEqual([25, 57, 89, 121, 153, 185, 217, 249, 281, 313, 345])
+    for (let i = 1; i < wheel.length; i++) {
+      expect(wheel[i] - wheel[i - 1]).toBe(32)
+    }
+  })
+
+  it('gives Café the Burger hue at half chroma, so it reads brown rather than a second amber', () => {
+    const cafe = CURATED_CUISINES.find((c) => c.name === 'Café')!
+    expect(cafe).toEqual({ name: 'Café', hue: 60, chroma: 0.5 })
+  })
+
+  it('offers 22 fallback tones and never reuses a curated hue for a free-text cuisine', () => {
+    expect(CUSTOM_TONES).toHaveLength(22)
+    const curated = new Set(CURATED_CUISINES.map((c) => c.hue))
+    for (const tone of CUSTOM_TONES) {
+      expect(curated.has(tone.hue)).toBe(false)
+    }
+  })
+
+  it('resolves a free-text cuisine to one of the fallback tones, deterministically', () => {
+    const tone = toneForCuisine('Ethiopian')
+    expect(CUSTOM_TONES).toContainEqual(tone)
+    expect(toneForCuisine('ethiopian')).toEqual(tone)
+  })
+})
+
+describe('cuisinePillTokens', () => {
+  it('pairs a very light background with a dark text of the same hue', () => {
+    expect(cuisinePillTokens('Thai')).toEqual({
+      background: 'oklch(0.96 0.045 281)',
+      color: 'oklch(0.4 0.13 281)',
+    })
+  })
+
+  it('scales both halves by the tone chroma, so Café stays brown', () => {
+    expect(cuisinePillTokens('Café')).toEqual({
+      background: 'oklch(0.96 0.0225 60)',
+      color: 'oklch(0.4 0.065 60)',
+    })
+  })
+
+  it('renders an uncategorized cuisine achromatically', () => {
+    expect(cuisinePillTokens(undefined)).toEqual({
+      background: 'oklch(0.96 0 0)',
+      color: 'oklch(0.4 0 0)',
+    })
   })
 })
 

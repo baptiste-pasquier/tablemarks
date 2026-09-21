@@ -1,5 +1,28 @@
-/** Neutral color for places with no cuisine. */
-export const UNCATEGORIZED_COLOR = '#9ca3af'
+/**
+ * A cuisine's color identity is a hue, not a hex. Three rendered forms derive from it by
+ * formula, so a cuisine nobody curated - one a user typed - gets the same contrast guarantees
+ * as a curated one. Recipes and their measured contrast floors: docs/reference/design-tokens.md.
+ */
+export interface CuisineTone {
+  /** OKLCH hue angle in degrees. */
+  hue: number
+  /** Chroma multiplier applied to every recipe. 1 on the wheel; 0.5 makes Café a true brown. */
+  chroma: number
+}
+
+const PILL_BACKGROUND = { lightness: 0.96, chroma: 0.045 }
+const PILL_TEXT = { lightness: 0.4, chroma: 0.13 }
+const SOLID = { lightness: 0.48, chroma: 0.15 }
+
+function render(recipe: { lightness: number; chroma: number }, tone: CuisineTone): string {
+  return `oklch(${recipe.lightness} ${recipe.chroma * tone.chroma} ${tone.hue})`
+}
+
+/** Achromatic tone for places with no cuisine. */
+export const UNCATEGORIZED_TONE: CuisineTone = { hue: 0, chroma: 0 }
+
+/** Neutral solid color for places with no cuisine. */
+export const UNCATEGORIZED_COLOR = render(SOLID, UNCATEGORIZED_TONE)
 
 /** Emoji for places with no cuisine — distinct from the generic free-text fallback. */
 export const UNCATEGORIZED_EMOJI = '🍽️'
@@ -7,23 +30,41 @@ export const UNCATEGORIZED_EMOJI = '🍽️'
 /** Generic emoji for a free-text cuisine with no curated match. */
 export const GENERIC_CUISINE_EMOJI = '🍴'
 
-/** Curated cuisines with fixed colors. The vocabulary is open — users can add their own. */
-export const CURATED_CUISINES: ReadonlyArray<{ name: string; color: string }> = [
-  { name: 'Burger', color: '#b45309' },
-  { name: 'French', color: '#2563eb' },
-  { name: 'Italian', color: '#16a34a' },
-  { name: 'Indian', color: '#ea580c' },
-  { name: 'Japanese', color: '#db2777' },
-  { name: 'Chinese', color: '#dc2626' },
-  { name: 'Thai', color: '#7c3aed' },
-  { name: 'Mexican', color: '#ca8a04' },
-  { name: 'Pizza', color: '#e11d48' },
-  { name: 'Korean', color: '#0d9488' },
-  { name: 'Vietnamese', color: '#0891b2' },
-  { name: 'Café', color: '#92400e' },
+/**
+ * Curated cuisines. The eleven wheel entries sit 32 degrees apart so no two converge once
+ * lightened into a pastel pill — the fault this replaced was three near-identical oranges and
+ * three near-identical reds. Café is the one entry off the wheel: Burger's hue at half chroma.
+ * The vocabulary stays open — users add their own, and those hash into CUSTOM_TONES.
+ */
+export const CURATED_CUISINES: ReadonlyArray<{ name: string; hue: number; chroma: number }> = [
+  { name: 'Pizza', hue: 25, chroma: 1 },
+  { name: 'Indian', hue: 57, chroma: 1 },
+  { name: 'Burger', hue: 89, chroma: 1 },
+  { name: 'Mexican', hue: 121, chroma: 1 },
+  { name: 'Italian', hue: 153, chroma: 1 },
+  { name: 'Korean', hue: 185, chroma: 1 },
+  { name: 'Vietnamese', hue: 217, chroma: 1 },
+  { name: 'French', hue: 249, chroma: 1 },
+  { name: 'Thai', hue: 281, chroma: 1 },
+  { name: 'Japanese', hue: 313, chroma: 1 },
+  { name: 'Chinese', hue: 345, chroma: 1 },
+  { name: 'Café', hue: 60, chroma: 0.5 },
 ]
 
-const CURATED_BY_KEY = new Map(CURATED_CUISINES.map((c) => [c.name.toLowerCase(), c.color]))
+const CURATED_BY_KEY = new Map<string, CuisineTone>(
+  CURATED_CUISINES.map((c) => [c.name.toLowerCase(), { hue: c.hue, chroma: c.chroma }]),
+)
+
+// Fallback wheel for free-text cuisines, assigned by name hash. Each hue sits at the midpoint
+// of a curated pair, so a user cuisine never lands on a curated hue; the same eleven repeat at
+// half chroma to reach 22 distinct tones. Collisions past that are acceptable: the color is a
+// scannability hint, not an identifier, and the emoji carries the meaning.
+const FALLBACK_HUES = [9, 41, 73, 105, 137, 169, 201, 233, 265, 297, 329]
+
+export const CUSTOM_TONES: readonly CuisineTone[] = [
+  ...FALLBACK_HUES.map((hue) => ({ hue, chroma: 1 })),
+  ...FALLBACK_HUES.map((hue) => ({ hue, chroma: 0.5 })),
+]
 
 /** Curated cuisine -> representative emoji, keyed the same way as `CURATED_BY_KEY`. */
 const CUISINE_EMOJI = new Map([
@@ -41,19 +82,6 @@ const CUISINE_EMOJI = new Map([
   ['café', '☕️'],
 ])
 
-// Palette for custom cuisines — assigned deterministically by name hash. Collisions are
-// acceptable: the color is a scannability hint, not an identifier.
-const CUSTOM_PALETTE = [
-  '#9333ea',
-  '#65a30d',
-  '#0284c7',
-  '#be123c',
-  '#a16207',
-  '#15803d',
-  '#7e22ce',
-  '#c2410c',
-]
-
 function hashString(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0
@@ -65,14 +93,26 @@ function normalize(cuisine: string | null | undefined): string | null {
   return c ? c : null
 }
 
-/** The one cuisine-to-color source, shared by markers and filter chips. Neutral for uncategorized. */
-export function colorForCuisine(cuisine: string | null | undefined): string {
+/** The one cuisine-to-tone source. Every rendered cuisine color goes through here. */
+export function toneForCuisine(cuisine: string | null | undefined): CuisineTone {
   const key = normalize(cuisine)
-  if (!key) return UNCATEGORIZED_COLOR
-  return (
-    CURATED_BY_KEY.get(key.toLowerCase()) ??
-    CUSTOM_PALETTE[hashString(key.toLowerCase()) % CUSTOM_PALETTE.length]
-  )
+  if (!key) return UNCATEGORIZED_TONE
+  const lower = key.toLowerCase()
+  return CURATED_BY_KEY.get(lower) ?? CUSTOM_TONES[hashString(lower) % CUSTOM_TONES.length]
+}
+
+/** Solid form — map markers and filter dots. Dark enough that white text on it stays legible. */
+export function colorForCuisine(cuisine: string | null | undefined): string {
+  return render(SOLID, toneForCuisine(cuisine))
+}
+
+/** Pastel form — the cuisine badge and chip. The pair is contrast-safe at any hue. */
+export function cuisinePillTokens(cuisine: string | null | undefined): {
+  background: string
+  color: string
+} {
+  const tone = toneForCuisine(cuisine)
+  return { background: render(PILL_BACKGROUND, tone), color: render(PILL_TEXT, tone) }
 }
 
 /** The one cuisine-to-emoji source, mirroring `colorForCuisine`'s normalize-then-lookup shape. */
