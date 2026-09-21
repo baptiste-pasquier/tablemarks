@@ -5,7 +5,7 @@
 
   --color-brand: #00a97a;
   --color-brand-soft: #e6f7f1;
-  --color-brand-strong: #00875f;
+  --color-brand-strong: #00734f;
 
   --color-verdict-go-back: #00734f;
   --color-verdict-detour: #b45309;
@@ -85,13 +85,12 @@
 
   /* Soft Pop shape language: cards carry a shadow instead of a border. */
   --radius-card: 1.125rem;
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 10px 24px rgb(16 24 40 / 0.1);
+  /* Short and dense, not wide and soft: a card sits on white, so the shadow has to draw an
+     edge under it. A 24px spread lights an area instead and leaves the card edgeless. */
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.1), 0 6px 16px rgb(16 24 40 / 0.14);
+  /* Same job at chip scale, a touch denser since a chip is small enough to lose its edge. */
+  --shadow-chip: 0 1px 2px rgb(16 24 40 / 0.12), 0 4px 10px rgb(16 24 40 / 0.14);
   --shadow-brand: 0 6px 16px rgb(0 169 122 / 0.28);
-
-  /* The page behind the cards. Measured against the white card it sits under: the first
-     attempt (#f5f7f9) landed at 1.07:1, which reads as one flat white surface. This is 1.18:1 --
-     enough for the card edge to register without a border. */
-  --color-canvas: #e9edf2;
 }
 
 html,
@@ -105,7 +104,7 @@ body {
   -webkit-font-smoothing: antialiased;
   font-family: var(--font-sans);
   color: var(--color-gray-900);
-  background: var(--color-canvas);
+  background: var(--color-gray-50);
 }
 
 /* KTD5: Leaflet's default .leaflet-tooltip sets white-space: nowrap, which would let the

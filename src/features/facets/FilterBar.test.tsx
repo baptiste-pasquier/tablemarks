@@ -136,6 +136,32 @@ describe('FilterBar', () => {
     expect(new Set(drawn).size).toBe(labels.length)
   })
 
+  it('dresses a selected chip in what it filters for, not all of them in brand green', () => {
+    const filter = {
+      cuisines: new Set(['thai']),
+      statuses: new Set(['to_try'] as const),
+      verdicts: new Set(['worth_a_detour'] as const),
+    }
+    render(<FilterBar restaurants={PLACES} filter={filter} onChange={vi.fn()} />)
+
+    // A verdict chip borrows the verdict's own fill -- four identical green pills would say
+    // nothing about which verdict is selected.
+    expect(screen.getByRole('button', { name: 'Worth a detour' })).toHaveClass(
+      'bg-verdict-detour',
+      'text-white',
+    )
+    expect(screen.getByRole('button', { name: 'To try' })).toHaveClass(
+      'bg-gray-200',
+      'text-gray-700',
+    )
+    // A cuisine has no such color of its own, so it falls back to the brand fill.
+    expect(screen.getByRole('button', { name: /Thai/ })).toHaveClass('bg-brand', 'text-white')
+
+    // An unselected verdict must not leak its color -- only the selected one is filled.
+    expect(screen.getByRole('button', { name: 'Never again' })).toHaveClass('bg-white')
+    expect(screen.getByRole('button', { name: 'Never again' })).not.toHaveClass('bg-verdict-never')
+  })
+
   it('collapses cuisines beyond 6 behind a "+N more" control, expandable via "Collapse"', async () => {
     const many = ['Thai', 'Indian', 'French', 'Italian', 'Japanese', 'Chinese', 'Mexican'].map(
       (cuisine, i) => r({ id: `p${i}`, cuisine }),

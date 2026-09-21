@@ -6,19 +6,31 @@ type ToggleChipShape = 'segment' | 'pill'
 // Exact active/hover/disabled class values preserved byte-for-byte from SortBar's `segmentClass`
 // and FilterBar's local `Chip` (KTD4) — no new values invented, no KD1 (Button) reconciliation
 // applied here.
-function chipClass(shape: ToggleChipShape, active: boolean, disabled: boolean): string {
+/**
+ * What a selected pill wears when its caller does not name a color of its own: the same brand
+ * green as the primary buttons, so "selected" reads as one idea across the app.
+ */
+const DEFAULT_ACTIVE_PILL = 'bg-brand text-white'
+
+function chipClass(
+  shape: ToggleChipShape,
+  active: boolean,
+  disabled: boolean,
+  activeTone: string | undefined,
+): string {
   if (shape === 'segment') {
     if (disabled) return 'min-h-10 px-3 py-1.5 text-xs font-medium text-gray-300 cursor-not-allowed'
     return `min-h-10 px-3 py-1.5 text-xs font-medium transition ${
       active ? 'bg-brand-soft font-semibold text-brand-strong' : 'text-gray-600 hover:bg-gray-50'
     }`
   }
-  // Soft Pop is borderless, so a chip is told apart by its fill. An inactive chip cannot be white:
-  // these sit inside a white filter card, where a shadow alone left them invisible.
+  // Soft Pop is borderless, so relief tells a chip from the white card it sits on -- `shadow-chip`
+  // is denser than a card's for that reason. Only the selected chip takes a fill, which is what
+  // makes the selection findable among a dozen siblings; the pastel fill it replaced did not.
   return `inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition ${
     active
-      ? 'bg-brand-soft font-semibold text-brand-strong'
-      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      ? `${activeTone ?? DEFAULT_ACTIVE_PILL} font-semibold shadow-chip`
+      : 'bg-white text-gray-700 shadow-chip hover:bg-gray-50'
   }`
 }
 
@@ -41,6 +53,7 @@ function chipClass(shape: ToggleChipShape, active: boolean, disabled: boolean): 
 export function ToggleChip({
   shape,
   active,
+  activeTone,
   disabled = false,
   onClick,
   className = '',
@@ -48,6 +61,12 @@ export function ToggleChip({
 }: {
   shape: ToggleChipShape
   active: boolean
+  /**
+   * Surface + text classes for the selected state, replacing the brand fill. A chip that filters
+   * for a colored thing wears that thing's color when selected, so the row of verdict chips reads
+   * as the badges it selects rather than as four identical green pills.
+   */
+  activeTone?: string
   disabled?: boolean
   onClick: () => void
   className?: string
@@ -59,7 +78,7 @@ export function ToggleChip({
       disabled={disabled}
       aria-pressed={active}
       onClick={onClick}
-      className={cn(chipClass(shape, active, disabled), className)}
+      className={cn(chipClass(shape, active, disabled, activeTone), className)}
     >
       {children}
     </button>

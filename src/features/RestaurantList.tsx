@@ -35,7 +35,7 @@ export function RestaurantList({
   }
 
   return (
-    <ul className="space-y-2 p-3">
+    <ul className="space-y-4 p-3">
       {items.map((r) => {
         const visited = badgeState(r).kind === 'visited'
         const distanceLabel = distanceLabelFor(currentPosition, r)

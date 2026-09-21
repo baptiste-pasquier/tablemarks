@@ -13,13 +13,12 @@ below is defined anywhere else, and no component hardcodes a value one of these 
 
 ## Brand and neutrals
 
-| Token                                  | Value                 | Used for                                                                                                 |
-| -------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
-| `--color-brand`                        | `#00a97a`             | Primary actions, the active chip, the front pin of the mark                                              |
-| `--color-brand-strong`                 | `#00875f`             | Hover and active states of a primary action                                                              |
-| `--color-brand-soft`                   | `#e6f7f1`             | The fill of an active toggle chip                                                                        |
-| `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                                                                     |
-| `--color-canvas`                       | `#e9edf2`             | The page behind the cards. At 1.18:1 against white, which is what makes a borderless card read as a card |
+| Token                                  | Value                 | Used for                                                                     |
+| -------------------------------------- | --------------------- | ---------------------------------------------------------------------------- |
+| `--color-brand`                        | `#00a97a`             | Primary actions, and the fill of a selected chip                             |
+| `--color-brand-strong`                 | `#00734f`             | Hover and active states of a primary action, link text                       |
+| `--color-brand-soft`                   | `#e6f7f1`             | Hover wash on a brand-tinted control, and the active segment in the sort bar |
+| `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                                         |
 
 ## Verdicts and statuses
 
@@ -45,6 +44,10 @@ A verdict's leading glyph is a Lucide icon (`VERDICT_ICON` in `src/features/disp
 emoji: an emoji carries fixed colors and turns into a smudge on a solid fill, while a line icon
 inherits `currentColor`. Cuisines keep emoji — on a pastel pill the color is an asset.
 
+A selected filter chip wears what it filters for: a verdict chip takes that verdict's own fill,
+a status chip the neutral status pill, and a cuisine chip — having no color of its own to borrow —
+the brand fill. Four identical green pills would say nothing about which verdict is selected.
+
 Every cuisine color is an `oklch()` value, so the palette needs a browser that parses it
 (Baseline since mid-2023). An older engine drops the declaration and renders the badge
 unstyled rather than mis-tinted.
@@ -54,7 +57,8 @@ unstyled rather than mis-tinted.
 | Token            | Value                                                             |
 | ---------------- | ----------------------------------------------------------------- |
 | `--radius-card`  | `1.125rem`                                                        |
-| `--shadow-card`  | `0 1px 2px rgb(16 24 40 / 0.06), 0 10px 24px rgb(16 24 40 / 0.1)` |
+| `--shadow-card`  | `0 1px 2px rgb(16 24 40 / 0.1), 0 6px 16px rgb(16 24 40 / 0.14)`  |
+| `--shadow-chip`  | `0 1px 2px rgb(16 24 40 / 0.12), 0 4px 10px rgb(16 24 40 / 0.14)` |
 | `--shadow-brand` | `0 6px 16px rgb(0 169 122 / 0.28)`                                |
 
 Cards carry a shadow and no border. Buttons and chips are `rounded-full`.
@@ -100,3 +104,7 @@ sources use hex, not `oklch()`: sharp rasterises through librsvg, which does not
 Every pin in `public/logo.svg` must sit inside a circle of radius 205 centred at (256,256) on the
 512 canvas — the maskable safe zone. The current mark sits on that boundary with no margin, so a
 change to any pin's `translate` or `scale` must be re-measured against it.
+
+Surfaces sit on white and separate by relief, not by a tinted page behind them: the shadows above
+are short and dense on purpose, because a wide soft spread lights an area instead of drawing an
+edge. Cards are spaced `space-y-4`, which is part of the same job.

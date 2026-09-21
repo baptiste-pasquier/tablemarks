@@ -2,6 +2,26 @@ import { Ban, Compass, Meh, RotateCcw, type LucideIcon } from 'lucide-react'
 import { statusOf, translateStatus, type Restaurant, type Verdict } from '../types/models'
 
 /**
+ * Surface and text a verdict wears wherever it appears: the badge on a card, and the filter chip
+ * once selected. A selected "worth a detour" chip in brand green would say the opposite of what
+ * it filters for, so the chip borrows the verdict's own color instead. The fills are deep enough
+ * that white clears AA on all four -- `docs/reference/design-tokens.md` carries the figures.
+ */
+export const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
+  go_back: 'bg-verdict-go-back text-white',
+  worth_a_detour: 'bg-verdict-detour text-white',
+  once_was_enough: 'bg-verdict-once text-white',
+  never_again: 'bg-verdict-never text-white',
+}
+
+/**
+ * The same borrowing for the two plain statuses, which wear the neutral pill rather than a
+ * verdict color. Kept in step with `STATUS_PILL` in `StatusBadge.tsx`, which needs the same pair
+ * as inline style values rather than classes.
+ */
+export const STATUS_CHIP_CLASS = 'bg-gray-200 text-gray-700'
+
+/**
  * A line icon per verdict, not an emoji. An emoji carries its own fixed colors, so on a solid
  * verdict fill it reads as a colored smudge rather than a symbol; a Lucide glyph is drawn in
  * `currentColor` and stays legible on any surface. Cuisines keep their emoji -- those sit on a

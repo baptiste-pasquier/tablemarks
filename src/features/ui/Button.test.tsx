@@ -100,7 +100,7 @@ describe('Button', () => {
 
   it('applies the brand-underline classes for the link variant', () => {
     render(<Button variant="link">Go</Button>)
-    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('text-brand', 'underline')
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('text-brand-strong', 'underline')
   })
 
   it('defaults the link variant to text-sm', () => {
@@ -127,7 +127,7 @@ describe('Button', () => {
     )
     const button = screen.getByRole('button', { name: 'Go' })
     expect(button).toHaveClass('mt-1')
-    expect(button).toHaveClass('text-brand')
+    expect(button).toHaveClass('text-brand-strong')
   })
 
   it('applies only the neutral hover class for the icon-dismiss variant with tone="neutral"', () => {

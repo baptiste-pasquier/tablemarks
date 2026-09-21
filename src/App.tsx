@@ -341,7 +341,7 @@ export default function App() {
   }, [filtersOpen])
 
   return (
-    <div className="flex h-full flex-col bg-canvas text-gray-900">
+    <div className="flex h-full flex-col bg-gray-50 text-gray-900">
       <header
         ref={headerRef}
         className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/85 px-4 py-3 backdrop-blur"
@@ -418,9 +418,7 @@ export default function App() {
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside
           className={cn(
-            // The list pane carries the canvas, not white: a white card on a white pane has no
-            // edge, and `--shadow-card` alone cannot invent one.
-            'min-h-0 flex-1 flex-col border-gray-200 bg-canvas md:flex md:w-[var(--sidebar-width)] md:flex-none md:border-r',
+            'min-h-0 flex-1 flex-col border-gray-200 bg-white md:flex md:w-[var(--sidebar-width)] md:flex-none md:border-r',
             view === 'list' ? 'flex' : 'hidden',
           )}
         >
@@ -431,7 +429,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setDeciding(true)}
-              className="w-full rounded-xl border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand transition hover:bg-brand-soft active:bg-brand-soft"
+              className="w-full rounded-full border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand-strong transition hover:bg-brand-soft active:bg-brand-soft"
             >
               {t('shell.whereToEat')}
             </button>

@@ -26,7 +26,7 @@ const VARIANT_STYLES: Record<StyledVariant, string> = {
     'rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-brand transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50',
   secondary:
     'rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200 disabled:opacity-50',
-  link: 'font-medium text-brand underline',
+  link: 'font-medium text-brand-strong underline',
 }
 
 // SortBar's direction toggle sits beside its text-xs segment siblings and needs to match them

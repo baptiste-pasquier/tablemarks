@@ -5,7 +5,7 @@ import { ToggleChip } from './ToggleChip'
 
 describe('ToggleChip', () => {
   describe('shape="pill"', () => {
-    it('applies the active pill classes (bg-brand-soft, shadow-sm) — borderless in Soft Pop', () => {
+    it('fills the active pill with solid brand and white text, so a selection is findable', () => {
       render(
         <ToggleChip shape="pill" active onClick={vi.fn()}>
           Thai
@@ -22,23 +22,53 @@ describe('ToggleChip', () => {
         'py-1.5',
         'text-xs',
         'transition',
-        'bg-brand-soft',
+        'bg-brand',
         'font-semibold',
-        'text-brand-strong',
+        'text-white',
+        'shadow-chip',
       )
       expect(button).not.toHaveClass('border', 'border-brand')
+      // The pastel fill it replaced put brand text at 4.09:1 on brand-soft, under the AA floor.
+      expect(button).not.toHaveClass('bg-brand-soft')
     })
 
-    it('gives an inactive pill a filled surface, since these sit inside a white card', () => {
+    it('lets a caller replace the brand fill, so a chip can wear what it filters for', () => {
+      render(
+        <ToggleChip shape="pill" active activeTone="bg-verdict-detour text-white" onClick={vi.fn()}>
+          Worth a detour
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Worth a detour' })
+      expect(button).toHaveClass('bg-verdict-detour', 'text-white', 'font-semibold', 'shadow-chip')
+      expect(button).not.toHaveClass('bg-brand')
+    })
+
+    it('ignores activeTone while inactive, which keeps the unselected row uniform', () => {
+      render(
+        <ToggleChip
+          shape="pill"
+          active={false}
+          activeTone="bg-verdict-detour text-white"
+          onClick={vi.fn()}
+        >
+          Worth a detour
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Worth a detour' })
+      expect(button).toHaveClass('bg-white', 'text-gray-700', 'shadow-chip')
+      expect(button).not.toHaveClass('bg-verdict-detour')
+    })
+
+    it('separates an inactive pill by relief, not by a gray fill', () => {
       render(
         <ToggleChip shape="pill" active={false} onClick={vi.fn()}>
           Thai
         </ToggleChip>,
       )
       const button = screen.getByRole('button', { name: 'Thai' })
-      expect(button).toHaveClass('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300')
-      // A white chip on a white filter card was invisible, and no shadow was enough to fix it.
-      expect(button).not.toHaveClass('bg-white', 'border', 'border-gray-300')
+      expect(button).toHaveClass('bg-white', 'text-gray-700', 'shadow-chip', 'hover:bg-gray-50')
+      // `shadow-chip`, not `shadow-sm`: a chip is small enough to lose its edge to a soft shadow.
+      expect(button).not.toHaveClass('bg-gray-200', 'shadow-sm', 'border', 'border-gray-300')
     })
 
     it('reflects active in aria-pressed', () => {

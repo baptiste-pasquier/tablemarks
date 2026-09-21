@@ -1,5 +1,5 @@
 import { Badge } from './ui/Badge'
-import { badgeState, VERDICT_ICON } from './display'
+import { badgeState, VERDICT_BADGE_CLASS, VERDICT_ICON } from './display'
 import {
   translatePending,
   translateStatus,
@@ -7,19 +7,6 @@ import {
   type Restaurant,
   type Verdict,
 } from '../types/models'
-
-/**
- * Surface *and* text color per verdict. The fills are deep enough that white clears AA on all
- * four (5.02:1 to 6.29:1), which is what lets the set share one text color -- an earlier pass
- * used bright fills with dark text, and two strong colors fighting in one pill read worse than
- * the measurement suggested. `docs/reference/design-tokens.md` carries the figures.
- */
-const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
-  go_back: 'bg-verdict-go-back text-white',
-  worth_a_detour: 'bg-verdict-detour text-white',
-  once_was_enough: 'bg-verdict-once text-white',
-  never_again: 'bg-verdict-never text-white',
-}
 
 /**
  * Statuses are not verdicts: "to try" and "resolving" say nothing about the place, so they get

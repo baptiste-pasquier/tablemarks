@@ -7,7 +7,7 @@ import {
   type RestaurantStatus,
   type Restaurant,
 } from '../../types/models'
-import { VERDICT_ICON } from '../display'
+import { STATUS_CHIP_CLASS, VERDICT_BADGE_CLASS, VERDICT_ICON } from '../display'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
 import { Button } from '../ui/Button'
@@ -198,7 +198,7 @@ export function FilterBar({
                   aria-expanded={expanded}
                   aria-controls={cuisineGroupId}
                   onClick={() => setExpanded((e) => !e)}
-                  className="inline-flex min-h-10 items-center rounded-full bg-gray-200 px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-300"
+                  className="inline-flex min-h-10 items-center rounded-full bg-white px-3 py-1.5 text-xs text-gray-700 shadow-chip transition hover:bg-gray-50"
                 >
                   {expanded
                     ? t('filters.collapse')
@@ -217,6 +217,7 @@ export function FilterBar({
                 key={s}
                 shape="pill"
                 active={filter.statuses.has(s)}
+                activeTone={STATUS_CHIP_CLASS}
                 onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
               >
                 {translateStatus(s)}
@@ -229,6 +230,7 @@ export function FilterBar({
                   key={v}
                   shape="pill"
                   active={filter.verdicts.has(v)}
+                  activeTone={VERDICT_BADGE_CLASS[v]}
                   onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}
                 >
                   <Icon size={13} strokeWidth={2.4} aria-hidden="true" />
