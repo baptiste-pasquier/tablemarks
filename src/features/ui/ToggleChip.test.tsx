@@ -5,7 +5,7 @@ import { ToggleChip } from './ToggleChip'
 
 describe('ToggleChip', () => {
   describe('shape="pill"', () => {
-    it('applies the active pill classes (border-brand, bg-brand-soft, shadow-sm) matching FilterBar', () => {
+    it('applies the active pill classes (bg-brand-soft, shadow-sm) — borderless in Soft Pop', () => {
       render(
         <ToggleChip shape="pill" active onClick={vi.fn()}>
           Thai
@@ -18,33 +18,27 @@ describe('ToggleChip', () => {
         'items-center',
         'gap-1.5',
         'rounded-full',
-        'border',
         'px-3',
         'py-1.5',
         'text-xs',
         'transition',
-        'border-brand',
         'bg-brand-soft',
         'font-semibold',
         'text-brand-strong',
         'shadow-sm',
       )
+      expect(button).not.toHaveClass('border', 'border-brand')
     })
 
-    it('applies the inactive pill classes (border-gray-300, hover states) matching FilterBar', () => {
+    it('applies the inactive pill classes (white, shadow, hover states) matching FilterBar', () => {
       render(
         <ToggleChip shape="pill" active={false} onClick={vi.fn()}>
           Thai
         </ToggleChip>,
       )
       const button = screen.getByRole('button', { name: 'Thai' })
-      expect(button).toHaveClass(
-        'border-gray-300',
-        'text-gray-600',
-        'hover:border-gray-400',
-        'hover:bg-gray-50',
-      )
-      expect(button).not.toHaveClass('border-brand')
+      expect(button).toHaveClass('bg-white', 'text-gray-600', 'shadow-sm', 'hover:bg-gray-50')
+      expect(button).not.toHaveClass('border', 'border-gray-300')
     })
 
     it('reflects active in aria-pressed', () => {

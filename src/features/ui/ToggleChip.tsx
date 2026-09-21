@@ -13,10 +13,12 @@ function chipClass(shape: ToggleChipShape, active: boolean, disabled: boolean): 
       active ? 'bg-brand-soft font-semibold text-brand-strong' : 'text-gray-600 hover:bg-gray-50'
     }`
   }
-  return `inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
+  // Soft Pop is borderless: a chip separates from the page by its shadow, and an active chip by
+  // its brand-soft fill. The former `border`/`border-brand` pair is gone, not merely recolored.
+  return `inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition ${
     active
-      ? 'border-brand bg-brand-soft font-semibold text-brand-strong shadow-sm'
-      : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+      ? 'bg-brand-soft font-semibold text-brand-strong shadow-sm'
+      : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
   }`
 }
 
@@ -29,7 +31,7 @@ function chipClass(shape: ToggleChipShape, active: boolean, disabled: boolean): 
  * the divider between SortBar's two segments) stays bespoke markup in `SortBar.tsx`, passed in via
  * `className` when needed, since that wrapper isn't duplicated anywhere else.
  *
- * `shape="pill"` renders the full standalone rounded, bordered pill `FilterBar.tsx` uses today.
+ * `shape="pill"` renders the full standalone rounded, shadowed pill `FilterBar.tsx` uses today.
  * Content (a color dot, an icon, a label) is left entirely to `children` (KTD4) — cuisine chips
  * are its only slot-content consumer today, so nothing color/icon-shaped is hardcoded here.
  *
