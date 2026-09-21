@@ -16,6 +16,13 @@ const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
   never_again: 'bg-verdict-never',
 }
 
+/**
+ * Statuses are not verdicts: "to try" and "resolving" say nothing about the place, so they get
+ * the pastel pill shape the cuisine badges use, while the four verdicts stay solid. The shape
+ * carries the distinction, which is what makes "has this been visited" readable at a glance.
+ */
+const STATUS_PILL = { background: 'var(--color-gray-100)', color: 'var(--color-gray-700)' }
+
 /** One visit's own verdict badge, always in "verdict" mode — used per entry in the visit history. */
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {
   return (
@@ -38,9 +45,9 @@ export function StatusBadge({
   restaurant: Pick<Restaurant, 'pending' | 'visitCount' | 'latestVerdict'>
 }) {
   const state = badgeState(restaurant)
-  if (state.kind === 'pending') return <Badge text={translatePending()} tone="bg-verdict-neutral" />
+  if (state.kind === 'pending') return <Badge text={translatePending()} pastel={STATUS_PILL} />
   if (state.kind === 'to_try')
-    return <Badge text={translateStatus('to_try')} tone="bg-verdict-neutral" />
+    return <Badge text={translateStatus('to_try')} pastel={STATUS_PILL} />
   if (state.verdict) return <VerdictBadge verdict={state.verdict} />
-  return <Badge text={translateStatus('visited')} tone="bg-verdict-neutral" />
+  return <Badge text={translateStatus('visited')} pastel={STATUS_PILL} />
 }

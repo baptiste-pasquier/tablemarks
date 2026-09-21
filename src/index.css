@@ -11,7 +11,6 @@
   --color-verdict-detour: #f59e0b;
   --color-verdict-once: #9aa3b2;
   --color-verdict-never: #f43f5e;
-  --color-verdict-neutral: #9aa3b2;
 
   /* Base height of the mobile List/Map toggle bar (KTD4); safe-area inset is added
      on top of this wherever the bar itself or clearance for it is computed. */

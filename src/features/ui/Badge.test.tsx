@@ -39,7 +39,7 @@ describe('Badge', () => {
   })
 
   it('renders without an icon element when none is given', () => {
-    render(<Badge text="To try" tone="bg-verdict-neutral" />)
+    render(<Badge text="To try" tone="bg-verdict-once" />)
     const label = screen.getByText('To try')
     expect(label.parentElement?.children.length).toBe(1)
   })
