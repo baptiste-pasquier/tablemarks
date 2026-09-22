@@ -118,25 +118,23 @@ body {
   background: var(--color-canvas);
 }
 
-/* KTD5: Leaflet's default .leaflet-tooltip sets white-space: nowrap, which would let the
-   marker info-box overflow instead of wrapping onto a second line (R5), and no width of its
-   own (shrink-to-fit) -- so a short tooltip stays content-width and a long one grows up to
-   max-width before wrapping (a fixed width would waste space on short content). Two things
-   went wrong here before landing on this combination: overflow-wrap: anywhere counts toward
-   min-content sizing and collapses the box to near-single-character width, breaking even
-   short, ordinary words mid-character -- break-word avoids that while still forcing a break
-   in a single long unbroken token rather than overflowing. Explicit background-color (rather
-   than relying on Leaflet's own .leaflet-tooltip default) keeps the card fully opaque against
-   the map tiles behind it. min-width gives the shrink-to-fit box a floor: without one, a
-   short name (e.g. one word) lets the box collapse down to roughly that word's own width,
-   which is too narrow for the badge + visit-count + cuisine meta line below it to pack more
-   than one segment per line, wrapping each onto its own line even when they'd easily fit
-   together in a wider box -- observed in production even after replacing the meta line's
-   flex-wrap with plain inline flow, so the fix is a width floor, not the wrapping mechanism. */
+/* The marker tooltip, drawn like a card rather than Leaflet's default chrome (a hairline white
+   border, a gray 3px-radius shadow, a system font). `width: max-content` capped by `max-width`
+   sizes it to its content up to 230px and only then wraps the name: a Leaflet tooltip sits in a
+   zero-width pane, so plain shrink-to-fit collapsed it to its min-content -- a one-word name
+   squeezed every row onto its own line. `overflow-wrap: break-word`, not `anywhere`, so a single
+   long token still breaks instead of overflowing without lowering that min-content. The rows
+   themselves are laid out in MarkerTooltipContent.tsx. */
 .marker-tooltip {
-  white-space: normal;
+  width: max-content;
   min-width: 160px;
-  max-width: 220px;
-  overflow-wrap: break-word;
+  max-width: 230px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-card);
   background-color: #fff;
+  font-family: var(--font-sans);
+  white-space: normal;
+  overflow-wrap: break-word;
 }

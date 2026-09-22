@@ -2,13 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
+import { MarkerTooltipContent } from './MarkerTooltipContent'
 import type { MapMarker } from './markers'
 import { geolocate, type GeoPoint } from '../../lib/geolocate'
 import { DEFAULT_MAP_CENTER } from '../../lib/geo'
-import { StatusBadge } from '../StatusBadge'
-import { badgeState } from '../display'
-import { cuisineDisplayName, emojiForCuisine } from '../facets/cuisines'
-import { translateVisitsCount } from '../../types/models'
 import { computeLabelPlacement, type LabelCandidate, type ScreenPoint } from './labelPlacement'
 
 /**
@@ -449,19 +446,6 @@ export function MapView({
           onChange={setVisibleLabelIds}
         />
         {markers.map((m) => {
-          // R4/R5: badge + visit-count (only when visited, exactly like RestaurantList's row)
-          // + cuisine emoji/label, joined with a middle dot — only present segments produce a
-          // separator, so a to-try place (no visit-count segment) never shows a stray "· ·".
-          const visited = badgeState(m).kind === 'visited'
-          const metaParts: React.ReactNode[] = [<StatusBadge key="badge" restaurant={m} />]
-          if (visited) metaParts.push(translateVisitsCount(m.visitCount))
-          metaParts.push(
-            <span key="cuisine">
-              <span aria-hidden="true">{emojiForCuisine(m.cuisine)}</span>{' '}
-              {cuisineDisplayName(m.cuisine, t('common.uncategorized'))}
-            </span>,
-          )
-
           return (
             <Marker
               key={m.id}
@@ -530,19 +514,7 @@ export function MapView({
               }
             >
               <Tooltip direction="top" className="marker-tooltip" opacity={1}>
-                <span className="block font-bold tracking-tight text-gray-900">{m.name}</span>
-                <span className="mt-0.5 block text-xs text-gray-600">
-                  {metaParts.map((part, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 align-middle">
-                      {i > 0 && (
-                        <span aria-hidden="true" className="mx-1">
-                          ·
-                        </span>
-                      )}
-                      {part}
-                    </span>
-                  ))}
-                </span>
+                <MarkerTooltipContent marker={m} currentPosition={currentPosition} />
               </Tooltip>
             </Marker>
           )
