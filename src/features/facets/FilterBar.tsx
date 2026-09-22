@@ -42,7 +42,7 @@ function GroupLabel({ layout, children }: { layout: FilterBarLayout; children: s
   return (
     <span
       className={cn(
-        'text-[10px] font-semibold tracking-wide text-gray-400 uppercase',
+        'text-[10px] font-semibold tracking-wide text-gray-600 uppercase',
         // Keeps the label from shrinking below its own text width when the flex row is tight.
         layout === 'inline' && 'shrink-0',
       )}

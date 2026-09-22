@@ -25,7 +25,7 @@ const VARIANT_STYLES: Record<StyledVariant, string> = {
   primary:
     'rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-brand transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50',
   secondary:
-    'rounded-full border border-gray-300 px-3 py-1.5 font-medium transition hover:bg-gray-100 active:bg-gray-200 disabled:opacity-50',
+    'rounded-full bg-white px-3 py-1.5 font-medium shadow-chip transition hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50',
   link: 'font-medium text-brand-strong underline',
 }
 
@@ -46,7 +46,7 @@ const TEXT_SIZE: Record<ButtonSize, string> = {
 // `iconOnly` is typed as valid only alongside `variant: 'secondary'` (below) so a mismatched pair
 // is a compile error instead of silently discarding `variant`.
 const ICON_ONLY_SECONDARY =
-  'rounded-full border border-gray-300 p-1.5 transition hover:bg-gray-100 active:bg-gray-200 disabled:opacity-50'
+  'rounded-full bg-white p-1.5 shadow-chip transition hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50'
 
 // The three "✕" dismiss buttons (ModalHeader, RestaurantDetail's delete-visit action,
 // ReloadPrompt's toast dismiss) used to each carry their own copy of this base plus a

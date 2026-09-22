@@ -24,12 +24,13 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('rounded-full', 'shadow-brand')
   })
 
-  it('applies the pill/border class for the secondary variant', () => {
+  it('draws the secondary variant as a white pill lifted by shadow, not a bordered one', () => {
     render(<Button variant="secondary">Go</Button>)
-    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(
-      'rounded-full',
-      'border-gray-300',
-    )
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('rounded-full', 'bg-white', 'shadow-chip')
+    // It sits on the gray canvas, where a white fill separates it; a border would be a second
+    // edge drawn around the one the shadow already gives it.
+    expect(button).not.toHaveClass('border', 'border-gray-300')
   })
 
   it('defaults the secondary variant to text-sm', () => {
@@ -70,8 +71,8 @@ describe('Button', () => {
   it('carries the canonical hover/active states on the secondary variant regardless of call site', () => {
     render(<Button variant="secondary">Go</Button>)
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(
-      'hover:bg-gray-100',
-      'active:bg-gray-200',
+      'hover:bg-gray-50',
+      'active:bg-gray-100',
     )
   })
 
@@ -82,8 +83,8 @@ describe('Button', () => {
       </Button>,
     )
     expect(screen.getByRole('button', { name: 'icon' })).toHaveClass(
-      'hover:bg-gray-100',
-      'active:bg-gray-200',
+      'hover:bg-gray-50',
+      'active:bg-gray-100',
     )
   })
 

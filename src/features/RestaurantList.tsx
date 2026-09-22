@@ -29,7 +29,7 @@ export function RestaurantList({
         <p className="text-lg font-bold tracking-tight text-gray-900">
           {t('restaurantList.emptyTitle')}
         </p>
-        <p className="max-w-[16rem] text-sm text-gray-500">{t('restaurantList.emptyBody')}</p>
+        <p className="max-w-[16rem] text-sm text-gray-600">{t('restaurantList.emptyBody')}</p>
       </div>
     )
   }

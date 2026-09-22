@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 
-const EYEBROW_CLASSES = 'text-xs font-semibold uppercase tracking-wide text-gray-400'
+// gray-600, not gray-400: an eyebrow sits on the canvas or on white, and gray-400 measured
+// under 2.5:1 on either.
+const EYEBROW_CLASSES = 'text-xs font-semibold uppercase tracking-wide text-gray-600'
 
 /**
  * Shared section-title styling for the cross-file "eyebrow" label pattern (KD6, R6): small,

@@ -56,7 +56,7 @@ describe('RestaurantDetail', () => {
     expect(await screen.findByText('To try')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /here now/i }))
     const button = enabled(await screen.findAllByRole('button', { name: 'Go back' }))
-    expect(button).toHaveClass('hover:bg-gray-100', 'active:bg-gray-200', 'py-1.5')
+    expect(button).toHaveClass('hover:bg-gray-50', 'active:bg-gray-100', 'py-1.5')
   })
 
   it('edits and persists the cuisine', async () => {

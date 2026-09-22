@@ -15,10 +15,19 @@ below is defined anywhere else, and no component hardcodes a value one of these 
 
 | Token                                  | Value                 | Used for                                                                     |
 | -------------------------------------- | --------------------- | ---------------------------------------------------------------------------- |
-| `--color-brand`                        | `#00a97a`             | Primary actions, and the fill of a selected chip                             |
-| `--color-brand-strong`                 | `#00734f`             | Hover and active states of a primary action, link text                       |
-| `--color-brand-soft`                   | `#e6f7f1`             | Hover wash on a brand-tinted control, and the active segment in the sort bar |
+| `--color-brand`                        | `#ea580c`             | Primary actions, and the fill of a selected chip                             |
+| `--color-brand-strong`                 | `#b93a0c`             | Hover and active states of a primary action, link text                       |
+| `--color-brand-soft`                   | `#ffede3`             | Hover wash on a brand-tinted control, and the active segment in the sort bar |
+| `--color-canvas`                       | `#f3f4f6`             | The whole interface, header included — everything white sits on it           |
 | `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                                         |
+
+White text on `--color-brand` measures 3.56:1, under AA — no vivid orange reaches it, and a
+darker one reads as the terracotta identity this replaced. Text in the brand color therefore uses
+`--color-brand-strong` (5.72:1 on white).
+
+Text placed directly on `--color-canvas` is `--color-gray-600` or darker: `gray-500` lands near
+3.6:1 there and `gray-400` under 2.5:1. Inside a white surface the same rule holds for eyebrows,
+which are small enough that `gray-400` was never legible.
 
 ## Verdicts and statuses
 
@@ -32,9 +41,12 @@ still read badly, two strong colors competing inside one pill.
 | Token                     | Value     | White text on it |
 | ------------------------- | --------- | ---------------- |
 | `--color-verdict-go-back` | `#00734f` | 5.89:1           |
-| `--color-verdict-detour`  | `#b45309` | 5.02:1           |
+| `--color-verdict-detour`  | `#4338ca` | 7.90:1           |
 | `--color-verdict-once`    | `#546174` | 6.29:1           |
 | `--color-verdict-never`   | `#be123c` | 6.29:1           |
+
+No verdict may sit near the brand hue: a selected verdict chip and a selected cuisine chip
+appear side by side, and an amber detour beside an orange brand was indistinguishable.
 
 Changing one of these means re-measuring it: badge text is 12px, so the floor is AA's 4.5:1 for
 normal text, and nothing in the suite checks these four the way `cuisines.test.ts` checks the
@@ -46,7 +58,7 @@ inherits `currentColor`. Cuisines keep emoji — on a pastel pill the color is a
 
 A selected filter chip wears what it filters for: a verdict chip takes that verdict's own fill,
 a status chip the neutral status pill, and a cuisine chip — having no color of its own to borrow —
-the brand fill. Four identical green pills would say nothing about which verdict is selected.
+the brand fill. Four identical brand-colored pills would say nothing about which verdict is selected.
 
 Every cuisine color is an `oklch()` value, so the palette needs a browser that parses it
 (Baseline since mid-2023). An older engine drops the declaration and renders the badge

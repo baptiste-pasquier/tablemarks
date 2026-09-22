@@ -8,7 +8,7 @@ type ToggleChipShape = 'segment' | 'pill'
 // applied here.
 /**
  * What a selected pill wears when its caller does not name a color of its own: the same brand
- * green as the primary buttons, so "selected" reads as one idea across the app.
+ * color as the primary buttons, so "selected" reads as one idea across the app.
  */
 const DEFAULT_ACTIVE_PILL = 'bg-brand text-white'
 
@@ -64,7 +64,7 @@ export function ToggleChip({
   /**
    * Surface + text classes for the selected state, replacing the brand fill. A chip that filters
    * for a colored thing wears that thing's color when selected, so the row of verdict chips reads
-   * as the badges it selects rather than as four identical green pills.
+   * as the badges it selects rather than as four identical brand-colored pills.
    */
   activeTone?: string
   disabled?: boolean

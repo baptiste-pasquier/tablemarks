@@ -136,7 +136,7 @@ describe('FilterBar', () => {
     expect(new Set(drawn).size).toBe(labels.length)
   })
 
-  it('dresses a selected chip in what it filters for, not all of them in brand green', () => {
+  it('dresses a selected chip in what it filters for, not all of them in the brand color', () => {
     const filter = {
       cuisines: new Set(['thai']),
       statuses: new Set(['to_try'] as const),
@@ -144,7 +144,7 @@ describe('FilterBar', () => {
     }
     render(<FilterBar restaurants={PLACES} filter={filter} onChange={vi.fn()} />)
 
-    // A verdict chip borrows the verdict's own fill -- four identical green pills would say
+    // A verdict chip borrows the verdict's own fill -- four identical brand-colored pills would say
     // nothing about which verdict is selected.
     expect(screen.getByRole('button', { name: 'Worth a detour' })).toHaveClass(
       'bg-verdict-detour',

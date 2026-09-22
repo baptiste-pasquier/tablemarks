@@ -341,10 +341,10 @@ export default function App() {
   }, [filtersOpen])
 
   return (
-    <div className="flex h-full flex-col bg-gray-50 text-gray-900">
+    <div className="flex h-full flex-col bg-canvas text-gray-900">
       <header
         ref={headerRef}
-        className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/85 px-4 py-3 backdrop-blur"
+        className="sticky top-0 z-20 flex items-center justify-between bg-canvas/85 px-4 py-3 backdrop-blur"
       >
         {/* min-w-0/flex-1 + truncate (bug fix): without a shrink target, this group's natural width
             plus the right group's (sign-in/settings) forced the header wider than a narrow phone
@@ -369,7 +369,7 @@ export default function App() {
             <h1 className="truncate text-2xl font-bold tracking-tight text-gray-900">
               {t('app.title')}
             </h1>
-            <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">{t('shell.tagline')}</p>
+            <p className="mt-0.5 hidden text-xs text-gray-600 sm:block">{t('shell.tagline')}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -418,18 +418,18 @@ export default function App() {
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside
           className={cn(
-            'min-h-0 flex-1 flex-col border-gray-200 bg-white md:flex md:w-[var(--sidebar-width)] md:flex-none md:border-r',
+            'min-h-0 flex-1 flex-col border-gray-200 bg-canvas md:flex md:w-[var(--sidebar-width)] md:flex-none md:border-r',
             view === 'list' ? 'flex' : 'hidden',
           )}
         >
-          <div className="space-y-2 border-b border-gray-200 p-3">
+          <div className="space-y-2 p-3">
             <Button variant="primary" className="w-full" onClick={() => setAdding(true)}>
               {t('shell.addPlace')}
             </Button>
             <button
               type="button"
               onClick={() => setDeciding(true)}
-              className="w-full rounded-full border border-brand/30 px-3 py-2.5 text-sm font-semibold text-brand-strong transition hover:bg-brand-soft active:bg-brand-soft"
+              className="w-full rounded-full bg-white px-3 py-2.5 text-sm font-semibold text-brand-strong shadow-chip transition hover:bg-brand-soft active:bg-brand-soft"
             >
               {t('shell.whereToEat')}
             </button>

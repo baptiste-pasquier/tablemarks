@@ -12,7 +12,7 @@ describe('Eyebrow', () => {
       'font-semibold',
       'uppercase',
       'tracking-wide',
-      'text-gray-400',
+      'text-gray-600',
     )
   })
 
@@ -32,7 +32,7 @@ describe('Eyebrow', () => {
       'font-semibold',
       'uppercase',
       'tracking-wide',
-      'text-gray-400',
+      'text-gray-600',
     )
   })
 })

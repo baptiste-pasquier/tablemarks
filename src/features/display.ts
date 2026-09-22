@@ -3,7 +3,7 @@ import { statusOf, translateStatus, type Restaurant, type Verdict } from '../typ
 
 /**
  * Surface and text a verdict wears wherever it appears: the badge on a card, and the filter chip
- * once selected. A selected "worth a detour" chip in brand green would say the opposite of what
+ * once selected. A selected "worth a detour" chip in the brand color would say the opposite of what
  * it filters for, so the chip borrows the verdict's own color instead. The fills are deep enough
  * that white clears AA on all four -- `docs/reference/design-tokens.md` carries the figures.
  */
