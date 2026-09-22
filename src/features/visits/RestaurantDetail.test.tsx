@@ -82,15 +82,27 @@ describe('RestaurantDetail', () => {
     expect(drawn.size).toBe(VERDICTS.length)
   })
 
-  it('edits and persists the cuisine', async () => {
+  it('edits and persists the cuisine through the picker', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
     const user = userEvent.setup()
 
-    await user.type(await screen.findByLabelText('Cuisine'), 'French')
-    await user.tab() // blur commits the edit
+    await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: /French/ }))
 
     await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('French'))
+  })
+
+  it('persists a free-typed cuisine through "Other…"', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: 'Other…' }))
+    await user.type(screen.getByLabelText('Other category'), 'Ramen{Enter}')
+
+    await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('Ramen'))
   })
 
   it('clears the cuisine, leaving the place uncategorized', async () => {
@@ -98,8 +110,8 @@ describe('RestaurantDetail', () => {
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
     const user = userEvent.setup()
 
-    await user.clear(await screen.findByLabelText('Cuisine'))
-    await user.tab()
+    await user.click(await screen.findByRole('button', { name: 'Category: French' }))
+    await user.click(screen.getByRole('button', { name: /French/, pressed: true }))
 
     await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBeUndefined())
   })

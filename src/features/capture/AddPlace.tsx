@@ -1,10 +1,12 @@
-import { useId, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronRight, Link2, MapPin } from 'lucide-react'
 import { capturePaste, captureSearchPick, type CaptureResult } from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
 import { updateRestaurant } from '../../data/restaurants'
 import { useRestaurants } from '../useRestaurants'
 import { cuisineOptions } from '../facets/cuisines'
+import { CuisinePicker } from '../facets/CuisinePicker'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { Button } from '../ui/Button'
@@ -40,7 +42,6 @@ export function AddPlace({
   const [duplicate, setDuplicate] = useState<Restaurant | null>(null)
   const restaurants = useRestaurants()
   const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
-  const cuisineListId = useId()
 
   // Exhaustive over CaptureResult: the `never` assignment makes a future variant a type error
   // here instead of silently falling through to the search branch.
@@ -118,38 +119,32 @@ export function AddPlace({
     <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
       <ModalHeader title={t('capture.title')} onClose={onClose} />
 
-      <label className="block text-sm text-gray-600" htmlFor="add-input">
+      <label className="block text-[13px] font-semibold text-gray-700" htmlFor="add-input">
         {t('capture.pasteLabel')}
       </label>
-      <textarea
-        id="add-input"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        rows={2}
-        className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
-        placeholder={t('capture.pastePlaceholder')}
-      />
+      {/* One line, not a textarea: a link or a name is a single line, and Enter can then submit. */}
+      <div className="mt-1.5 flex items-center gap-2.5 rounded-[14px] border-[1.5px] border-gray-300 bg-white px-3.5 py-3 text-gray-600 transition focus-within:border-brand focus-within:ring-3 focus-within:ring-brand/15">
+        <Link2 size={17} aria-hidden="true" className="shrink-0" />
+        <input
+          id="add-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !busy) void submit()
+          }}
+          className="min-w-0 flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500"
+          placeholder={t('capture.pastePlaceholder')}
+        />
+      </div>
 
-      <label className="mt-3 block text-sm text-gray-600" htmlFor="add-cuisine">
-        {t('capture.cuisineLabel')} <span className="text-gray-400">{t('capture.optional')}</span>
-      </label>
-      <input
-        id="add-cuisine"
-        list={cuisineListId}
-        value={cuisine}
-        onChange={(e) => setCuisine(e.target.value)}
-        className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
-        placeholder={t('capture.cuisinePlaceholder')}
-      />
-      <datalist id={cuisineListId}>
-        {options.map((o) => (
-          <option key={o} value={o} />
-        ))}
-      </datalist>
+      {/* Optional, and shows it by reading "Uncategorized" until something is picked. */}
+      <div className="mt-3">
+        <CuisinePicker value={cuisine} options={options} onChange={(c) => setCuisine(c ?? '')} />
+      </div>
 
       <Button
         variant="primary"
-        className="mt-3 w-full"
+        className="mt-4 w-full"
         onClick={() => void submit()}
         disabled={busy || !input.trim()}
       >
@@ -188,20 +183,34 @@ export function AddPlace({
       )}
 
       {candidates && candidates.length > 0 && (
-        <ul className="mt-3 divide-y divide-gray-100 border-t border-gray-100">
-          {candidates.map((c, i) => (
-            <li key={`${c.lat},${c.lng},${i}`}>
-              <button
-                type="button"
-                onClick={() => void pick(c)}
-                className="w-full px-1 py-2 text-left text-sm hover:bg-gray-50"
-              >
-                <span className="font-medium">{c.name}</span>
-                {c.address && <span className="block text-xs text-gray-500">{c.address}</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4">
+          <p className="text-[13px] font-semibold text-gray-700">{t('capture.whichOne')}</p>
+          <ul className="mt-2 space-y-2">
+            {candidates.map((c, i) => (
+              <li key={`${c.lat},${c.lng},${i}`}>
+                <button
+                  type="button"
+                  onClick={() => void pick(c)}
+                  className="flex w-full items-center gap-2.5 rounded-[14px] bg-white px-3 py-2.5 text-left shadow-card transition hover:bg-gray-50"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-brand-soft text-brand-strong"
+                  >
+                    <MapPin size={16} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-gray-900">{c.name}</span>
+                    {c.address && (
+                      <span className="block truncate text-xs text-gray-600">{c.address}</span>
+                    )}
+                  </span>
+                  <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-gray-500" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </Modal>
   )

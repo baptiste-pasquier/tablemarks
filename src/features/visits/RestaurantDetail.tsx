@@ -1,11 +1,12 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
 import { updateRestaurant } from '../../data/restaurants'
-import { cuisineOptions, colorForCuisine, emojiForCuisine } from '../facets/cuisines'
+import { cuisineOptions } from '../facets/cuisines'
+import { CuisinePicker } from '../facets/CuisinePicker'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { Button } from '../ui/Button'
@@ -66,41 +67,32 @@ export function RestaurantDetail({
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
   const restaurants = useRestaurants()
   const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
-  const cuisineListId = useId()
   const [logging, setLogging] = useState(false)
   const [pastDate, setPastDate] = useState('')
-  // Guards the notes/cuisine fields against being remounted (and thus reset to the store value)
-  // while the user is mid-edit — see saveField/noteKey/cuisineKey below. Refs, not state: flipping
+  // Guards the notes field against being remounted (and thus reset to the store value) while the
+  // user is mid-edit — see saveField/noteKey below. Refs, not state: flipping
   // them on focus/blur must not itself force a re-render (see KTD8 amendment in the plan).
   const noteFocusedRef = useRef(false)
-  const cuisineFocusedRef = useRef(false)
-  // The value each field displayed when its current edit session began (set in onFocus, from the
+  // The value the notes field displayed when its current edit session began (set in onFocus, from the
   // DOM so it's exact regardless of any store update racing focus). saveField compares against this
   // baseline instead of the live `restaurant` field, so a focus+blur with no real edit never
   // reverts a concurrent external update (e.g. a sync pull) that landed while the field was focused.
   const noteBaselineRef = useRef('')
-  const cuisineBaselineRef = useRef('')
-  // Each field's `key`, recomputed from the store value — but only while unfocused. Deliberately
+  // The field's `key`, recomputed from the store value — but only while unfocused. Deliberately
   // NOT derived inline as `focused ? ... : ...`: doing so still races an external update landing on
   // the very first render after focus starts (before any render had a chance to "freeze" the old
   // key), which would still force a one-time remount using the just-arrived external value. Instead
   // we only ever update this state while not focused, so a key change (and remount) can only happen
   // once the field is blurred.
   const [noteKey, setNoteKey] = useState('')
-  const [cuisineKey, setCuisineKey] = useState('')
 
   if (!restaurant) return null
 
-  // Recompute each field's key from the current store value, but only while that field is
-  // unfocused (see noteKey/cuisineKey's declaration above for why this can't be a plain inline
-  // ternary).
+  // Recompute the notes field's key from the current store value, but only while it is unfocused
+  // (see noteKey's declaration above for why this can't be a plain inline ternary).
   if (!noteFocusedRef.current) {
     const desiredNoteKey = `${restaurant.id}:${restaurant.note ?? ''}`
     if (desiredNoteKey !== noteKey) setNoteKey(desiredNoteKey)
-  }
-  if (!cuisineFocusedRef.current) {
-    const desiredCuisineKey = `${restaurant.id}:${restaurant.cuisine ?? ''}`
-    if (desiredCuisineKey !== cuisineKey) setCuisineKey(desiredCuisineKey)
   }
 
   const distanceLabel = distanceLabelFor(currentPosition, restaurant)
@@ -121,7 +113,7 @@ export function RestaurantDetail({
   // onFocus) rather than the live `restaurant[field]`: a store update can land while the field is
   // focused, and comparing against the current restaurant value would then treat an unedited
   // focus+blur as a real edit, silently reverting the external update back to the pre-focus value.
-  function saveField(field: 'cuisine' | 'note', value: string, baseline: string) {
+  function saveField(field: 'note', value: string, baseline: string) {
     const next = value.trim() || undefined
     const prev = baseline.trim() || undefined
     if (next === prev) return
@@ -172,39 +164,16 @@ export function RestaurantDetail({
           </div>
         )}
 
-        <div className="mt-3 flex items-center gap-2">
-          <span aria-hidden="true" className="shrink-0">
-            {emojiForCuisine(restaurant.cuisine)}
-          </span>
-          <span
-            aria-hidden="true"
-            className="inline-block h-3 w-3 shrink-0 rounded-full"
-            style={{ background: colorForCuisine(restaurant.cuisine) }}
+        <div className="mt-3">
+          <CuisinePicker
+            value={restaurant.cuisine}
+            options={options}
+            onChange={(cuisine) => {
+              if (cuisine === (restaurant.cuisine?.trim() || undefined)) return
+              // Best-effort, like the notes field below: the store listener shows the real state.
+              void updateRestaurant(restaurantId, { cuisine }).catch(() => {})
+            }}
           />
-          <input
-            key={cuisineKey}
-            list={cuisineListId}
-            defaultValue={restaurant.cuisine ?? ''}
-            onFocus={(e) => {
-              cuisineFocusedRef.current = true
-              cuisineBaselineRef.current = e.currentTarget.value
-            }}
-            onBlur={(e) => {
-              cuisineFocusedRef.current = false
-              saveField('cuisine', e.target.value, cuisineBaselineRef.current)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur()
-            }}
-            aria-label={t('visitDetail.cuisineLabel')}
-            placeholder={t('visitDetail.cuisinePlaceholder')}
-            className="w-full rounded-md border border-gray-300 bg-white p-1.5 text-sm"
-          />
-          <datalist id={cuisineListId}>
-            {options.map((o) => (
-              <option key={o} value={o} />
-            ))}
-          </datalist>
         </div>
 
         {(googleMapsHref || goToHref) && (

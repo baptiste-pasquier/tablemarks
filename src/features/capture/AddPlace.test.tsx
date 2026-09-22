@@ -51,12 +51,25 @@ describe('AddPlace', () => {
     expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel')
   })
 
+  it('submits on Enter from the single-line link field', async () => {
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText(/paste a google maps link/i), `${FULL_URL}{Enter}`)
+
+    await waitFor(async () =>
+      expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel'),
+    )
+  })
+
   it('persists a chosen (custom) cuisine on the created place', async () => {
     render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
     const user = userEvent.setup()
 
     await user.type(screen.getByLabelText(/paste a google maps link/i), FULL_URL)
-    await user.type(screen.getByLabelText(/cuisine/i), 'Ramen') // non-curated, free-typed
+    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: 'Other…' }))
+    await user.type(screen.getByLabelText('Other category'), 'Ramen{Enter}') // non-curated
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
     await waitFor(async () => {

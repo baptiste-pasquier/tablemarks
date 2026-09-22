@@ -34,9 +34,6 @@
     "title": "Ajouter un lieu",
     "pasteLabel": "Collez un lien Google Maps, ou saisissez un nom de lieu",
     "pastePlaceholder": "https://maps.app.goo.gl/…  ou  Chez Marcel Paris",
-    "cuisineLabel": "Cuisine",
-    "optional": "(facultatif)",
-    "cuisinePlaceholder": "ex. Italienne, Ramen…",
     "working": "En cours…",
     "submit": "Ajouter",
     "errorNoMatches": "Aucun lieu correspondant trouvé.",
@@ -48,7 +45,8 @@
     "shortLinkTrySearch": "Saisissez plutôt le nom du lieu, puis choisissez-le dans les résultats de recherche.",
     "shortLinkTryFullUrl": "Ou collez le lien Google Maps complet depuis la barre d'adresse de votre navigateur — le lien long qui contient les coordonnées.",
     "alreadySaved": "est déjà enregistré.",
-    "openIt": "Ouvrir"
+    "openIt": "Ouvrir",
+    "whichOne": "Lequel ?"
   },
   "decide": {
     "title": "Où manger ?",
@@ -60,8 +58,6 @@
     "directions": "Itinéraire"
   },
   "visitDetail": {
-    "cuisineLabel": "Cuisine",
-    "cuisinePlaceholder": "Ajouter une cuisine…",
     "notesLabel": "Notes",
     "notesPlaceholder": "Ajouter une note…",
     "howWasIt": "Comment c'était ?",
@@ -175,5 +171,16 @@
     "to_try": "à essayer",
     "visited": "visité",
     "resolving": "Résolution…"
+  },
+  "cuisinePicker": {
+    "triggerAria": "Catégorie : {{name}}",
+    "change": "Changer",
+    "choose": "Choisir",
+    "close": "Fermer",
+    "optionsAria": "Catégories",
+    "other": "Autre…",
+    "otherAria": "Autre catégorie",
+    "otherPlaceholder": "Nom…",
+    "add": "OK"
   }
 }
