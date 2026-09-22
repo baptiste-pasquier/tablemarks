@@ -30,10 +30,14 @@ function VerdictButtons({
 }) {
   return (
     <div className="flex flex-wrap gap-2">
+      {/* Each button sits on its own white backing: disabled, a button drops to half opacity, and on
+          the tinted "add a past visit" panel that let the orange show through it. */}
       {VERDICTS.map((v) => (
-        <Button key={v} variant="secondary" disabled={disabled} onClick={() => onPick(v)}>
-          {translateVerdict(v)}
-        </Button>
+        <span key={v} className="rounded-full bg-white">
+          <Button variant="secondary" disabled={disabled} onClick={() => onPick(v)}>
+            {translateVerdict(v)}
+          </Button>
+        </span>
       ))}
     </div>
   )
@@ -131,7 +135,7 @@ export function RestaurantDetail({
 
       {/* Info block (R4): identity + location detail grouped into one visually distinct container. */}
       <div className="rounded-card bg-gray-50 p-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
           <StatusBadge restaurant={restaurant} />
           {restaurant.address && (
             <span className="flex items-center gap-1">
@@ -142,7 +146,7 @@ export function RestaurantDetail({
         </div>
 
         {(distanceLabel || restaurant.added) && (
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-600">
             {distanceLabel && (
               <span className="flex items-center gap-1">
                 <Navigation size={14} aria-hidden="true" />
@@ -262,11 +266,11 @@ export function RestaurantDetail({
         <h3 className="text-sm font-semibold text-gray-700">
           {t('visitDetail.visitsHeading')}{' '}
           {visits.length > 0 && (
-            <span className="font-normal text-gray-400">({visits.length})</span>
+            <span className="font-normal text-gray-600">({visits.length})</span>
           )}
         </h3>
         {visits.length === 0 && (
-          <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>
+          <p className="mt-1 text-sm text-gray-600">{t('visitDetail.noVisitsYet')}</p>
         )}
         {visits.length > 0 && (
           <ul className="mt-2">
@@ -286,7 +290,7 @@ export function RestaurantDetail({
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <VerdictBadge verdict={v.verdict} />
-                      <span className="text-gray-400">{v.date}</span>
+                      <span className="font-medium text-gray-700">{v.date}</span>
                     </span>
                     <Button
                       variant="icon-dismiss"
@@ -302,17 +306,17 @@ export function RestaurantDetail({
             ))}
           </ul>
         )}
-        <details className="mt-2 rounded-lg border border-dashed border-gray-300 p-2 text-center">
-          <summary className="cursor-pointer list-none text-sm font-semibold text-gray-400">
+        <details className="mt-3 rounded-lg border border-dashed border-brand/40 bg-brand-soft p-2.5 text-center">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-brand-strong">
             {t('visitDetail.addPastVisit')}
           </summary>
-          <div className="mt-2 space-y-2 text-left">
+          <div className="mt-2.5 space-y-2 text-left">
             <input
               type="date"
               value={pastDate}
               onChange={(e) => setPastDate(e.target.value)}
               aria-label={t('visitDetail.visitDateAria')}
-              className="rounded-md border border-gray-300 p-1.5 text-sm"
+              className="rounded-md border border-gray-300 bg-white p-1.5 text-sm"
             />
             <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
           </div>
