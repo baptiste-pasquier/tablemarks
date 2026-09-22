@@ -162,16 +162,14 @@ export function FilterBar({
                   key={c}
                   shape="pill"
                   active={filter.cuisines.has(c.toLowerCase())}
+                  activeColor={colorForCuisine(c)}
                   onClick={() =>
                     onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })
                   }
                 >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: colorForCuisine(c) }}
-                  />
-                  <span aria-hidden="true">{emojiForCuisine(c)}</span>
+                  <span aria-hidden="true" className="text-base leading-none">
+                    {emojiForCuisine(c)}
+                  </span>
                   {c}
                 </ToggleChip>
               ))}
@@ -179,16 +177,14 @@ export function FilterBar({
                 <ToggleChip
                   shape="pill"
                   active={filter.cuisines.has(UNCATEGORIZED)}
+                  activeColor={colorForCuisine(undefined)}
                   onClick={() =>
                     onChange({ ...filter, cuisines: withToggled(filter.cuisines, UNCATEGORIZED) })
                   }
                 >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: colorForCuisine(undefined) }}
-                  />
-                  <span aria-hidden="true">{emojiForCuisine(undefined)}</span>
+                  <span aria-hidden="true" className="text-base leading-none">
+                    {emojiForCuisine(undefined)}
+                  </span>
                   {t('common.uncategorized')}
                 </ToggleChip>
               )}

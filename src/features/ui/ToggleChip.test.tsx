@@ -59,6 +59,34 @@ describe('ToggleChip', () => {
       expect(button).not.toHaveClass('bg-verdict-detour')
     })
 
+    it('fills an active pill with a runtime activeColor and white text, for a color no class names', () => {
+      render(
+        <ToggleChip shape="pill" active activeColor="oklch(0.48 0.15 153)" onClick={vi.fn()}>
+          Italian
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Italian' })
+      expect(button.getAttribute('style')).toContain('oklch(0.48 0.15 153)')
+      expect(button).toHaveClass('text-white', 'font-semibold')
+      expect(button).not.toHaveClass('bg-brand')
+    })
+
+    it('ignores activeColor while inactive', () => {
+      render(
+        <ToggleChip
+          shape="pill"
+          active={false}
+          activeColor="oklch(0.48 0.15 153)"
+          onClick={vi.fn()}
+        >
+          Italian
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Italian' })
+      expect(button.getAttribute('style')).toBeNull()
+      expect(button).toHaveClass('bg-white')
+    })
+
     it('separates an inactive pill by relief, not by a gray fill', () => {
       render(
         <ToggleChip shape="pill" active={false} onClick={vi.fn()}>

@@ -154,8 +154,11 @@ describe('FilterBar', () => {
       'bg-gray-200',
       'text-gray-700',
     )
-    // A cuisine has no such color of its own, so it falls back to the brand fill.
-    expect(screen.getByRole('button', { name: /Thai/ })).toHaveClass('bg-brand', 'text-white')
+    // A cuisine wears the color its markers wear on the map (Thai is hue 281 on the wheel).
+    const thai = screen.getByRole('button', { name: /Thai/ })
+    expect(thai.getAttribute('style')).toContain('oklch(0.48 0.15 281)')
+    expect(thai).toHaveClass('text-white')
+    expect(thai).not.toHaveClass('bg-brand')
 
     // An unselected verdict must not leak its color -- only the selected one is filled.
     expect(screen.getByRole('button', { name: 'Never again' })).toHaveClass('bg-white')
@@ -171,6 +174,18 @@ describe('FilterBar', () => {
       return (icon as SVGElement).outerHTML
     })
     expect(new Set(icons).size).toBe(2)
+  })
+
+  it('leads a cuisine chip with a larger emoji and no color dot', () => {
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+
+    const thai = screen.getByRole('button', { name: /Thai/ })
+    const emoji = within(thai).getByText('🍜')
+    expect(emoji).toHaveAttribute('aria-hidden', 'true')
+    expect(emoji).toHaveClass('text-base')
+    // The emoji alone names the cuisine at rest; the marker color arrives on selection.
+    expect(thai.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1)
+    expect(thai.getAttribute('style')).toBeNull()
   })
 
   it('fills a selected "Visited" chip with the brand color, since no badge of its own exists to borrow', () => {

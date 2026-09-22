@@ -79,10 +79,11 @@ is a status's (`STATUS_ICON`: sparkles for "to try", a check for "visited"), nev
 emoji carries fixed colors and turns into a smudge on a solid fill, while a line icon inherits
 `currentColor`. Cuisines keep emoji — on a pastel pill the color is an asset.
 
-A selected filter chip wears what it filters for: a verdict chip takes that verdict's own fill,
-"to try" the neutral pill its badge wears, and a chip with no color of its own to borrow — a
-cuisine, or "visited", whose places show their verdict rather than a badge — the brand fill. Four
-identical brand-colored pills would say nothing about which verdict is selected.
+A selected filter chip wears what it filters for: a verdict chip takes that verdict's own fill, a
+cuisine chip the solid color its markers wear on the map, "to try" the neutral pill its badge
+wears, and "visited" — which has no color of its own to borrow — the brand fill. At rest every
+chip is white, and a cuisine chip shows only its emoji: the color arrives with the selection.
+Four identical brand-colored pills would say nothing about which verdict is selected.
 
 Every cuisine color is an `oklch()` value, so the palette needs a browser that parses it
 (Baseline since mid-2023). An older engine drops the declaration and renders the badge
@@ -105,12 +106,12 @@ Cards carry a shadow and no border. Buttons and chips are `rounded-full`.
 A cuisine carries a hue and a chroma multiplier, never a hex. `src/features/facets/cuisines.ts`
 is the only module that renders one into a color.
 
-| Form                     | Recipe                  | Contrast floor               |
-| ------------------------ | ----------------------- | ---------------------------- |
-| Pill background          | `oklch(0.96 0.045×c H)` | —                            |
-| Pill text                | `oklch(0.40 0.13×c H)`  | 7.19:1 on its own background |
-| Solid marker, filter dot | `oklch(0.48 0.15×c H)`  | 5.52:1 against white text    |
-| List tile avatar         | `oklch(0.93 0.07×c H)`  | — (holds an emoji, no text)  |
+| Form                               | Recipe                  | Contrast floor               |
+| ---------------------------------- | ----------------------- | ---------------------------- |
+| Pill background                    | `oklch(0.96 0.045×c H)` | —                            |
+| Pill text                          | `oklch(0.40 0.13×c H)`  | 7.19:1 on its own background |
+| Solid marker, selected filter chip | `oklch(0.48 0.15×c H)`  | 5.52:1 against white text    |
+| List tile avatar                   | `oklch(0.93 0.07×c H)`  | — (holds an emoji, no text)  |
 
 Every floor holds for every hue, including hues a browser maps back into sRGB. The list tile also
 sets the cuisine's name in the pill text color straight on the white card, and

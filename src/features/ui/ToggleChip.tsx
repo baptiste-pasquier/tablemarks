@@ -44,8 +44,8 @@ function chipClass(
  * `className` when needed, since that wrapper isn't duplicated anywhere else.
  *
  * `shape="pill"` renders the full standalone rounded, shadowed pill `FilterBar.tsx` uses today.
- * Content (a color dot, an icon, a label) is left entirely to `children` (KTD4) — cuisine chips
- * are its only slot-content consumer today, so nothing color/icon-shaped is hardcoded here.
+ * Content (an emoji, an icon, a label) is left entirely to `children` (KTD4), so nothing
+ * color/icon-shaped is hardcoded here.
  *
  * Callers keep owning `active`/`onClick` computation (KTD5) — e.g. FilterBar's lowercase-key
  * normalization stays at the call site, not in this component.
@@ -54,6 +54,7 @@ export function ToggleChip({
   shape,
   active,
   activeTone,
+  activeColor,
   disabled = false,
   onClick,
   className = '',
@@ -67,6 +68,12 @@ export function ToggleChip({
    * as the badges it selects rather than as four identical brand-colored pills.
    */
   activeTone?: string
+  /**
+   * A selected fill computed at runtime, for a color no class can name — a cuisine's marker color
+   * is an `oklch()` value derived from its hue. Wins over `activeTone`, and always pairs with white
+   * text, which the solid cuisine form is tested to carry at AA.
+   */
+  activeColor?: string
   disabled?: boolean
   onClick: () => void
   className?: string
@@ -78,7 +85,11 @@ export function ToggleChip({
       disabled={disabled}
       aria-pressed={active}
       onClick={onClick}
-      className={cn(chipClass(shape, active, disabled, activeTone), className)}
+      className={cn(
+        chipClass(shape, active, disabled, activeColor ? 'text-white' : activeTone),
+        className,
+      )}
+      style={active && activeColor ? { background: activeColor } : undefined}
     >
       {children}
     </button>
