@@ -449,7 +449,7 @@ export default function App() {
             type="button"
             onClick={() => setView(v)}
             aria-pressed={view === v}
-            className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition ${
+            className={`flex-1 rounded-xl px-3 py-2 text-[15px] font-semibold capitalize transition ${
               view === v ? 'bg-brand text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
