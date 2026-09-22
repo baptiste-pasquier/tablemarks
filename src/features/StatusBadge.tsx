@@ -1,10 +1,11 @@
 import { Badge } from './ui/Badge'
-import { badgeState, VERDICT_BADGE_CLASS, VERDICT_ICON } from './display'
+import { badgeState, STATUS_ICON, VERDICT_BADGE_CLASS, VERDICT_ICON } from './display'
 import {
   translatePending,
   translateStatus,
   translateVerdict,
   type Restaurant,
+  type RestaurantStatus,
   type Verdict,
 } from '../types/models'
 
@@ -27,6 +28,18 @@ export function VerdictBadge({ verdict }: { verdict: Verdict }) {
   )
 }
 
+/** A plain status's pastel pill, led by its own icon the way a verdict's badge is. */
+function StatusPill({ status }: { status: RestaurantStatus }) {
+  const Icon = STATUS_ICON[status]
+  return (
+    <Badge
+      text={translateStatus(status)}
+      pastel={STATUS_PILL}
+      icon={<Icon size={13} strokeWidth={2.4} />}
+    />
+  )
+}
+
 /**
  * Fused status+verdict badge (R8, R9, KTD3): one element in place of a separate status pill and
  * rollup line. Built from the same classification `badgeState` computes, so it never carries a
@@ -39,8 +52,7 @@ export function StatusBadge({
 }) {
   const state = badgeState(restaurant)
   if (state.kind === 'pending') return <Badge text={translatePending()} pastel={STATUS_PILL} />
-  if (state.kind === 'to_try')
-    return <Badge text={translateStatus('to_try')} pastel={STATUS_PILL} />
+  if (state.kind === 'to_try') return <StatusPill status="to_try" />
   if (state.verdict) return <VerdictBadge verdict={state.verdict} />
-  return <Badge text={translateStatus('visited')} pastel={STATUS_PILL} />
+  return <StatusPill status="visited" />
 }

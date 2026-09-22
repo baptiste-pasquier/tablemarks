@@ -74,9 +74,10 @@ Changing one of these means re-measuring it: badge text is 12px, so the floor is
 normal text, and nothing in the suite checks these four the way `cuisines.test.ts` checks the
 derived palette.
 
-A verdict's leading glyph is a Lucide icon (`VERDICT_ICON` in `src/features/display.ts`), never an
-emoji: an emoji carries fixed colors and turns into a smudge on a solid fill, while a line icon
-inherits `currentColor`. Cuisines keep emoji — on a pastel pill the color is an asset.
+A verdict's leading glyph is a Lucide icon (`VERDICT_ICON` in `src/features/display.ts`), and so
+is a status's (`STATUS_ICON`: sparkles for "to try", a check for "visited"), never an emoji: an
+emoji carries fixed colors and turns into a smudge on a solid fill, while a line icon inherits
+`currentColor`. Cuisines keep emoji — on a pastel pill the color is an asset.
 
 A selected filter chip wears what it filters for: a verdict chip takes that verdict's own fill,
 "to try" the neutral pill its badge wears, and a chip with no color of its own to borrow — a

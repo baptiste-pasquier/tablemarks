@@ -1,4 +1,4 @@
-import { Ban, Compass, Meh, RotateCcw, type LucideIcon } from 'lucide-react'
+import { Ban, Check, Compass, Meh, RotateCcw, Sparkles, type LucideIcon } from 'lucide-react'
 import {
   statusOf,
   translateStatus,
@@ -43,6 +43,16 @@ export const VERDICT_ICON: Record<Verdict, LucideIcon> = {
   worth_a_detour: Compass,
   once_was_enough: Meh,
   never_again: Ban,
+}
+
+/**
+ * The same for the two statuses, so a status chip or pill reads at the glance a verdict does:
+ * sparkles for a place still to discover, a check for one that has been. Neither echoes a verdict
+ * glyph, and neither is the map pin, which the list tile already spends on the distance.
+ */
+export const STATUS_ICON: Record<RestaurantStatus, LucideIcon> = {
+  to_try: Sparkles,
+  visited: Check,
 }
 
 export function statusLabel(r: Restaurant): string {

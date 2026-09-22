@@ -7,7 +7,7 @@ import {
   type RestaurantStatus,
   type Restaurant,
 } from '../../types/models'
-import { STATUS_CHIP_CLASS, VERDICT_BADGE_CLASS, VERDICT_ICON } from '../display'
+import { STATUS_CHIP_CLASS, STATUS_ICON, VERDICT_BADGE_CLASS, VERDICT_ICON } from '../display'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
 import { Button } from '../ui/Button'
@@ -212,17 +212,21 @@ export function FilterBar({
         <div className={GROUP_ROW_CLASS[layout]}>
           <GroupLabel layout={layout}>{t('filters.statusVerdictGroup')}</GroupLabel>
           <div className={CHIPS_ROW_CLASS[layout]}>
-            {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => (
-              <ToggleChip
-                key={s}
-                shape="pill"
-                active={filter.statuses.has(s)}
-                activeTone={STATUS_CHIP_CLASS[s]}
-                onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
-              >
-                {translateStatus(s)}
-              </ToggleChip>
-            ))}
+            {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => {
+              const Icon = STATUS_ICON[s]
+              return (
+                <ToggleChip
+                  key={s}
+                  shape="pill"
+                  active={filter.statuses.has(s)}
+                  activeTone={STATUS_CHIP_CLASS[s]}
+                  onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
+                >
+                  <Icon size={13} strokeWidth={2.4} aria-hidden="true" />
+                  {translateStatus(s)}
+                </ToggleChip>
+              )
+            })}
             {VERDICTS.map((v) => {
               const Icon = VERDICT_ICON[v]
               return (

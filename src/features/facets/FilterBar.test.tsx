@@ -162,6 +162,17 @@ describe('FilterBar', () => {
     expect(screen.getByRole('button', { name: 'Never again' })).not.toHaveClass('bg-verdict-never')
   })
 
+  it('draws a distinct decorative icon on each status chip, beside its label', () => {
+    render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
+
+    const icons = ['To try', 'Visited'].map((name) => {
+      const icon = screen.getByRole('button', { name }).querySelector('svg')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      return (icon as SVGElement).outerHTML
+    })
+    expect(new Set(icons).size).toBe(2)
+  })
+
   it('fills a selected "Visited" chip with the brand color, since no badge of its own exists to borrow', () => {
     const filter = { ...emptyFilter(), statuses: new Set(['visited'] as const) }
     render(<FilterBar restaurants={PLACES} filter={filter} onChange={vi.fn()} />)
