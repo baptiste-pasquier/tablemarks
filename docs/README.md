@@ -69,6 +69,7 @@ Every maintained doc appears here. A doc missing from this list fails the gate.
 ### `reference/`
 
 - [`data-model.md`](reference/data-model.md) — record shapes, verdicts, the rollup, and local↔remote mapping
+- [`design-tokens.md`](reference/design-tokens.md) — the color, shape and cuisine-palette contract
 
 ### `conventions/`
 

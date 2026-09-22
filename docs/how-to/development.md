@@ -44,6 +44,7 @@ other feature works. To attach a local PocketBase, see
 | `npm run build`      | Type-check, then build for production                                                                                                                                   |
 | `npm run check:docs` | Documentation gate — the same one the pre-commit hook and CI run                                                                                                        |
 | `npm run check:demo` | Refuse a tree that would put a service worker or manifest on the Pages origin. Add a build directory (`sh scripts/check-demo-target.sh dist`) to check the artifact too |
+| `npm run icons`      | Regenerates the six raster icons from `public/logo.svg` and `public/logo-mark.svg`                                                                                      |
 
 ## Project structure
 

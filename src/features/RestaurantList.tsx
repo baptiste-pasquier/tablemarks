@@ -1,14 +1,16 @@
 import { useTranslation } from 'react-i18next'
+import { MapPin } from 'lucide-react'
 import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
-import { colorForCuisine, cuisineDisplayName, emojiForCuisine } from './facets/cuisines'
-import { Badge } from './ui/Badge'
+import {
+  cuisineAvatarBackground,
+  cuisineDisplayName,
+  cuisinePillTokens,
+  emojiForCuisine,
+} from './facets/cuisines'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
 import { distanceLabelFor } from '../lib/geo'
-
-/** Cream base the cuisine tint mixes into, matching the shipped "Carnet culinaire" page background. */
-const CARD_TINT_BASE = '#fdfaf6'
 
 export function RestaurantList({
   items,
@@ -29,18 +31,17 @@ export function RestaurantList({
         <span aria-hidden="true" className="text-4xl">
           🍽️
         </span>
-        <p className="font-display text-lg font-semibold text-gray-900">
+        <p className="text-lg font-bold tracking-tight text-gray-900">
           {t('restaurantList.emptyTitle')}
         </p>
-        <p className="max-w-[16rem] text-sm text-gray-500">{t('restaurantList.emptyBody')}</p>
+        <p className="max-w-[16rem] text-sm text-gray-600">{t('restaurantList.emptyBody')}</p>
       </div>
     )
   }
 
   return (
-    <ul className="space-y-2 p-3">
+    <ul className="space-y-4 p-3">
       {items.map((r) => {
-        const cuisineColor = colorForCuisine(r.cuisine)
         const visited = badgeState(r).kind === 'visited'
         const distanceLabel = distanceLabelFor(currentPosition, r)
         return (
@@ -55,32 +56,48 @@ export function RestaurantList({
               onMouseLeave={() => onHover?.(null)}
               onFocus={() => onHover?.(r.id)}
               onBlur={() => onHover?.(null)}
-              className="block w-full rounded-2xl p-3 text-left shadow-sm transition hover:shadow-md"
-              style={{
-                background: `color-mix(in srgb, ${cuisineColor} 16%, ${CARD_TINT_BASE})`,
-                border: `1px solid color-mix(in srgb, ${cuisineColor} 35%, ${CARD_TINT_BASE})`,
-              }}
+              className="block w-full rounded-card bg-white p-3 text-left shadow-card transition hover:shadow-lg"
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 truncate font-display text-base font-semibold text-gray-900">
-                  {r.name}
+              {/* The cuisine leads as an avatar, so the name's line is shared only with the
+                  status, and the cuisine's own color carries into its name on the line below. */}
+              <div className="flex items-start gap-3">
+                <span
+                  aria-hidden="true"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[22px]"
+                  style={{ background: cuisineAvatarBackground(r.cuisine) }}
+                >
+                  {emojiForCuisine(r.cuisine)}
                 </span>
-                <Badge
-                  text={cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
-                  icon={emojiForCuisine(r.cuisine)}
-                  color={cuisineColor}
-                />
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <StatusBadge restaurant={r} />
-                  {visited && (
-                    <span className="text-xs text-gray-600">
-                      {translateVisitsCount(r.visitCount)}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-base font-bold tracking-tight text-gray-900">
+                      {r.name}
                     </span>
-                  )}
+                    <StatusBadge restaurant={r} />
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs whitespace-nowrap">
+                    <span
+                      className="min-w-0 truncate font-semibold"
+                      style={{ color: cuisinePillTokens(r.cuisine).color }}
+                    >
+                      {cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
+                    </span>
+                    {visited && (
+                      <>
+                        <span aria-hidden="true" className="text-gray-400">
+                          ·
+                        </span>
+                        <span className="text-gray-600">{translateVisitsCount(r.visitCount)}</span>
+                      </>
+                    )}
+                    {distanceLabel && (
+                      <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-gray-600">
+                        <MapPin size={13} strokeWidth={2.2} aria-hidden="true" />
+                        {distanceLabel}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {distanceLabel && <span className="text-xs text-gray-600">{distanceLabel}</span>}
               </div>
             </button>
           </li>

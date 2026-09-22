@@ -2,13 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
+import { MarkerTooltipContent } from './MarkerTooltipContent'
 import type { MapMarker } from './markers'
 import { geolocate, type GeoPoint } from '../../lib/geolocate'
 import { DEFAULT_MAP_CENTER } from '../../lib/geo'
-import { StatusBadge } from '../StatusBadge'
-import { badgeState } from '../display'
-import { cuisineDisplayName, emojiForCuisine } from '../facets/cuisines'
-import { translateVisitsCount } from '../../types/models'
 import { computeLabelPlacement, type LabelCandidate, type ScreenPoint } from './labelPlacement'
 
 /**
@@ -57,7 +54,9 @@ function pinHtml(color: string, selected: boolean): string {
   let html = pinHtmlCache.get(key)
   if (!html) {
     const shadow = selected
-      ? `box-shadow:0 0 0 5px ${color}33, 0 3px 6px rgba(0,0,0,.4);`
+      ? // `${color}33` would append hex alpha, which only parses on a hex color; cuisine colors
+        // are `oklch(...)` now, and one invalid value drops the whole box-shadow declaration.
+        `box-shadow:0 0 0 5px color-mix(in oklab, ${color} 20%, transparent), 0 3px 6px rgba(0,0,0,.4);`
       : `box-shadow:0 2px 4px rgba(0,0,0,.35);`
     html = `<span style="position:absolute;inset:0;display:block;border-radius:50% 50% 50% 0;background:${color};border:2px solid #fff;transform:rotate(-45deg);${shadow}"><span style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:9999px;background:rgba(255,255,255,.92)"></span></span>`
     pinHtmlCache.set(key, html)
@@ -86,7 +85,7 @@ function iconForColor(
 ): L.DivIcon {
   const size = selected ? 30 : 24
   const label = labelText
-    ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;font-family:system-ui, sans-serif;color:#1f2937;white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
+    ? `<span aria-hidden="true" style="position:absolute;top:50%;left:100%;transform:translateY(-50%);margin-left:6px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:11px;line-height:1.5;font-family:var(--font-sans);color:var(--color-gray-800);white-space:nowrap;pointer-events:none;">${escapeHtml(labelText)}</span>`
     : ''
   return L.divIcon({
     className: '',
@@ -447,19 +446,6 @@ export function MapView({
           onChange={setVisibleLabelIds}
         />
         {markers.map((m) => {
-          // R4/R5: badge + visit-count (only when visited, exactly like RestaurantList's row)
-          // + cuisine emoji/label, joined with a middle dot — only present segments produce a
-          // separator, so a to-try place (no visit-count segment) never shows a stray "· ·".
-          const visited = badgeState(m).kind === 'visited'
-          const metaParts: React.ReactNode[] = [<StatusBadge key="badge" restaurant={m} />]
-          if (visited) metaParts.push(translateVisitsCount(m.visitCount))
-          metaParts.push(
-            <span key="cuisine">
-              <span aria-hidden="true">{emojiForCuisine(m.cuisine)}</span>{' '}
-              {cuisineDisplayName(m.cuisine, t('common.uncategorized'))}
-            </span>,
-          )
-
           return (
             <Marker
               key={m.id}
@@ -528,19 +514,7 @@ export function MapView({
               }
             >
               <Tooltip direction="top" className="marker-tooltip" opacity={1}>
-                <span className="block font-display font-semibold text-gray-900">{m.name}</span>
-                <span className="mt-0.5 block text-xs text-gray-600">
-                  {metaParts.map((part, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 align-middle">
-                      {i > 0 && (
-                        <span aria-hidden="true" className="mx-1">
-                          ·
-                        </span>
-                      )}
-                      {part}
-                    </span>
-                  ))}
-                </span>
+                <MarkerTooltipContent marker={m} currentPosition={currentPosition} />
               </Tooltip>
             </Marker>
           )
@@ -558,19 +532,19 @@ export function MapView({
             ZoomControl can call useMap() — react-leaflet renders children straight into the
             Leaflet container div (no portal), so this positions identically to a sibling would.
             `right-3`/`top-3` (mobile, unchanged from before this stack existed) are overridden at
-            `md:`: `right` switches to the same `--filter-overlay-gap` the desktop filter overlay
-            uses on its own right edge (index.css), so the two share one right edge instead of
-            drifting apart by a few pixels; `top` reads the measured `--filter-overlay-height`
-            custom property (KTD3) — the overlay is `position: fixed` and authored inside <aside>,
-            not a flow-sibling of this stack, so it reserves no space this stack could rely on —
-            App.tsx measures the overlay's real rendered height via a ResizeObserver and writes it
-            to that property, so this stack always clears it regardless of how tall the cuisine
-            row's "+N autres" expansion grows it. Also stops 'dblclick'/'wheel' propagation (see
+            `md:`: `right` switches to the same `--filter-overlay-gap` the floating account controls
+            use on their right edge (index.css), so the two share one right edge; `top` clears the
+            taller of the two things floating above it — the filter overlay (`--filter-overlay-
+            height`, KTD3) and the account controls (`--account-float-height`). Both are `position:
+            fixed` and authored elsewhere, so neither reserves space this stack could rely on; each
+            is measured by a ResizeObserver, so this stack clears them however tall the cuisine
+            row's "+N autres" expansion grows the overlay — and still clears the account controls
+            when there is no overlay at all (an empty app renders none). Also stops 'dblclick'/'wheel' propagation (see
             `controlStackRef` above) so interacting with these buttons doesn't also reach Leaflet's
             own container and trigger its native doubleClickZoom/scrollWheelZoom handling. */}
         <div
           ref={controlStackRef}
-          className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(var(--filter-overlay-height,0px)+2rem)] md:right-[var(--filter-overlay-gap)]"
+          className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(max(var(--filter-overlay-height,0px),var(--account-float-height,0px))+2rem)] md:right-[var(--filter-overlay-gap)]"
         >
           <button
             type="button"

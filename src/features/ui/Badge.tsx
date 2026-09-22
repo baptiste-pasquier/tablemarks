@@ -1,13 +1,20 @@
+import type { ReactNode } from 'react'
+
 import { cn } from '../../lib/cn'
 
 type BadgeProps = {
   text: string
-  icon?: string
+  /**
+   * A leading glyph: an emoji string for a cuisine, or a rendered icon element for a verdict.
+   * Both are decorative -- the label beside them carries the meaning -- so this is wrapped in
+   * `aria-hidden` either way.
+   */
+  icon?: ReactNode
   /**
    * Tinted-pill mode (light background/dark text + a leading color dot, e.g. the account
    * dropdown's sync-status chip) instead of the default solid-background/white-text mode. In
-   * this mode `tone`/`color` supply the *full* background+text pairing (already tinted) rather
-   * than a solid surface color, and `dotClassName` supplies the leading dot's fill.
+   * this mode `tone` supplies the *full* background+text pairing (already tinted) rather than
+   * a solid surface color, and `dotClassName` supplies the leading dot's fill.
    */
   tint?: boolean
   dotClassName?: string
@@ -18,44 +25,48 @@ type BadgeProps = {
    * call site reach into this markup with a descendant selector.
    */
   labelClassName?: string
-} & ({ tone: string; color?: never } | { color: string; tone?: never })
-
-function luminance(hex: string): number {
-  const n = parseInt(hex.slice(1), 16)
-  const channel = (c: number) => {
-    const s = c / 255
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
-  }
-  return (
-    0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
+} &
+  /**
+   * Solid mode: Tailwind classes for the surface *and* its text color. The text color belongs
+   * with the fill rather than being fixed to white here, because which one is readable depends
+   * on the fill -- white on a verdict, gray-700 on a status's gray. See `VERDICT_BADGE_CLASS` and
+   * `STATUS_PILL_CLASS` in `display.ts`.
+   */
+  (| { tone: string; pastel?: never }
+    /**
+     * Pastel mode: an explicit background/text pair, contrast-guaranteed by whoever computed it
+     * (`cuisinePillTokens` for a cuisine). Replaces the former
+     * `color` mode, which took one solid color and picked its text color by luminance — a
+     * guess the hue system makes unnecessary.
+     */
+    | { pastel: { background: string; color: string }; tone?: never }
   )
-}
 
 /**
- * White or near-black text for a solid color-mode surface, picked from the relative-luminance
- * crossover point where black-on-color and white-on-color contrast ratios are equal — curated
- * and hashed colors (e.g. per-cuisine) span too wide a luminance range for one fixed text color
- * (KTD3).
+ * Shared badge primitive: exactly one of `tone` (Tailwind classes, for the closed status/verdict
+ * set) or `pastel` (an explicit pair, for per-cuisine values) picks the surface and its text
+ * color; both share the same size/padding/font so a future style change touches this file
+ * instead of every call site.
  */
-function textColorFor(bgHex: string): string {
-  return luminance(bgHex) > 0.179 ? '#000000' : '#ffffff'
-}
-
-/**
- * Shared badge primitive (R3/R4, KTD3): exactly one of `tone` (a Tailwind class, for the closed
- * status/verdict set — fixed white text) or `color` (a raw CSS color, for per-cuisine values —
- * text color computed internally via the same luminance rule) picks the surface; both share the
- * same size/padding/font so a future style change touches this file instead of every call site.
- */
-export function Badge({ text, icon, tone, color, tint, dotClassName, labelClassName }: BadgeProps) {
-  const style = !tint && color ? { background: color, color: textColorFor(color) } : undefined
-  const colorClass = tint ? (tone ?? '') : tone ? `${tone} text-white` : ''
+export function Badge({
+  text,
+  icon,
+  tone,
+  pastel,
+  tint,
+  dotClassName,
+  labelClassName,
+}: BadgeProps) {
+  const style = pastel ? { background: pastel.background, color: pastel.color } : undefined
+  const colorClass = tone ?? ''
 
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full font-semibold',
-        tint ? 'px-2.5 py-1 text-xs shadow-sm transition' : 'px-2 py-0.5 text-[11px]',
+        // One size for every badge: at 11px with 2px of padding, a two-word verdict was the
+        // hardest thing on the card to read, and the tinted variant was already at this size.
+        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold',
+        tint && 'shadow-sm transition',
         colorClass,
       )}
       style={style}

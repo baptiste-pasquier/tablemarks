@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { RestaurantList } from './RestaurantList'
-import { VERDICT_ICON, VERDICTS, translateVerdict, type Restaurant } from '../types/models'
+import { VERDICTS, translateVerdict, type Restaurant } from '../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'name'>): Restaurant {
   return {
@@ -48,16 +48,22 @@ describe('RestaurantList', () => {
       />,
     )
 
+    // Asserts the invariant rather than the glyph: four verdicts, four distinct drawn icons, each
+    // hidden from assistive tech and none of them part of the label's text.
+    const drawn = new Set<string>()
     for (const v of VERDICTS) {
       const label = screen.getByText(translateVerdict(v))
       const badge = label.parentElement
       expect(badge).not.toBeNull()
-      const icon = within(badge as HTMLElement).getByText(VERDICT_ICON[v])
-      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      const icon = (badge as HTMLElement).querySelector('[aria-hidden="true"]')
+      expect(icon).not.toBeNull()
+      expect(icon?.textContent).toBe('')
+      drawn.add((icon as HTMLElement).innerHTML)
     }
+    expect(drawn.size).toBe(VERDICTS.length)
   })
 
-  it('shows a cuisine-tinted card with a top-right cuisine badge, and the verdict chip plus visit count in the card body, not beside the name', () => {
+  it('leads each card with a cuisine avatar, puts the status beside the name, and the tinted cuisine name with the visit count on the line below', () => {
     render(
       <RestaurantList
         items={[
@@ -73,18 +79,38 @@ describe('RestaurantList', () => {
     )
 
     const card = screen.getByRole('button', { name: /Baan Thaï/ })
-    expect(card).toHaveStyle({ background: 'color-mix(in srgb, #7c3aed 16%, #fdfaf6)' })
+    expect(card).toHaveClass('bg-white', 'rounded-card', 'shadow-card')
+    expect(card.getAttribute('style')).toBeNull()
 
+    // Thai is hue 281 on the wheel: the avatar takes the deeper avatar tint, decorative only.
+    const avatar = within(card).getByText('🍜')
+    expect(avatar).toHaveAttribute('aria-hidden', 'true')
+    expect(avatar.getAttribute('style')).toContain('oklch(0.93 0.07 281)')
+
+    // The name shares its line with the status badge alone ...
     const name = screen.getByText('Baan Thaï')
-    const cuisineBadge = screen.getByText('Thai').parentElement as HTMLElement
-    expect(within(cuisineBadge).getByText('🍜')).toHaveAttribute('aria-hidden', 'true')
-    // The cuisine badge shares the header row with the name (R10) ...
-    expect(name.parentElement).toBe(cuisineBadge.parentElement)
+    const statusBadge = screen.getByText('Go back').parentElement as HTMLElement
+    expect(statusBadge.parentElement).toBe(name.parentElement)
 
-    // ... while the verdict chip and visit count live in the card body, not that header row (R11).
-    const verdictChip = screen.getByText('Go back')
-    expect(name.parentElement).not.toBe(verdictChip.closest('div'))
-    expect(screen.getByText('3 visits')).toBeInTheDocument()
+    // ... and the cuisine, set in its own text color, sits below with the visit count.
+    const cuisine = screen.getByText('Thai')
+    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.13 281)')
+    expect(cuisine.parentElement).toBe(screen.getByText('3 visits').parentElement)
+    expect(cuisine.parentElement).not.toBe(name.parentElement)
+  })
+
+  it('puts the distance at the end of the cuisine line, behind a decorative pin icon', () => {
+    render(
+      <RestaurantList
+        items={[r({ id: 'a', name: 'Place A', cuisine: 'French', lat: 48.8566, lng: 2.3522 })]}
+        currentPosition={{ lat: 48.8566, lng: 2.3622 }}
+      />,
+    )
+
+    const distance = screen.getByText('732 m')
+    expect(distance.parentElement).toBe(screen.getByText('French').parentElement)
+    const pin = distance.querySelector('svg')
+    expect(pin).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('shows a to-try restaurant with no visit count', () => {
@@ -105,29 +131,14 @@ describe('RestaurantList', () => {
     expect(screen.queryByText(/visits?$/)).not.toBeInTheDocument()
   })
 
-  it('renders the uncategorized tint and emoji for a restaurant with no cuisine, not a blank badge', () => {
+  it('renders the uncategorized avatar and label for a restaurant with no cuisine, achromatic rather than blank', () => {
     render(<RestaurantList items={[r({ id: 'a', name: 'No cuisine place' })]} />)
 
-    const badge = screen.getByText('Uncategorized').parentElement as HTMLElement
-    expect(within(badge).getByText('🍽️')).toHaveAttribute('aria-hidden', 'true')
-
     const card = screen.getByRole('button', { name: /No cuisine place/ })
-    expect(card).toHaveStyle({ background: 'color-mix(in srgb, #9ca3af 16%, #fdfaf6)' })
-  })
-
-  it('renders white badge text against a low-luminance cuisine color and near-black against a high-luminance one', () => {
-    render(
-      <RestaurantList
-        items={[
-          // Thai (#7c3aed) is low-luminance -> white badge text.
-          r({ id: 'a', name: 'Dark cuisine', cuisine: 'Thai' }),
-          // Mexican (#ca8a04) is high-luminance -> near-black badge text.
-          r({ id: 'b', name: 'Light cuisine', cuisine: 'Mexican' }),
-        ]}
-      />,
-    )
-    expect(screen.getByText('Thai')).toHaveStyle({ color: '#ffffff' })
-    expect(screen.getByText('Mexican')).toHaveStyle({ color: '#000000' })
+    const avatar = within(card).getByText('🍽️')
+    expect(avatar).toHaveAttribute('aria-hidden', 'true')
+    expect(avatar.getAttribute('style')).toContain('oklch(0.93 0 0)')
+    expect(screen.getByText('Uncategorized').getAttribute('style')).toContain('oklch(0.4 0 0)')
   })
 
   it('shows "Uncategorized" (not a blank label) for a whitespace-only cuisine', () => {

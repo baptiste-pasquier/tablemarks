@@ -79,7 +79,7 @@ export function Modal({
         ref={panelRef}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full rounded-t-2xl bg-white p-5 shadow-xl outline-none md:max-w-md md:rounded-2xl ${panelClassName}`}
+        className={`w-full rounded-t-card bg-white p-5 shadow-xl outline-none md:max-w-md md:rounded-card ${panelClassName}`}
       >
         <div
           aria-hidden="true"

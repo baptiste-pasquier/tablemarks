@@ -21,14 +21,40 @@ describe('Button', () => {
   it('applies the brand-background class for the primary variant', () => {
     render(<Button variant="primary">Go</Button>)
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('bg-brand')
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('rounded-full', 'shadow-brand')
   })
 
-  it('applies the pill/border class for the secondary variant', () => {
-    render(<Button variant="secondary">Go</Button>)
-    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(
-      'rounded-full',
-      'border-gray-300',
+  it('inverts the primary action for the brand band: a white pill with brand-strong text', () => {
+    render(<Button variant="on-brand">Go</Button>)
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('rounded-full', 'bg-white', 'text-brand-strong', 'font-bold')
+    expect(button).not.toHaveClass('bg-brand')
+  })
+
+  it('draws the secondary action on the brand band as translucent white glass inside a white edge', () => {
+    render(<Button variant="on-brand-glass">Go</Button>)
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('rounded-full', 'bg-white/20', 'text-white', 'ring-inset')
+  })
+
+  it('draws a band icon as glass on a phone and as a white chip once it floats over the map on desktop', () => {
+    render(
+      <Button variant="band-icon" aria-label="Settings">
+        ⚙
+      </Button>,
     )
+    const button = screen.getByRole('button', { name: 'Settings' })
+    expect(button).toHaveClass('h-9', 'w-9', 'bg-white/20', 'text-white')
+    expect(button).toHaveClass('md:bg-white', 'md:text-gray-900', 'md:shadow-chip')
+  })
+
+  it('draws the secondary variant as a white pill lifted by shadow, not a bordered one', () => {
+    render(<Button variant="secondary">Go</Button>)
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('rounded-full', 'bg-white', 'shadow-chip')
+    // It sits on the gray canvas, where a white fill separates it; a border would be a second
+    // edge drawn around the one the shadow already gives it.
+    expect(button).not.toHaveClass('border', 'border-gray-300')
   })
 
   it('defaults the secondary variant to text-sm', () => {
@@ -69,8 +95,8 @@ describe('Button', () => {
   it('carries the canonical hover/active states on the secondary variant regardless of call site', () => {
     render(<Button variant="secondary">Go</Button>)
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(
-      'hover:bg-gray-100',
-      'active:bg-gray-200',
+      'hover:bg-gray-50',
+      'active:bg-gray-100',
     )
   })
 
@@ -81,8 +107,8 @@ describe('Button', () => {
       </Button>,
     )
     expect(screen.getByRole('button', { name: 'icon' })).toHaveClass(
-      'hover:bg-gray-100',
-      'active:bg-gray-200',
+      'hover:bg-gray-50',
+      'active:bg-gray-100',
     )
   })
 
@@ -99,7 +125,7 @@ describe('Button', () => {
 
   it('applies the brand-underline classes for the link variant', () => {
     render(<Button variant="link">Go</Button>)
-    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('text-brand', 'underline')
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('text-brand-strong', 'underline')
   })
 
   it('defaults the link variant to text-sm', () => {
@@ -126,7 +152,7 @@ describe('Button', () => {
     )
     const button = screen.getByRole('button', { name: 'Go' })
     expect(button).toHaveClass('mt-1')
-    expect(button).toHaveClass('text-brand')
+    expect(button).toHaveClass('text-brand-strong')
   })
 
   it('applies only the neutral hover class for the icon-dismiss variant with tone="neutral"', () => {

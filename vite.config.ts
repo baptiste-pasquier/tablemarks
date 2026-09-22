@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
           name: 'Tablemarks',
           short_name: 'Tablemarks',
           description: 'Save and find your favorite places on a map.',
-          theme_color: '#d4561f',
+          theme_color: '#ea580c',
           background_color: '#ffffff',
           display: 'standalone',
           // No `start_url`: the plugin defaults it to the resolved base, so a subpath build launches

@@ -4,10 +4,10 @@ import {
   VERDICTS,
   translateVerdict,
   translateStatus,
-  VERDICT_ICON,
   type RestaurantStatus,
   type Restaurant,
 } from '../../types/models'
+import { STATUS_CHIP_CLASS, STATUS_ICON, VERDICT_BADGE_CLASS, VERDICT_ICON } from '../display'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
 import { Button } from '../ui/Button'
@@ -42,7 +42,7 @@ function GroupLabel({ layout, children }: { layout: FilterBarLayout; children: s
   return (
     <span
       className={cn(
-        'text-[10px] font-semibold tracking-wide text-gray-400 uppercase',
+        'text-[10px] font-semibold tracking-wide text-gray-600 uppercase',
         // Keeps the label from shrinking below its own text width when the flex row is tight.
         layout === 'inline' && 'shrink-0',
       )}
@@ -162,16 +162,14 @@ export function FilterBar({
                   key={c}
                   shape="pill"
                   active={filter.cuisines.has(c.toLowerCase())}
+                  activeColor={colorForCuisine(c)}
                   onClick={() =>
                     onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })
                   }
                 >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: colorForCuisine(c) }}
-                  />
-                  <span aria-hidden="true">{emojiForCuisine(c)}</span>
+                  <span aria-hidden="true" className="text-base leading-none">
+                    {emojiForCuisine(c)}
+                  </span>
                   {c}
                 </ToggleChip>
               ))}
@@ -179,16 +177,14 @@ export function FilterBar({
                 <ToggleChip
                   shape="pill"
                   active={filter.cuisines.has(UNCATEGORIZED)}
+                  activeColor={colorForCuisine(undefined)}
                   onClick={() =>
                     onChange({ ...filter, cuisines: withToggled(filter.cuisines, UNCATEGORIZED) })
                   }
                 >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: colorForCuisine(undefined) }}
-                  />
-                  <span aria-hidden="true">{emojiForCuisine(undefined)}</span>
+                  <span aria-hidden="true" className="text-base leading-none">
+                    {emojiForCuisine(undefined)}
+                  </span>
                   {t('common.uncategorized')}
                 </ToggleChip>
               )}
@@ -198,7 +194,7 @@ export function FilterBar({
                   aria-expanded={expanded}
                   aria-controls={cuisineGroupId}
                   onClick={() => setExpanded((e) => !e)}
-                  className="inline-flex min-h-10 items-center rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 transition hover:border-gray-400 hover:bg-gray-50"
+                  className="inline-flex min-h-10 items-center rounded-full bg-white px-3 py-1.5 text-xs text-gray-700 shadow-chip transition hover:bg-gray-50"
                 >
                   {expanded
                     ? t('filters.collapse')
@@ -212,27 +208,36 @@ export function FilterBar({
         <div className={GROUP_ROW_CLASS[layout]}>
           <GroupLabel layout={layout}>{t('filters.statusVerdictGroup')}</GroupLabel>
           <div className={CHIPS_ROW_CLASS[layout]}>
-            {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => (
-              <ToggleChip
-                key={s}
-                shape="pill"
-                active={filter.statuses.has(s)}
-                onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
-              >
-                {translateStatus(s)}
-              </ToggleChip>
-            ))}
-            {VERDICTS.map((v) => (
-              <ToggleChip
-                key={v}
-                shape="pill"
-                active={filter.verdicts.has(v)}
-                onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}
-              >
-                <span aria-hidden="true">{VERDICT_ICON[v]}</span>
-                {translateVerdict(v)}
-              </ToggleChip>
-            ))}
+            {(['to_try', 'visited'] as RestaurantStatus[]).map((s) => {
+              const Icon = STATUS_ICON[s]
+              return (
+                <ToggleChip
+                  key={s}
+                  shape="pill"
+                  active={filter.statuses.has(s)}
+                  activeTone={STATUS_CHIP_CLASS[s]}
+                  onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
+                >
+                  <Icon size={13} strokeWidth={2.4} aria-hidden="true" />
+                  {translateStatus(s)}
+                </ToggleChip>
+              )
+            })}
+            {VERDICTS.map((v) => {
+              const Icon = VERDICT_ICON[v]
+              return (
+                <ToggleChip
+                  key={v}
+                  shape="pill"
+                  active={filter.verdicts.has(v)}
+                  activeTone={VERDICT_BADGE_CLASS[v]}
+                  onClick={() => onChange({ ...filter, verdicts: withToggled(filter.verdicts, v) })}
+                >
+                  <Icon size={13} strokeWidth={2.4} aria-hidden="true" />
+                  {translateVerdict(v)}
+                </ToggleChip>
+              )
+            })}
           </div>
         </div>
       </div>

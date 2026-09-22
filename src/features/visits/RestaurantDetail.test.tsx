@@ -1,11 +1,23 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
 import { RestaurantDetail } from './RestaurantDetail'
-import { createRestaurant, getRestaurant, mutateRestaurant } from '../../data/restaurants'
+import {
+  createRestaurant,
+  getRestaurant,
+  mutateRestaurant,
+  updateRestaurant,
+} from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 import { instantToLocalDay } from '../../lib/dates'
+import { VERDICTS, translateVerdict } from '../../types/models'
+
+// Partial mock: the real repository, with `updateRestaurant` spied so one test can make a save fail.
+vi.mock('../../data/restaurants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../data/restaurants')>()
+  return { ...actual, updateRestaurant: vi.fn(actual.updateRestaurant) }
+})
 
 beforeEach(freshDB)
 afterEach(() => vi.unstubAllEnvs())
@@ -56,18 +68,64 @@ describe('RestaurantDetail', () => {
     expect(await screen.findByText('To try')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /here now/i }))
     const button = enabled(await screen.findAllByRole('button', { name: 'Go back' }))
-    expect(button).toHaveClass('hover:bg-gray-100', 'active:bg-gray-200', 'py-1.5')
+    expect(button).toHaveClass('hover:bg-gray-50', 'active:bg-gray-100', 'py-1.5')
   })
 
-  it('edits and persists the cuisine', async () => {
+  it('leads every verdict-picker button with its verdict icon, in both pickers', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await screen.findByText('To try')
+    await user.click(screen.getByRole('button', { name: /here now/i }))
+
+    // Both pickers are in the DOM now: "I'm here now" and the collapsed "Add a past visit".
+    const drawn = new Set<string>()
+    for (const v of VERDICTS) {
+      const buttons = await screen.findAllByRole('button', { name: translateVerdict(v) })
+      expect(buttons).toHaveLength(2)
+      for (const button of buttons) {
+        const icon = button.querySelector('svg')
+        expect(icon).toHaveAttribute('aria-hidden', 'true')
+        drawn.add((icon as SVGElement).outerHTML)
+      }
+    }
+    expect(drawn.size).toBe(VERDICTS.length)
+  })
+
+  it('edits and persists the cuisine through the picker', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
     const user = userEvent.setup()
 
-    await user.type(await screen.findByLabelText('Cuisine'), 'French')
-    await user.tab() // blur commits the edit
+    await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: /French/ }))
 
     await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('French'))
+  })
+
+  it('persists a free-typed cuisine through "Other…"', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: 'Other…' }))
+    await user.type(screen.getByLabelText('Other category'), 'Ramen{Enter}')
+
+    await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('Ramen'))
+  })
+
+  it('tells the user when a category could not be saved', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    vi.mocked(updateRestaurant).mockRejectedValueOnce(new Error('QuotaExceededError'))
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: /French/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
   })
 
   it('clears the cuisine, leaving the place uncategorized', async () => {
@@ -75,8 +133,8 @@ describe('RestaurantDetail', () => {
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
     const user = userEvent.setup()
 
-    await user.clear(await screen.findByLabelText('Cuisine'))
-    await user.tab()
+    await user.click(await screen.findByRole('button', { name: 'Category: French' }))
+    await user.click(screen.getByRole('button', { name: /French/, pressed: true }))
 
     await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBeUndefined())
   })
@@ -147,6 +205,31 @@ describe('RestaurantDetail', () => {
     // been remounted out from under them.
     await waitFor(() => expect(textarea).toHaveValue('original note plus my edit'))
     expect(screen.getByLabelText('Notes')).toBe(textarea)
+  })
+
+  it('sets the visit count, the visit dates and "Add a past visit" dark enough to read', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    await createVisit({ restaurantId: r.id, date: '2026-06-01', verdict: 'go_back' })
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+
+    // gray-400 and gray-500 measure under AA at this size (design-tokens.md): the floor is gray-600.
+    const light = /\btext-gray-(300|400|500)\b/
+    expect((await screen.findByText('(1)')).className).not.toMatch(light)
+    expect(screen.getByText('2026-06-01')).toHaveClass('text-gray-700')
+    const addPast = screen.getByText('Add a past visit')
+    expect(addPast.className).not.toMatch(light)
+    expect(addPast).toHaveClass('text-brand-strong')
+    // A tinted panel rather than a bare dashed outline, so the action reads as one ...
+    const panel = addPast.closest('details') as HTMLElement
+    expect(panel).toHaveClass('bg-brand-soft')
+    // ... where the date field and the verdict buttons stay opaque white, even while the buttons
+    // are disabled at half opacity waiting for a date.
+    expect(screen.getByLabelText('Visit date')).toHaveClass('bg-white')
+    const pastButtons = within(panel).getAllByRole('button')
+    expect(pastButtons).toHaveLength(4)
+    for (const button of pastButtons) expect(button.parentElement).toHaveClass('bg-white')
+    expect(panel.querySelector('.bg-white:not(input):not(span):not(button)')).toBeNull()
   })
 
   it('renders the visit history most-recent-first regardless of creation order', async () => {

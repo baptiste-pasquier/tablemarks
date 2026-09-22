@@ -1,15 +1,17 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
-import { updateRestaurant } from '../../data/restaurants'
-import { cuisineOptions, colorForCuisine, emojiForCuisine } from '../facets/cuisines'
+import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
+import { cuisineOptions } from '../facets/cuisines'
+import { CuisinePicker } from '../facets/CuisinePicker'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { Button } from '../ui/Button'
 import { StatusBadge, VerdictBadge } from '../StatusBadge'
+import { VERDICT_ICON } from '../display'
 import { VERDICTS, translateVerdict, type Verdict } from '../../types/models'
 import type { GeoPoint } from '../../lib/geolocate'
 import { distanceLabelFor } from '../../lib/geo'
@@ -30,11 +32,24 @@ function VerdictButtons({
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {VERDICTS.map((v) => (
-        <Button key={v} variant="secondary" disabled={disabled} onClick={() => onPick(v)}>
-          {translateVerdict(v)}
-        </Button>
-      ))}
+      {/* Each button sits on its own white backing: disabled, a button drops to half opacity, and on
+          the tinted "add a past visit" panel that let the orange show through it. */}
+      {VERDICTS.map((v) => {
+        const Icon = VERDICT_ICON[v]
+        return (
+          <span key={v} className="rounded-full bg-white">
+            <Button
+              variant="secondary"
+              className="inline-flex items-center gap-1.5"
+              disabled={disabled}
+              onClick={() => onPick(v)}
+            >
+              <Icon size={14} strokeWidth={2.4} aria-hidden="true" />
+              {translateVerdict(v)}
+            </Button>
+          </span>
+        )
+      })}
     </div>
   )
 }
@@ -52,41 +67,33 @@ export function RestaurantDetail({
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
   const restaurants = useRestaurants()
   const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
-  const cuisineListId = useId()
   const [logging, setLogging] = useState(false)
   const [pastDate, setPastDate] = useState('')
-  // Guards the notes/cuisine fields against being remounted (and thus reset to the store value)
-  // while the user is mid-edit — see saveField/noteKey/cuisineKey below. Refs, not state: flipping
+  const [saveFailed, setSaveFailed] = useState(false)
+  // Guards the notes field against being remounted (and thus reset to the store value) while the
+  // user is mid-edit — see saveField/noteKey below. Refs, not state: flipping
   // them on focus/blur must not itself force a re-render (see KTD8 amendment in the plan).
   const noteFocusedRef = useRef(false)
-  const cuisineFocusedRef = useRef(false)
-  // The value each field displayed when its current edit session began (set in onFocus, from the
+  // The value the notes field displayed when its current edit session began (set in onFocus, from the
   // DOM so it's exact regardless of any store update racing focus). saveField compares against this
   // baseline instead of the live `restaurant` field, so a focus+blur with no real edit never
   // reverts a concurrent external update (e.g. a sync pull) that landed while the field was focused.
   const noteBaselineRef = useRef('')
-  const cuisineBaselineRef = useRef('')
-  // Each field's `key`, recomputed from the store value — but only while unfocused. Deliberately
+  // The field's `key`, recomputed from the store value — but only while unfocused. Deliberately
   // NOT derived inline as `focused ? ... : ...`: doing so still races an external update landing on
   // the very first render after focus starts (before any render had a chance to "freeze" the old
   // key), which would still force a one-time remount using the just-arrived external value. Instead
   // we only ever update this state while not focused, so a key change (and remount) can only happen
   // once the field is blurred.
   const [noteKey, setNoteKey] = useState('')
-  const [cuisineKey, setCuisineKey] = useState('')
 
   if (!restaurant) return null
 
-  // Recompute each field's key from the current store value, but only while that field is
-  // unfocused (see noteKey/cuisineKey's declaration above for why this can't be a plain inline
-  // ternary).
+  // Recompute the notes field's key from the current store value, but only while it is unfocused
+  // (see noteKey's declaration above for why this can't be a plain inline ternary).
   if (!noteFocusedRef.current) {
     const desiredNoteKey = `${restaurant.id}:${restaurant.note ?? ''}`
     if (desiredNoteKey !== noteKey) setNoteKey(desiredNoteKey)
-  }
-  if (!cuisineFocusedRef.current) {
-    const desiredCuisineKey = `${restaurant.id}:${restaurant.cuisine ?? ''}`
-    if (desiredCuisineKey !== cuisineKey) setCuisineKey(desiredCuisineKey)
   }
 
   const distanceLabel = distanceLabelFor(currentPosition, restaurant)
@@ -99,19 +106,22 @@ export function RestaurantDetail({
       : undefined
   const goToHref = destination ? googleMapsDirectionsUrl(destination) : undefined
 
-  // Best-effort: the row may have been deleted/synced away between render and blur, in which
-  // case updateRestaurant rejects (it already routes through mutateRestaurant's single-transaction
-  // read-modify-write — see data/restaurants.ts). The store listener reflects the real state either way.
-  //
+  // A rejected write (storage full, the row deleted or synced away meanwhile) reaches the user; the
+  // store listener goes on showing the real state either way.
+  function save(changes: RestaurantPatch) {
+    setSaveFailed(false)
+    void updateRestaurant(restaurantId, changes).catch(() => setSaveFailed(true))
+  }
+
   // Compares against `baseline` (the value displayed when the edit session began, captured in
   // onFocus) rather than the live `restaurant[field]`: a store update can land while the field is
   // focused, and comparing against the current restaurant value would then treat an unedited
   // focus+blur as a real edit, silently reverting the external update back to the pre-focus value.
-  function saveField(field: 'cuisine' | 'note', value: string, baseline: string) {
+  function saveField(field: 'note', value: string, baseline: string) {
     const next = value.trim() || undefined
     const prev = baseline.trim() || undefined
     if (next === prev) return
-    void updateRestaurant(restaurantId, { [field]: next }).catch(() => {})
+    save({ [field]: next })
   }
 
   async function logNow(verdict: Verdict) {
@@ -129,9 +139,16 @@ export function RestaurantDetail({
     <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
       <ModalHeader title={restaurant.name} onClose={onClose} variant="detail" />
 
+      {/* Above everything, since the category and the notes, far apart, both save through it. */}
+      {saveFailed && (
+        <p role="alert" className="mb-2 text-sm text-red-600">
+          {t('visitDetail.errorSave')}
+        </p>
+      )}
+
       {/* Info block (R4): identity + location detail grouped into one visually distinct container. */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+      <div className="rounded-card bg-gray-50 p-3">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
           <StatusBadge restaurant={restaurant} />
           {restaurant.address && (
             <span className="flex items-center gap-1">
@@ -142,7 +159,7 @@ export function RestaurantDetail({
         </div>
 
         {(distanceLabel || restaurant.added) && (
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-600">
             {distanceLabel && (
               <span className="flex items-center gap-1">
                 <Navigation size={14} aria-hidden="true" />
@@ -158,39 +175,15 @@ export function RestaurantDetail({
           </div>
         )}
 
-        <div className="mt-3 flex items-center gap-2">
-          <span aria-hidden="true" className="shrink-0">
-            {emojiForCuisine(restaurant.cuisine)}
-          </span>
-          <span
-            aria-hidden="true"
-            className="inline-block h-3 w-3 shrink-0 rounded-full"
-            style={{ background: colorForCuisine(restaurant.cuisine) }}
+        <div className="mt-3">
+          <CuisinePicker
+            value={restaurant.cuisine}
+            options={options}
+            onChange={(cuisine) => {
+              if (cuisine === (restaurant.cuisine?.trim() || undefined)) return
+              save({ cuisine })
+            }}
           />
-          <input
-            key={cuisineKey}
-            list={cuisineListId}
-            defaultValue={restaurant.cuisine ?? ''}
-            onFocus={(e) => {
-              cuisineFocusedRef.current = true
-              cuisineBaselineRef.current = e.currentTarget.value
-            }}
-            onBlur={(e) => {
-              cuisineFocusedRef.current = false
-              saveField('cuisine', e.target.value, cuisineBaselineRef.current)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur()
-            }}
-            aria-label={t('visitDetail.cuisineLabel')}
-            placeholder={t('visitDetail.cuisinePlaceholder')}
-            className="w-full rounded-md border border-gray-300 bg-white p-1.5 text-sm"
-          />
-          <datalist id={cuisineListId}>
-            {options.map((o) => (
-              <option key={o} value={o} />
-            ))}
-          </datalist>
         </div>
 
         {(googleMapsHref || goToHref) && (
@@ -262,11 +255,11 @@ export function RestaurantDetail({
         <h3 className="text-sm font-semibold text-gray-700">
           {t('visitDetail.visitsHeading')}{' '}
           {visits.length > 0 && (
-            <span className="font-normal text-gray-400">({visits.length})</span>
+            <span className="font-normal text-gray-600">({visits.length})</span>
           )}
         </h3>
         {visits.length === 0 && (
-          <p className="mt-1 text-sm text-gray-500">{t('visitDetail.noVisitsYet')}</p>
+          <p className="mt-1 text-sm text-gray-600">{t('visitDetail.noVisitsYet')}</p>
         )}
         {visits.length > 0 && (
           <ul className="mt-2">
@@ -286,7 +279,7 @@ export function RestaurantDetail({
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <VerdictBadge verdict={v.verdict} />
-                      <span className="text-gray-400">{v.date}</span>
+                      <span className="font-medium text-gray-700">{v.date}</span>
                     </span>
                     <Button
                       variant="icon-dismiss"
@@ -302,17 +295,17 @@ export function RestaurantDetail({
             ))}
           </ul>
         )}
-        <details className="mt-2 rounded-lg border border-dashed border-gray-300 p-2 text-center">
-          <summary className="cursor-pointer list-none text-sm font-semibold text-gray-400">
+        <details className="mt-3 rounded-lg border border-dashed border-brand/40 bg-brand-soft p-2.5 text-center">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-brand-strong">
             {t('visitDetail.addPastVisit')}
           </summary>
-          <div className="mt-2 space-y-2 text-left">
+          <div className="mt-2.5 space-y-2 text-left">
             <input
               type="date"
               value={pastDate}
               onChange={(e) => setPastDate(e.target.value)}
               aria-label={t('visitDetail.visitDateAria')}
-              className="rounded-md border border-gray-300 p-1.5 text-sm"
+              className="rounded-md border border-gray-300 bg-white p-1.5 text-sm"
             />
             <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
           </div>

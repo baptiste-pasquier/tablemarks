@@ -12,6 +12,7 @@
     "tagline": "Your map of places worth a table",
     "signIn": "Sign in",
     "withGoogle": "with Google",
+    "signInWithGoogle": "Sign in with Google",
     "signOut": "Sign out",
     "accountMenuAria": "Account menu",
     "accountMenuSignedInAs": "Signed in as",
@@ -33,9 +34,6 @@
     "title": "Add a place",
     "pasteLabel": "Paste a Google Maps link, or type a place name",
     "pastePlaceholder": "https://maps.app.goo.gl/…  or  Chez Marcel Paris",
-    "cuisineLabel": "Cuisine",
-    "optional": "(optional)",
-    "cuisinePlaceholder": "e.g. Italian, Ramen…",
     "working": "Working…",
     "submit": "Add",
     "errorNoMatches": "No matching places found.",
@@ -47,7 +45,8 @@
     "shortLinkTrySearch": "Type the place name instead, then pick it from the search results.",
     "shortLinkTryFullUrl": "Or paste the full Google Maps link from your browser address bar — the long one with coordinates in it.",
     "alreadySaved": "is already saved.",
-    "openIt": "Open it"
+    "openIt": "Open it",
+    "whichOne": "Which one?"
   },
   "decide": {
     "title": "Where to eat?",
@@ -59,8 +58,6 @@
     "directions": "Directions"
   },
   "visitDetail": {
-    "cuisineLabel": "Cuisine",
-    "cuisinePlaceholder": "Add a cuisine…",
     "notesLabel": "Notes",
     "notesPlaceholder": "Add a note…",
     "howWasIt": "How was it?",
@@ -72,7 +69,8 @@
     "visitDateAria": "Visit date",
     "googleMaps": "Google Maps",
     "goTo": "Go to",
-    "addedOn": "Added {{date}}"
+    "addedOn": "Added {{date}}",
+    "errorSave": "Could not save this change."
   },
   "filters": {
     "title": "Filter",
@@ -174,5 +172,16 @@
     "to_try": "To try",
     "visited": "Visited",
     "resolving": "Resolving…"
+  },
+  "cuisinePicker": {
+    "triggerAria": "Category: {{name}}",
+    "change": "Change",
+    "choose": "Choose",
+    "close": "Close",
+    "optionsAria": "Categories",
+    "other": "Other…",
+    "otherAria": "Other category",
+    "otherPlaceholder": "Name…",
+    "add": "OK"
   }
 }

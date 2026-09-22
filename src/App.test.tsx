@@ -293,6 +293,17 @@ describe('App shell', () => {
     expect(fab).toHaveClass('bottom-[calc(var(--safe-area-floating-offset)+0.5rem)]')
     expect(pill).toHaveClass('bottom-[calc(var(--safe-area-floating-offset)+0.5rem)]')
   })
+
+  it('draws the "+" FAB as an icon rather than a text glyph, which the font sets off-center', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    await user.click(screen.getByRole('button', { name: /^map$/i }))
+
+    const fab = screen.getByRole('button', { name: 'Add a place' })
+    expect(fab.textContent).toBe('')
+    expect(fab.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+  })
 })
 
 describe('currentPosition state and fetch wiring (U2)', () => {
@@ -587,9 +598,7 @@ describe('desktop filter overlay (U3)', () => {
       el.className.includes('md:top-[var(--filter-overlay-top)]'),
     )
     expect(overlayWrapper).toBeDefined()
-    expect(overlayWrapper?.className).not.toMatch(
-      /md:bg-white|md:shadow-lg|md:border-gray-200|md:rounded-2xl/,
-    )
+    expect(overlayWrapper?.className).not.toMatch(/md:bg-white|md:shadow-lg|md:rounded-card/)
     expect(overlayWrapper?.textContent).toBe('')
   })
 
@@ -652,9 +661,9 @@ describe('desktop filter overlay (U3)', () => {
       vi.restoreAllMocks()
     })
 
-    /** App.tsx now runs the same measurement effect (`useMeasuredHeightVar`) for both the header
-     *  and the filter overlay, so `instances` holds one FakeResizeObserver per target — find the
-     *  overlay's by which element it actually observed, rather than assuming array order. */
+    /** The same measurement hook (`useMeasuredSizeVar`) runs for the filter overlay and, twice, for
+     *  the account controls, so `instances` holds several FakeResizeObservers — find the overlay's
+     *  by which element it actually observed, rather than assuming array order. */
     function overlayObserver(container: HTMLElement) {
       const overlayEl = Array.from(container.querySelectorAll('div')).find((el) =>
         el.className.includes('md:top-[var(--filter-overlay-top)]'),
@@ -689,13 +698,28 @@ describe('desktop filter overlay (U3)', () => {
       )
     })
 
-    it("also writes the header's measured height to --header-height, independently of the filter overlay (fixes the top/left gap mismatch)", async () => {
+    it("writes the floating account controls' measured width to --account-float-width, which the overlay's right edge stops short of, and follows it when the controls change width", async () => {
       await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+      vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockImplementation(
+        () => ({ height: 36, width: 72 }) as DOMRect,
+      )
 
       render(<App />)
       await screen.findByText('R1 Place')
 
-      expect(document.documentElement.style.getPropertyValue('--header-height')).toBe('120px')
+      expect(document.documentElement.style.getPropertyValue('--account-float-width')).toBe('72px')
+      expect(document.documentElement.style.getPropertyValue('--account-float-height')).toBe('36px')
+
+      // Signing in swaps Sign in + Settings for a lone avatar: a narrower group, reported as a
+      // resize of the same element.
+      const group = screen.getByRole('button', { name: /settings|paramètres/i }).parentElement!
+      const entry = {
+        borderBoxSize: [{ blockSize: 36, inlineSize: 36 }],
+      } as unknown as ResizeObserverEntry
+      for (const observer of instances.filter((o) => o.observed.includes(group))) {
+        observer.callback([entry], observer as unknown as ResizeObserver)
+      }
+      expect(document.documentElement.style.getPropertyValue('--account-float-width')).toBe('36px')
     })
 
     it('disconnects the ResizeObserver when App unmounts', async () => {
@@ -837,7 +861,7 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
    *  the sheet carries no title/heading of its own — see the design revision note in App.tsx). */
   function sheetPanel() {
     const seeResults = screen.getByRole('button', { name: /see results/i })
-    const panel = seeResults.closest('[class*="rounded-t-2xl"]')
+    const panel = seeResults.closest('[class*="rounded-t-card"]')
     if (!panel) throw new Error('Modal panel not found')
     return within(panel as HTMLElement)
   }
@@ -982,7 +1006,7 @@ describe('mobile "Filtres · N" pill and bottom sheet (U4)', () => {
 
     const seeResults = screen.getByRole('button', { name: /see results/i })
     const scrollBox = seeResults
-      .closest('[class*="rounded-t-2xl"]')
+      .closest('[class*="rounded-t-card"]')
       ?.querySelector('.overflow-y-auto')
     expect(seeResults).toHaveClass('shrink-0')
     expect(scrollBox).not.toBeNull()

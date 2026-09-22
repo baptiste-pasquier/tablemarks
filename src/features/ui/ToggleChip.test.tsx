@@ -5,7 +5,7 @@ import { ToggleChip } from './ToggleChip'
 
 describe('ToggleChip', () => {
   describe('shape="pill"', () => {
-    it('applies the active pill classes (border-brand, bg-brand-soft, shadow-sm) matching FilterBar', () => {
+    it('fills the active pill with solid brand and white text, so a selection is findable', () => {
       render(
         <ToggleChip shape="pill" active onClick={vi.fn()}>
           Thai
@@ -18,33 +18,109 @@ describe('ToggleChip', () => {
         'items-center',
         'gap-1.5',
         'rounded-full',
-        'border',
         'px-3',
         'py-1.5',
         'text-xs',
         'transition',
-        'border-brand',
-        'bg-brand-soft',
+        'bg-brand',
         'font-semibold',
-        'text-brand-strong',
-        'shadow-sm',
+        'text-white',
+        'shadow-chip',
       )
+      expect(button).not.toHaveClass('border', 'border-brand')
+      // The pastel fill it replaced put brand text at 4.09:1 on brand-soft, under the AA floor.
+      expect(button).not.toHaveClass('bg-brand-soft')
     })
 
-    it('applies the inactive pill classes (border-gray-300, hover states) matching FilterBar', () => {
+    it('lets a caller replace the brand fill, so a chip can wear what it filters for', () => {
+      render(
+        <ToggleChip shape="pill" active activeTone="bg-verdict-detour text-white" onClick={vi.fn()}>
+          Worth a detour
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Worth a detour' })
+      expect(button).toHaveClass('bg-verdict-detour', 'text-white', 'font-semibold', 'shadow-chip')
+      expect(button).not.toHaveClass('bg-brand')
+    })
+
+    it('wears a tint in both states, marking the selection with a ring in its text color', () => {
+      const tint = { background: 'oklch(0.96 0.045 249)', color: 'oklch(0.4 0.13 249)' }
+      const { rerender } = render(
+        <ToggleChip shape="pill" active={false} tint={tint} onClick={vi.fn()}>
+          French
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'French' })
+      expect(button).toHaveClass('min-h-10', 'rounded-full', 'text-xs', 'font-semibold')
+      expect(button).not.toHaveClass('bg-white', 'bg-brand', 'shadow-chip')
+      expect(button.style.background).toBe(tint.background)
+      expect(button.style.color).toBe(tint.color)
+      expect(button.style.boxShadow).toBe('')
+
+      rerender(
+        <ToggleChip shape="pill" active tint={tint} onClick={vi.fn()}>
+          French
+        </ToggleChip>,
+      )
+      expect(button.style.background).toBe(tint.background)
+      expect(button.style.boxShadow).toBe(`0 0 0 2px ${tint.color}`)
+      expect(button).not.toHaveClass('text-white')
+    })
+
+    it('ignores activeTone while inactive, which keeps the unselected row uniform', () => {
+      render(
+        <ToggleChip
+          shape="pill"
+          active={false}
+          activeTone="bg-verdict-detour text-white"
+          onClick={vi.fn()}
+        >
+          Worth a detour
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Worth a detour' })
+      expect(button).toHaveClass('bg-white', 'text-gray-700', 'shadow-chip')
+      expect(button).not.toHaveClass('bg-verdict-detour')
+    })
+
+    it('fills an active pill with a runtime activeColor and white text, for a color no class names', () => {
+      render(
+        <ToggleChip shape="pill" active activeColor="oklch(0.48 0.15 153)" onClick={vi.fn()}>
+          Italian
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Italian' })
+      expect(button.getAttribute('style')).toContain('oklch(0.48 0.15 153)')
+      expect(button).toHaveClass('text-white', 'font-semibold')
+      expect(button).not.toHaveClass('bg-brand')
+    })
+
+    it('ignores activeColor while inactive', () => {
+      render(
+        <ToggleChip
+          shape="pill"
+          active={false}
+          activeColor="oklch(0.48 0.15 153)"
+          onClick={vi.fn()}
+        >
+          Italian
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Italian' })
+      expect(button.getAttribute('style')).toBeNull()
+      expect(button).toHaveClass('bg-white')
+    })
+
+    it('separates an inactive pill by relief, not by a gray fill', () => {
       render(
         <ToggleChip shape="pill" active={false} onClick={vi.fn()}>
           Thai
         </ToggleChip>,
       )
       const button = screen.getByRole('button', { name: 'Thai' })
-      expect(button).toHaveClass(
-        'border-gray-300',
-        'text-gray-600',
-        'hover:border-gray-400',
-        'hover:bg-gray-50',
-      )
-      expect(button).not.toHaveClass('border-brand')
+      expect(button).toHaveClass('bg-white', 'text-gray-700', 'shadow-chip', 'hover:bg-gray-50')
+      // `shadow-chip`, not `shadow-sm`: a chip is small enough to lose its edge to a soft shadow.
+      expect(button).not.toHaveClass('bg-gray-200', 'shadow-sm', 'border', 'border-gray-300')
     })
 
     it('reflects active in aria-pressed', () => {

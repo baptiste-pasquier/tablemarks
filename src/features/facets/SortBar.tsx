@@ -70,15 +70,15 @@ export function SortBar({
   const { t } = useTranslation()
 
   return (
-    <div className={cn(WRAPPER_LAYOUT_CLASS[layout], 'p-3', divider && 'border-b border-gray-100')}>
+    <div className={cn(WRAPPER_LAYOUT_CLASS[layout], 'p-3', divider && 'border-b border-gray-200')}>
       <Eyebrow>{t('sort.title')}</Eyebrow>
-      <span className="inline-flex overflow-hidden rounded-full border border-gray-300">
+      <span className="inline-flex overflow-hidden rounded-full bg-white shadow-chip">
         <ToggleChip
           shape="segment"
           disabled={!distanceSelectable}
           active={criterion === 'distance'}
           onClick={() => onCriterionChange('distance')}
-          className="border-r border-gray-300"
+          className="border-r border-gray-200"
         >
           {t('sort.criterionDistance')}
         </ToggleChip>

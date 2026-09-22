@@ -1,6 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="96" fill="#d4561f"/>
-  <!-- map pin / bookmark mark for "saved places" -->
-  <path fill="#ffffff" d="M256 104c-66 0-120 52-120 117 0 86 104 176 116 186a6 6 0 0 0 8 0c12-10 116-100 116-186 0-65-54-117-120-117z"/>
-  <circle cx="256" cy="221" r="44" fill="#d4561f"/>
+  <defs>
+    <clipPath id="sq"><rect width="512" height="512" rx="114"/></clipPath>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F7722A"/>
+      <stop offset="1" stop-color="#DD4E0A"/>
+    </linearGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFE7D6"/>
+    </linearGradient>
+    <filter id="shSm" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#5A1900" flood-opacity=".3"/>
+    </filter>
+    <filter id="shLg" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="12" stdDeviation="15" flood-color="#5A1900" flood-opacity=".38"/>
+    </filter>
+    <path id="pin" d="M0-62c-34 0-62 27-62 60 0 45 54 92 60 97a4 4 0 0 0 4 0c6-5 60-52 60-97 0-33-28-60-62-60z"/>
+  </defs>
+  <g clip-path="url(#sq)">
+    <rect width="512" height="512" fill="url(#tile)"/>
+    <g stroke="#FF9A5E" stroke-width="15" stroke-linecap="round">
+      <path d="M-10 118h532"/>
+      <path d="M-10 350h532"/>
+      <path d="M132-10v532"/>
+      <path d="M390-10v532"/>
+    </g>
+    <rect x="-20" y="366" width="176" height="180" rx="26" fill="#E9864A"/>
+  </g>
+  <g filter="url(#shSm)" transform="translate(146 196) scale(1.15)">
+    <use href="#pin" fill="#0F7C66"/>
+    <circle cx="0" cy="-2" r="23" fill="#FFFFFF"/>
+  </g>
+  <!-- Farthest pin from centre: must stay inside the maskable safe-zone radius (205 from 256,256) — re-measure this transform before changing it. -->
+  <g filter="url(#shSm)" transform="translate(366 180) scale(1.15)">
+    <use href="#pin" fill="#6A2F8A"/>
+    <circle cx="0" cy="-2" r="23" fill="#FFFFFF"/>
+  </g>
+  <!-- The front pin is white on Paprika, its hole the brand orange: the tile carries the color. -->
+  <g filter="url(#shLg)" transform="translate(256 250) scale(1.6)">
+    <use href="#pin" fill="url(#front)"/>
+    <circle cx="0" cy="-2" r="23" fill="#EA580C"/>
+  </g>
 </svg>

@@ -383,6 +383,17 @@ describe('MapView', () => {
     expect(getByTestId('marker-2-2').dataset.size).toBe('30')
   })
 
+  it('gives the selected marker a glow the browser can actually parse', () => {
+    const { getByTestId } = render(<MapView markers={MARKERS} selectedId="a" onSelect={vi.fn()} />)
+    const selected = getByTestId('marker-1-1').dataset.iconHtml ?? ''
+    const unselected = getByTestId('marker-2-2').dataset.iconHtml ?? ''
+
+    expect(selected).toContain('box-shadow:0 0 0 5px color-mix(')
+    expect(unselected).not.toContain('0 0 0 5px')
+    // Hex alpha suffixes silently void the whole declaration once colors are `oklch(...)`.
+    expect(selected).not.toMatch(/oklch\([^)]*\)[0-9a-f]{2}/)
+  })
+
   describe('hovered marker halo (U2 R1-R3, KTD3)', () => {
     it('renders the hovered marker with the same halo/size as a selected marker, and moves it when hoveredId changes', () => {
       const { getByTestId, rerender } = render(<MapView markers={MARKERS} hoveredId="a" />)
@@ -711,7 +722,15 @@ describe('MapView', () => {
     expect(stack?.className).toContain('--filter-overlay-height')
   })
 
-  it('shares the same right offset (--filter-overlay-gap) as the desktop filter overlay, so the two right-align instead of drifting apart', () => {
+  it('also clears the floating account controls (--account-float-height), which sit above it even when there is no filter overlay', () => {
+    render(<MapView markers={[]} />)
+    const stack = screen.getByRole('button', { name: /center on my location/i }).parentElement
+    expect(stack?.className).toContain(
+      'md:top-[calc(max(var(--filter-overlay-height,0px),var(--account-float-height,0px))+2rem)]',
+    )
+  })
+
+  it('shares the same right offset (--filter-overlay-gap) as the floating account controls, so the two right-align instead of drifting apart', () => {
     render(<MapView markers={[]} />)
     const stack = screen.getByRole('button', { name: /center on my location/i }).parentElement
     expect(stack).toHaveClass('right-3', 'md:right-[var(--filter-overlay-gap)]')
