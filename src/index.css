@@ -9,6 +9,11 @@
   --color-brand: #ea580c;
   --color-brand-soft: #ffede3;
   --color-brand-strong: #b93a0c;
+  /* The two ends of the header band's gradient, with `--color-brand` at 55% between them: the
+     light end is the logo tile's own top color, the deep end is darker so the account controls on
+     the right sit on 4.61:1 without reading brown the way `brand-strong` does across a band. */
+  --color-brand-bright: #f7722a;
+  --color-brand-deep: #cf4708;
 
   --color-verdict-go-back: #00734f;
   /* Indigo, not amber: beside an orange brand an amber "worth a detour" chip was
@@ -27,29 +32,23 @@
   /* Desktop-only (>=768px) fixed offsets for the floating filter overlay pinned atop the map
      (KTD2). FilterBar stays authored inside <aside> (R7's tab-order requirement) but must render
      visually pinned over <main>'s map, so it's `position: fixed` with these offsets. The sidebar's
-     width is a single source of truth here: App.tsx's <aside> sets its own width via
-     `md:w-[var(--sidebar-width)]` rather than a Tailwind spacing-scale class (Tailwind v4 has no
-     `--width-*` theme namespace to name a fixed-width utility, unlike --color-* or --radius-*), so
-     changing this one value moves the sidebar and keeps the overlay's left offset in sync
-     automatically — no second place to update. The header's rendered height, by contrast, is not
-     reliably knowable from CSS alone (font metrics, locale text length) — it's measured at runtime
-     instead (App.tsx, via the same ResizeObserver-to-CSS-var technique as --filter-overlay-height
-     below) and written here, so `--filter-overlay-top` and `--filter-overlay-left` end up with the
-     *same* actual gap (--filter-overlay-gap) from their respective reference edges (header bottom,
-     sidebar right) rather than drifting apart. */
-  --sidebar-width: 21rem;
-  --header-height: 4rem; /* fallback until the runtime measurement effect runs; see above */
+     width is a single source of truth here: App.tsx's root grid sizes its first column from it,
+     so changing this one value moves the sidebar and keeps the overlay's left offset in sync —
+     no second place to update. 24rem, not less: a tile's name shares its line with the status
+     badge, and at 21rem ordinary names ("Le Petit Bouillon") truncated.
+     On desktop the header is only the top of the sidebar, so the map starts at the viewport's top
+     edge and the overlay's top gap is the same gap as its left one. */
+  --sidebar-width: 24rem;
   --filter-overlay-gap: 1rem;
-  --filter-overlay-top: calc(var(--header-height) + var(--filter-overlay-gap));
+  --filter-overlay-top: var(--filter-overlay-gap);
   --filter-overlay-left: calc(var(--sidebar-width) + var(--filter-overlay-gap));
-  /* The overlay spans the full width of the map pane (left set above, right set here — same gap
-     value on all three edges) rather than a fixed card width. It sets only `left`/`right`, no
-     `width`, so the browser derives the width and the overlay re-adapts on every viewport resize
-     with no JS. The Locate/zoom control stack (MapView.tsx) then simply floats on top of the
-     overlay's top-right corner — its z-index is already higher, so nothing under it is
-     unreachable; the overlay is meant to run the full width of the map, matching the prototype,
-     not stop short to avoid touching the stack. */
-  --filter-overlay-right: var(--filter-overlay-gap);
+  /* The overlay sets only `left`/`right`, no `width`, so the browser derives the width and the
+     overlay re-adapts on every viewport resize with no JS. Its right edge stops a gap short of the
+     account controls floating in the map's top-right corner (ShellAccount.tsx), whose width is
+     measured at runtime: a Sign in button, an avatar and an outage pill are all different widths. */
+  --account-float-width: 0px;
+  --account-float-height: 0px;
+  --filter-overlay-right: calc(var(--account-float-width) + 2 * var(--filter-overlay-gap));
 
   /* Written at runtime (App.tsx, via a ResizeObserver on the overlay's own ref) to the overlay's
      actual rendered height, so MapView's Locate/zoom control stack (KTD3) can always clear it via
@@ -96,6 +95,8 @@
   /* Same job at chip scale, a touch denser since a chip is small enough to lose its edge. */
   --shadow-chip: 0 1px 2px rgb(16 24 40 / 0.12), 0 4px 10px rgb(16 24 40 / 0.14);
   --shadow-brand: 0 6px 16px rgb(234 88 12 / 0.28);
+  /* Under a white button on the Paprika band: a warm brown shadow, since a gray one muddies orange. */
+  --shadow-on-brand: 0 6px 16px rgb(90 25 0 / 0.25);
 
   /* The page behind everything: root, header, list pane. White today -- surfaces separate by
      `--shadow-card` and `--shadow-chip` alone. Kept as a token so the page color stays one edit:

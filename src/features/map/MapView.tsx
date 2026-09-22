@@ -560,19 +560,19 @@ export function MapView({
             ZoomControl can call useMap() — react-leaflet renders children straight into the
             Leaflet container div (no portal), so this positions identically to a sibling would.
             `right-3`/`top-3` (mobile, unchanged from before this stack existed) are overridden at
-            `md:`: `right` switches to the same `--filter-overlay-gap` the desktop filter overlay
-            uses on its own right edge (index.css), so the two share one right edge instead of
-            drifting apart by a few pixels; `top` reads the measured `--filter-overlay-height`
-            custom property (KTD3) — the overlay is `position: fixed` and authored inside <aside>,
-            not a flow-sibling of this stack, so it reserves no space this stack could rely on —
-            App.tsx measures the overlay's real rendered height via a ResizeObserver and writes it
-            to that property, so this stack always clears it regardless of how tall the cuisine
-            row's "+N autres" expansion grows it. Also stops 'dblclick'/'wheel' propagation (see
+            `md:`: `right` switches to the same `--filter-overlay-gap` the floating account controls
+            use on their right edge (index.css), so the two share one right edge; `top` clears the
+            taller of the two things floating above it — the filter overlay (`--filter-overlay-
+            height`, KTD3) and the account controls (`--account-float-height`). Both are `position:
+            fixed` and authored elsewhere, so neither reserves space this stack could rely on; each
+            is measured by a ResizeObserver, so this stack clears them however tall the cuisine
+            row's "+N autres" expansion grows the overlay — and still clears the account controls
+            when there is no overlay at all (an empty app renders none). Also stops 'dblclick'/'wheel' propagation (see
             `controlStackRef` above) so interacting with these buttons doesn't also reach Leaflet's
             own container and trigger its native doubleClickZoom/scrollWheelZoom handling. */}
         <div
           ref={controlStackRef}
-          className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(var(--filter-overlay-height,0px)+2rem)] md:right-[var(--filter-overlay-gap)]"
+          className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2 md:top-[calc(max(var(--filter-overlay-height,0px),var(--account-float-height,0px))+2rem)] md:right-[var(--filter-overlay-gap)]"
         >
           <button
             type="button"

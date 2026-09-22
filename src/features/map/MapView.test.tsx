@@ -722,7 +722,15 @@ describe('MapView', () => {
     expect(stack?.className).toContain('--filter-overlay-height')
   })
 
-  it('shares the same right offset (--filter-overlay-gap) as the desktop filter overlay, so the two right-align instead of drifting apart', () => {
+  it('also clears the floating account controls (--account-float-height), which sit above it even when there is no filter overlay', () => {
+    render(<MapView markers={[]} />)
+    const stack = screen.getByRole('button', { name: /center on my location/i }).parentElement
+    expect(stack?.className).toContain(
+      'md:top-[calc(max(var(--filter-overlay-height,0px),var(--account-float-height,0px))+2rem)]',
+    )
+  })
+
+  it('shares the same right offset (--filter-overlay-gap) as the floating account controls, so the two right-align instead of drifting apart', () => {
     render(<MapView markers={[]} />)
     const stack = screen.getByRole('button', { name: /center on my location/i }).parentElement
     expect(stack).toHaveClass('right-3', 'md:right-[var(--filter-overlay-gap)]')

@@ -1,7 +1,15 @@
 import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '../../lib/cn'
 
-type ButtonVariant = 'primary' | 'secondary' | 'link' | 'icon-dismiss' | 'menu-item'
+type ButtonVariant =
+  | 'primary'
+  | 'on-brand'
+  | 'on-brand-glass'
+  | 'band-icon'
+  | 'secondary'
+  | 'link'
+  | 'icon-dismiss'
+  | 'menu-item'
 type ButtonSize = 'sm' | 'xs'
 type ButtonTone = 'neutral' | 'destructive' | 'toast'
 type MenuItemTone = Exclude<ButtonTone, 'toast'>
@@ -26,6 +34,19 @@ const VARIANT_STYLES: Record<StyledVariant, string> = {
     'rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-brand transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50',
   secondary:
     'rounded-full bg-white px-3 py-1.5 font-medium shadow-chip transition hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50',
+  // The two actions on the Paprika band (App.tsx), where a brand-filled button would vanish into
+  // its own background. `on-brand` is the primary action inverted; `on-brand-glass` the secondary
+  // one, a translucent white wash inside a white edge. Both bold and a step taller than `primary`:
+  // on a colored band a semibold label read thin.
+  'on-brand':
+    'rounded-full bg-white px-4 py-3 text-sm font-bold text-brand-strong shadow-on-brand transition hover:bg-brand-soft active:bg-brand-soft disabled:opacity-50',
+  'on-brand-glass':
+    'rounded-full bg-white/20 px-4 py-3 text-sm font-bold text-white ring-[1.5px] ring-white/55 transition ring-inset hover:bg-white/30 active:bg-white/30 disabled:opacity-50',
+  // An icon button that lives on the band on a phone (translucent, like `on-brand-glass`) and
+  // floats over the map on desktop (a white chip, like the icon-only secondary). One element
+  // changes surface at `md:` because the header's account controls move there (ShellAccount.tsx).
+  'band-icon':
+    'grid h-9 w-9 place-items-center rounded-full bg-white/20 text-white transition hover:bg-white/30 active:bg-white/30 disabled:opacity-50 md:bg-white md:text-gray-900 md:shadow-chip md:hover:bg-gray-50 md:active:bg-gray-100',
   link: 'font-medium text-brand-strong underline',
 }
 
@@ -90,7 +111,12 @@ export function Button({
   className = '',
   ...rest
 }: (
-  | { variant: 'primary'; iconOnly?: false; size?: never; tone?: never }
+  | {
+      variant: 'primary' | 'on-brand' | 'on-brand-glass' | 'band-icon'
+      iconOnly?: false
+      size?: never
+      tone?: never
+    }
   | { variant: 'secondary'; iconOnly?: boolean; size?: ButtonSize; tone?: never }
   | { variant: 'link'; iconOnly?: false; size?: ButtonSize; tone?: never }
   | { variant: 'icon-dismiss'; iconOnly?: false; size?: never; tone: ButtonTone }
@@ -113,6 +139,11 @@ export function Button({
         break
       case 'menu-item':
         base = cn(MENU_ITEM_BASE, MENU_ITEM_TONE[tone])
+        break
+      case 'on-brand':
+      case 'on-brand-glass':
+      case 'band-icon':
+        base = VARIANT_STYLES[variant]
         break
       default:
         base = VARIANT_STYLES.primary

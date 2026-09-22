@@ -18,12 +18,34 @@ below is defined anywhere else, and no component hardcodes a value one of these 
 | `--color-brand`                        | `#ea580c`             | Primary actions, and the fill of a selected chip                             |
 | `--color-brand-strong`                 | `#b93a0c`             | Hover and active states of a primary action, link text                       |
 | `--color-brand-soft`                   | `#ffede3`             | Hover wash on a brand-tinted control, and the active segment in the sort bar |
-| `--color-canvas`                       | `#ffffff`             | The page behind everything — root, header, list pane                         |
+| `--color-brand-bright`                 | `#f7722a`             | The light start of the header band's gradient                                |
+| `--color-brand-deep`                   | `#cf4708`             | The deep end of the header band's gradient                                   |
+| `--color-canvas`                       | `#ffffff`             | The page behind everything — root, list pane                                 |
 | `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                                         |
 
 White text on `--color-brand` measures 3.56:1, under AA — no vivid orange reaches it, and a
 darker one reads as the terracotta identity this replaced. Text in the brand color therefore uses
 `--color-brand-strong` (5.72:1 on white).
+
+## The header band
+
+The header and the two actions under it form one Paprika band: `--color-brand-bright` to
+`--color-brand-deep`, through `--color-brand` at 55%, left to right. The direction is
+load-bearing — the header and the action band are two boxes of the same width, and only a
+horizontal gradient meets itself across them without a seam. On desktop the band is the top of
+the sidebar, not a strip across the screen, and the account controls float over the map's
+top-right corner instead.
+
+The light start was chosen by eye over contrast, and its cost is measured: white on the band runs
+from 2.84:1 at the left edge to 4.61:1 at the right. The title starts at 3.03:1, just over AA's 3:1
+for large text; the 12px tagline, at about the same, is under AA. The actions use `on-brand` (a
+white pill with `--color-brand-strong` text on `--shadow-on-brand`) and `on-brand-glass` (white
+text on a 20% white wash inside a white edge), whose label measures 2.33:1 to 2.81:1 across the
+width it spans. The settings button on a phone is the same glass (`band-icon`), and turns into a
+white chip once it floats over the map on desktop.
+
+The logo is itself a Paprika tile, so on the band it wears a white ring (`ring-2 ring-white/80`) to
+keep an edge.
 
 Secondary text and eyebrows are `--color-gray-600` or darker (6.00:1 on white): `gray-500`
 measures 3.98:1 and `gray-400` under 2.5:1, both under AA for text this small. The margin matters
@@ -66,12 +88,13 @@ unstyled rather than mis-tinted.
 
 ## Shape
 
-| Token            | Value                                                             |
-| ---------------- | ----------------------------------------------------------------- |
-| `--radius-card`  | `1.125rem`                                                        |
-| `--shadow-card`  | `0 1px 2px rgb(16 24 40 / 0.1), 0 6px 16px rgb(16 24 40 / 0.14)`  |
-| `--shadow-chip`  | `0 1px 2px rgb(16 24 40 / 0.12), 0 4px 10px rgb(16 24 40 / 0.14)` |
-| `--shadow-brand` | `0 6px 16px rgb(0 169 122 / 0.28)`                                |
+| Token               | Value                                                             |
+| ------------------- | ----------------------------------------------------------------- |
+| `--radius-card`     | `1.125rem`                                                        |
+| `--shadow-card`     | `0 1px 2px rgb(16 24 40 / 0.1), 0 6px 16px rgb(16 24 40 / 0.14)`  |
+| `--shadow-chip`     | `0 1px 2px rgb(16 24 40 / 0.12), 0 4px 10px rgb(16 24 40 / 0.14)` |
+| `--shadow-brand`    | `0 6px 16px rgb(234 88 12 / 0.28)`                                |
+| `--shadow-on-brand` | `0 6px 16px rgb(90 25 0 / 0.25)`                                  |
 
 Cards carry a shadow and no border. Buttons and chips are `rounded-full`.
 
@@ -85,8 +108,11 @@ is the only module that renders one into a color.
 | Pill background          | `oklch(0.96 0.045×c H)` | —                            |
 | Pill text                | `oklch(0.40 0.13×c H)`  | 7.19:1 on its own background |
 | Solid marker, filter dot | `oklch(0.48 0.15×c H)`  | 5.52:1 against white text    |
+| List tile avatar         | `oklch(0.93 0.07×c H)`  | — (holds an emoji, no text)  |
 
-Both floors hold for every hue, including hues a browser maps back into sRGB.
+Every floor holds for every hue, including hues a browser maps back into sRGB. The list tile also
+sets the cuisine's name in the pill text color straight on the white card, and
+`cuisines.test.ts` holds that pairing to AA as well.
 
 ### Rules
 
@@ -109,6 +135,8 @@ Both floors hold for every hue, including hues a browser maps back into sRGB.
 
 ## Icons
 
+The mark is a Paprika tile (`#F7722A` to `#DD4E0A`) with a white front pin whose hole is
+`--color-brand`; the maskable target is flattened onto the gradient's midpoint, `#EA601B`.
 `public/logo.svg` feeds every raster at 180 px and above; `public/logo-mark.svg`, the single-pin
 reduction, feeds `favicon.ico` and `pwa-64x64.png`. `npm run icons` regenerates all six. Both
 sources use hex, not `oklch()`: sharp rasterises through librsvg, which does not implement it.

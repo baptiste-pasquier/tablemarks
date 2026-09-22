@@ -1,6 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Settings } from 'lucide-react'
 import { useRestaurants } from './features/useRestaurants'
 import { useAuth } from './auth/useAuth'
 import { RestaurantList } from './features/RestaurantList'
@@ -22,15 +21,14 @@ import { DecidePanel } from './features/decide/DecidePanel'
 import { SettingsPanel } from './features/settings/SettingsPanel'
 import { Modal } from './features/ui/Modal'
 import { Button } from './features/ui/Button'
-import { Badge } from './features/ui/Badge'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
-import { AccountMenu } from './features/account/AccountMenu'
-import { badgeColorClassName, pillToneClassName } from './features/sync/syncStatusPresentation'
+import { ShellAccount } from './features/account/ShellAccount'
 import { useBackendStatus } from './sync/useBackendStatus'
 import { backendAddressIsKnown, backendIsAbsent, backendIsUnreachable } from './sync/backendStatus'
 import { geolocate, type GeoPoint } from './lib/geolocate'
 import { DEFAULT_MAP_CENTER } from './lib/geo'
 import { cn } from './lib/cn'
+import { useMeasuredSizeVar } from './lib/useMeasuredSizeVar'
 
 type MobileView = 'list' | 'map'
 
@@ -54,37 +52,6 @@ function toggledDirections(
   return { ...directions, date: directions.date === 'newest' ? 'oldest' : 'newest' }
 }
 
-/**
- * Measures `ref`'s rendered height live (via ResizeObserver) and writes it to `document
- * .documentElement`'s `varName` CSS custom property. Used for two targets that a hardcoded
- * `index.css` constant can't reliably stand in for: the header (font metrics/locale text length
- * make its true height unknowable from CSS alone) and the desktop filter overlay (grows with the
- * cuisine row's "+N autres" expansion). Written straight to the DOM, not React state: a
- * ResizeObserver can fire on every frame during a resize, and only CSS consumers elsewhere ever
- * need to read these values, so routing them through setState would re-render the whole App tree
- * on every tick for no consumer that needs a React re-render.
- */
-function useMeasuredHeightVar(ref: RefObject<HTMLElement | null>, varName: string) {
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const applyHeight = (height: number) => {
-      document.documentElement.style.setProperty(varName, `${height}px`)
-    }
-    // A forced layout read is the point of useLayoutEffect here: this call has to happen
-    // synchronously before paint, before `observe()` below can report anything.
-    applyHeight(el.getBoundingClientRect().height)
-    // No-op (rather than throwing) where ResizeObserver isn't available — the initial
-    // `applyHeight()` call above still runs, it just won't track later resizes.
-    if (typeof ResizeObserver === 'undefined') return
-    // Reads the size the browser already computed for this notification, rather than forcing
-    // another layout read via getBoundingClientRect() on every resize tick.
-    const observer = new ResizeObserver(([entry]) => applyHeight(entry.borderBoxSize[0].blockSize))
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [ref, varName])
-}
-
 /** Mobile-only "Filtres · N" pill (U4, R4). Rendered once from each pane so exactly one is ever
  *  mounted at a time (see the two call sites below); both share this one class string/label. */
 function FiltersPill({ count, onOpen }: { count: number; onOpen: () => void }) {
@@ -97,49 +64,6 @@ function FiltersPill({ count, onOpen }: { count: number; onOpen: () => void }) {
     >
       {t('filters.mobilePillLabel', { count })}
     </button>
-  )
-}
-
-/**
- * Same `hidden sm:inline` gate the Sign in button's " with Google" suffix uses just below, and for
- * the same reason: the header's right-hand group is `shrink-0` by deliberate bug fix (see the
- * comment on the title group), so anything that widens it pushes the row past a ~320px viewport.
- * Passed through `Badge`'s own `labelClassName` rather than reached at with a descendant selector.
- */
-const INDICATOR_LABEL_GATE = 'hidden sm:inline'
-
-/**
- * Header indicator for a backend that belongs to this deployment but cannot be used right now
- * (R6, KD7) — a configured instance that is down, or a configuration that could not be read at
- * all. Reported to signed-out visitors too: a private instance that is merely down must never read
- * as a deliberately backend-free build.
- *
- * Copy lives under its own `backend` namespace rather than reusing `sync.*`: the sync wording
- * promises the app will keep retrying in the background, which no signed-out visitor has a
- * controller running to make true. Tone and shape come from the sync presentation helper and the
- * `Badge` primitive so this pill can never drift from the account menu's status chip.
- *
- * The accessible name is explicit because the visible label is `display: none` below `sm`, which
- * would otherwise leave a bare colored dot with no name at all.
- */
-function BackendUnreachableIndicator() {
-  const { t } = useTranslation()
-  const label = t('backend.unreachable')
-  return (
-    <span
-      role="status"
-      aria-label={label}
-      title={t('backend.unreachableDetail')}
-      className="inline-flex shrink-0 items-center"
-    >
-      <Badge
-        text={label}
-        tint
-        tone={pillToneClassName('problem')}
-        dotClassName={badgeColorClassName('problem')}
-        labelClassName={INDICATOR_LABEL_GATE}
-      />
-    </span>
   )
 }
 
@@ -311,12 +235,6 @@ export default function App() {
     })
   }, [])
 
-  // The header's real rendered height feeds --filter-overlay-top (index.css) so the overlay's top
-  // gap actually matches its left gap (both computed from --filter-overlay-gap) instead of
-  // drifting apart whenever the header's true height differs from index.css's hardcoded fallback.
-  const headerRef = useRef<HTMLElement>(null)
-  useMeasuredHeightVar(headerRef, '--header-height')
-
   // Desktop filter overlay (U3 KTD2/KTD3): FilterBar stays authored here in <aside> (R7's tab
   // order) but renders as a `position: fixed` floating card pinned over <main>'s map on desktop,
   // so it reserves no flow space MapView's Locate/zoom control stack could rely on to stay below
@@ -324,7 +242,7 @@ export default function App() {
   // MapView.tsx), so it always clears the overlay regardless of how tall the cuisine row's "+N
   // autres" expansion grows it.
   const filterOverlayRef = useRef<HTMLDivElement>(null)
-  useMeasuredHeightVar(filterOverlayRef, '--filter-overlay-height')
+  useMeasuredSizeVar(filterOverlayRef, '--filter-overlay-height')
 
   // If the viewport crosses into desktop width while the mobile filters sheet is open, close it:
   // desktop already shows FilterBar/SortBar in the floating overlay/sidebar, so leaving the sheet
@@ -341,11 +259,18 @@ export default function App() {
   }, [filtersOpen])
 
   return (
-    <div className="flex h-full flex-col bg-canvas text-gray-900">
-      <header
-        ref={headerRef}
-        className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-canvas/85 px-4 py-3 backdrop-blur"
-      >
+    /* Desktop is a two-column grid: the header and <aside> stack in the sidebar column, <main>
+       spans the full height beside them, so no band runs across the map just to reach the account
+       controls (they float over the map instead — ShellAccount.tsx). The wrapper between header
+       and panes is `md:contents` so both panes become grid cells without changing DOM order, which
+       is also the tab order. Below md, the same markup is the plain column it always was. */
+    <div className="flex h-full flex-col bg-canvas text-gray-900 md:grid md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]">
+      {/* The Paprika band. Its gradient runs left to right, so it lines up with the action band
+          below it on desktop, which has the same width and the same gradient: a diagonal one
+          would show a seam between the two boxes. Not sticky on desktop, where a sticky z-index
+          would make it a stacking context and trap the account controls it carries under the
+          map. */}
+      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 bg-linear-to-r from-brand-bright via-brand via-55% to-brand-deep px-4 py-3 text-white md:static md:z-auto md:col-start-1 md:row-start-1 md:pt-4 md:pb-1">
         {/* min-w-0/flex-1 + truncate (bug fix): without a shrink target, this group's natural width
             plus the right group's (sign-in/settings) forced the header wider than a narrow phone
             viewport (~320-375px), overflowing the whole page horizontally — visible as a
@@ -356,83 +281,52 @@ export default function App() {
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
           {/* The app's own mark, not a stand-in for it: this tile is the one piece of brand on
               screen at all times, and a generic emoji on a brand-colored square said nothing the
-              installed icon says. Served from BASE_URL because the demo lives on a repo subpath. */}
+              installed icon says. Served from BASE_URL because the demo lives on a repo subpath.
+              The white ring is what detaches it: the tile is Paprika on a Paprika band. */}
           <img
             src={`${import.meta.env.BASE_URL}logo.svg`}
             alt=""
             aria-hidden="true"
             width={36}
             height={36}
-            className="h-9 w-9 shrink-0"
+            className="h-9 w-9 shrink-0 rounded-[8px] ring-2 ring-white/80"
           />
           <div className="min-w-0 leading-none">
-            <h1 className="truncate text-2xl font-bold tracking-tight text-gray-900">
-              {t('app.title')}
-            </h1>
-            <p className="mt-0.5 hidden text-xs text-gray-600 sm:block">{t('shell.tagline')}</p>
+            <h1 className="truncate text-2xl font-bold tracking-tight">{t('app.title')}</h1>
+            <p className="mt-0.5 hidden text-xs font-medium text-white/90 sm:block">
+              {t('shell.tagline')}
+            </p>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {showBackendProblem && <BackendUnreachableIndicator />}
-          {signedIn ? (
-            <AccountMenu
-              email={email}
-              avatarUrl={avatarUrl}
-              onOpenSettings={() => setSettingsOpen(true)}
-              onSignOut={handleSignOut}
-            />
-          ) : (
-            /* A fragment carrying both controls, and only the Sign in half is gated: gating the
-               fragment would take Settings — and with it the language switcher — off the demo
-               entirely (R21). */
-            <>
-              {!backendAbsent && (
-                <Button
-                  id="shell-signin-button"
-                  variant="secondary"
-                  // Present but inert when the configuration itself could not be read (KTD9): there
-                  // is no address, so an active control would open an authentication window against
-                  // the visitor's own machine. A known address that is merely down keeps working —
-                  // retrying can succeed there.
-                  disabled={signInDisabled}
-                  title={signInDisabled ? t('backend.signInUnavailable') : undefined}
-                  onClick={() => void signIn()}
-                >
-                  {t('shell.signIn')}
-                  <span className="hidden sm:inline"> {t('shell.withGoogle')}</span>
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                iconOnly
-                onClick={() => setSettingsOpen(true)}
-                aria-label={t('settings.openAria')}
-              >
-                <Settings className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </>
-          )}
-        </div>
+        <ShellAccount
+          signedIn={signedIn}
+          email={email}
+          avatarUrl={avatarUrl}
+          backendAbsent={backendAbsent}
+          signInDisabled={signInDisabled}
+          showBackendProblem={showBackendProblem}
+          onSignIn={() => void signIn()}
+          onSignOut={handleSignOut}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col md:contents">
         <aside
           className={cn(
-            'min-h-0 flex-1 flex-col border-gray-200 bg-canvas md:flex md:w-[var(--sidebar-width)] md:flex-none md:border-r',
+            'min-h-0 flex-1 flex-col border-gray-200 bg-canvas md:col-start-1 md:row-start-2 md:flex md:border-r',
             view === 'list' ? 'flex' : 'hidden',
           )}
         >
-          <div className="space-y-2 border-b border-gray-200 p-3">
-            <Button variant="primary" className="w-full" onClick={() => setAdding(true)}>
+          {/* The rest of the Paprika band: the two actions sit on the header's gradient, so the top
+              of the column reads as one brand block. */}
+          <div className="space-y-2 bg-linear-to-r from-brand-bright via-brand via-55% to-brand-deep p-3 pb-4">
+            <Button variant="on-brand" className="w-full" onClick={() => setAdding(true)}>
               {t('shell.addPlace')}
             </Button>
-            <button
-              type="button"
-              onClick={() => setDeciding(true)}
-              className="w-full rounded-full bg-white px-3 py-2.5 text-sm font-semibold text-brand-strong shadow-chip transition hover:bg-brand-soft active:bg-brand-soft"
-            >
+            <Button variant="on-brand-glass" className="w-full" onClick={() => setDeciding(true)}>
               {t('shell.whereToEat')}
-            </button>
+            </Button>
           </div>
           {/* Desktop (KTD2): floating card pinned atop the map, `position: fixed` since this div
               is authored inside <aside> but must render visually over <main>. Below md, FilterBar
@@ -499,7 +393,11 @@ export default function App() {
             no scrollable content to move the padding into — it just fills <main> fully, and the
             "+" FAB/nav bar float above it via their own fixed/absolute positioning regardless. */}
         <main
-          className={cn('relative min-h-0 flex-1', view === 'map' ? 'block' : 'hidden', 'md:block')}
+          className={cn(
+            'relative min-h-0 flex-1 md:col-start-2 md:row-span-2 md:row-start-1',
+            view === 'map' ? 'block' : 'hidden',
+            'md:block',
+          )}
         >
           <MapView
             markers={markers}

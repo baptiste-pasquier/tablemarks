@@ -42,7 +42,7 @@ direction is what makes the app behave identically with or without an account.
 - Do not use a root-absolute path for a runtime asset — the demo is served from a repo subpath, so
   derive it from `import.meta.env.BASE_URL`.
 - Do not add UI state to `App.tsx` — extract a state hook (facets, selection) beside its feature.
-  At 619 lines it is over the limit below and is the example, not the pattern.
+  At 554 lines it is over the limit below and is the example, not the pattern.
 
 ## Storage and PocketBase
 

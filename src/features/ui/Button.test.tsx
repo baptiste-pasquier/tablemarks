@@ -24,6 +24,30 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('rounded-full', 'shadow-brand')
   })
 
+  it('inverts the primary action for the brand band: a white pill with brand-strong text', () => {
+    render(<Button variant="on-brand">Go</Button>)
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('rounded-full', 'bg-white', 'text-brand-strong', 'font-bold')
+    expect(button).not.toHaveClass('bg-brand')
+  })
+
+  it('draws the secondary action on the brand band as translucent white glass inside a white edge', () => {
+    render(<Button variant="on-brand-glass">Go</Button>)
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button).toHaveClass('rounded-full', 'bg-white/20', 'text-white', 'ring-inset')
+  })
+
+  it('draws a band icon as glass on a phone and as a white chip once it floats over the map on desktop', () => {
+    render(
+      <Button variant="band-icon" aria-label="Settings">
+        ⚙
+      </Button>,
+    )
+    const button = screen.getByRole('button', { name: 'Settings' })
+    expect(button).toHaveClass('h-9', 'w-9', 'bg-white/20', 'text-white')
+    expect(button).toHaveClass('md:bg-white', 'md:text-gray-900', 'md:shadow-chip')
+  })
+
   it('draws the secondary variant as a white pill lifted by shadow, not a bordered one', () => {
     render(<Button variant="secondary">Go</Button>)
     const button = screen.getByRole('button', { name: 'Go' })

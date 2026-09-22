@@ -45,3 +45,12 @@ The token contract and every figure above: `docs/reference/design-tokens.md`.
 The gray canvas was reverted the same day, at the owner's preference for white. The page is
 white again, and surfaces separate by `--shadow-card` and `--shadow-chip` alone, as they did
 before this decision. Paprika, the indigo detour and the darker secondary text stand.
+
+## Amendment — 2026-09-22, the brand band
+
+The owner judged the white interface too plain, and chose to put Paprika on the shell itself.
+The header and the two actions under it became one Paprika band. On desktop that band is the
+top of a 24rem sidebar rather than a strip across the screen, and the account controls float
+over the map. The sidebar widened from 21rem because the new list tile shares a name's line with
+its status, and at 21rem ordinary names truncated. The logo became a Paprika tile too, and wears
+a white ring on the band.
