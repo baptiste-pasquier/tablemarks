@@ -69,7 +69,8 @@
     "visitDateAria": "Visit date",
     "googleMaps": "Google Maps",
     "goTo": "Go to",
-    "addedOn": "Added {{date}}"
+    "addedOn": "Added {{date}}",
+    "errorSave": "Could not save this change."
   },
   "filters": {
     "title": "Filter",

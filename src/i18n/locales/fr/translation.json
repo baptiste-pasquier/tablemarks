@@ -69,7 +69,8 @@
     "visitDateAria": "Date de la visite",
     "googleMaps": "Google Maps",
     "goTo": "Itinéraire",
-    "addedOn": "Ajouté le {{date}}"
+    "addedOn": "Ajouté le {{date}}",
+    "errorSave": "Impossible d'enregistrer cette modification."
   },
   "filters": {
     "title": "Filtrer",

@@ -4,7 +4,7 @@ import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
-import { updateRestaurant } from '../../data/restaurants'
+import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
 import { cuisineOptions } from '../facets/cuisines'
 import { CuisinePicker } from '../facets/CuisinePicker'
 import { Modal } from '../ui/Modal'
@@ -69,6 +69,7 @@ export function RestaurantDetail({
   const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
   const [logging, setLogging] = useState(false)
   const [pastDate, setPastDate] = useState('')
+  const [saveFailed, setSaveFailed] = useState(false)
   // Guards the notes field against being remounted (and thus reset to the store value) while the
   // user is mid-edit — see saveField/noteKey below. Refs, not state: flipping
   // them on focus/blur must not itself force a re-render (see KTD8 amendment in the plan).
@@ -105,10 +106,13 @@ export function RestaurantDetail({
       : undefined
   const goToHref = destination ? googleMapsDirectionsUrl(destination) : undefined
 
-  // Best-effort: the row may have been deleted/synced away between render and blur, in which
-  // case updateRestaurant rejects (it already routes through mutateRestaurant's single-transaction
-  // read-modify-write — see data/restaurants.ts). The store listener reflects the real state either way.
-  //
+  // A rejected write (storage full, the row deleted or synced away meanwhile) reaches the user; the
+  // store listener goes on showing the real state either way.
+  function save(changes: RestaurantPatch) {
+    setSaveFailed(false)
+    void updateRestaurant(restaurantId, changes).catch(() => setSaveFailed(true))
+  }
+
   // Compares against `baseline` (the value displayed when the edit session began, captured in
   // onFocus) rather than the live `restaurant[field]`: a store update can land while the field is
   // focused, and comparing against the current restaurant value would then treat an unedited
@@ -117,7 +121,7 @@ export function RestaurantDetail({
     const next = value.trim() || undefined
     const prev = baseline.trim() || undefined
     if (next === prev) return
-    void updateRestaurant(restaurantId, { [field]: next }).catch(() => {})
+    save({ [field]: next })
   }
 
   async function logNow(verdict: Verdict) {
@@ -134,6 +138,13 @@ export function RestaurantDetail({
   return (
     <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
       <ModalHeader title={restaurant.name} onClose={onClose} variant="detail" />
+
+      {/* Above everything, since the category and the notes, far apart, both save through it. */}
+      {saveFailed && (
+        <p role="alert" className="mb-2 text-sm text-red-600">
+          {t('visitDetail.errorSave')}
+        </p>
+      )}
 
       {/* Info block (R4): identity + location detail grouped into one visually distinct container. */}
       <div className="rounded-card bg-gray-50 p-3">
@@ -170,8 +181,7 @@ export function RestaurantDetail({
             options={options}
             onChange={(cuisine) => {
               if (cuisine === (restaurant.cuisine?.trim() || undefined)) return
-              // Best-effort, like the notes field below: the store listener shows the real state.
-              void updateRestaurant(restaurantId, { cuisine }).catch(() => {})
+              save({ cuisine })
             }}
           />
         </div>

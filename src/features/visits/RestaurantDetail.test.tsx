@@ -3,10 +3,21 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
 import { RestaurantDetail } from './RestaurantDetail'
-import { createRestaurant, getRestaurant, mutateRestaurant } from '../../data/restaurants'
+import {
+  createRestaurant,
+  getRestaurant,
+  mutateRestaurant,
+  updateRestaurant,
+} from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 import { instantToLocalDay } from '../../lib/dates'
 import { VERDICTS, translateVerdict } from '../../types/models'
+
+// Partial mock: the real repository, with `updateRestaurant` spied so one test can make a save fail.
+vi.mock('../../data/restaurants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../data/restaurants')>()
+  return { ...actual, updateRestaurant: vi.fn(actual.updateRestaurant) }
+})
 
 beforeEach(freshDB)
 afterEach(() => vi.unstubAllEnvs())
@@ -103,6 +114,18 @@ describe('RestaurantDetail', () => {
     await user.type(screen.getByLabelText('Other category'), 'Ramen{Enter}')
 
     await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('Ramen'))
+  })
+
+  it('tells the user when a category could not be saved', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    vi.mocked(updateRestaurant).mockRejectedValueOnce(new Error('QuotaExceededError'))
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: /French/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
   })
 
   it('clears the cuisine, leaving the place uncategorized', async () => {
