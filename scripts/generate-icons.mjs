@@ -10,8 +10,8 @@ import sharp from 'sharp'
 
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public')
 
-/** The page background of `logo.svg`, and what the maskable target is flattened onto. */
-const CANVAS = '#F4F8F6'
+/** Midpoint of `logo.svg`'s Paprika gradient: what the maskable target's corners are flattened onto. */
+const CANVAS = '#EA601B'
 
 /**
  * target file -> [source svg, pixel size, flatten?]. The favicon is written as PNG bytes in an
