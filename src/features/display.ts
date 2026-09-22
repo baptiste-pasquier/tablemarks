@@ -1,5 +1,11 @@
 import { Ban, Compass, Meh, RotateCcw, type LucideIcon } from 'lucide-react'
-import { statusOf, translateStatus, type Restaurant, type Verdict } from '../types/models'
+import {
+  statusOf,
+  translateStatus,
+  type Restaurant,
+  type RestaurantStatus,
+  type Verdict,
+} from '../types/models'
 
 /**
  * Surface and text a verdict wears wherever it appears: the badge on a card, and the filter chip
@@ -15,11 +21,16 @@ export const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
 }
 
 /**
- * The same borrowing for the two plain statuses, which wear the neutral pill rather than a
- * verdict color. Kept in step with `STATUS_PILL` in `StatusBadge.tsx`, which needs the same pair
- * as inline style values rather than classes.
+ * The same borrowing for the two plain statuses. "To try" wears the neutral pill its badge wears
+ * on a tile — kept in step with `STATUS_PILL` in `StatusBadge.tsx`, which needs the same pair as
+ * inline style values rather than classes. "Visited" has no badge of its own (a visited place
+ * shows its verdict instead), so like a cuisine it takes the brand fill: `undefined` leaves
+ * `ToggleChip` on its default.
  */
-export const STATUS_CHIP_CLASS = 'bg-gray-200 text-gray-700'
+export const STATUS_CHIP_CLASS: Record<RestaurantStatus, string | undefined> = {
+  to_try: 'bg-gray-200 text-gray-700',
+  visited: undefined,
+}
 
 /**
  * A line icon per verdict, not an emoji. An emoji carries its own fixed colors, so on a solid

@@ -217,7 +217,7 @@ export function FilterBar({
                 key={s}
                 shape="pill"
                 active={filter.statuses.has(s)}
-                activeTone={STATUS_CHIP_CLASS}
+                activeTone={STATUS_CHIP_CLASS[s]}
                 onClick={() => onChange({ ...filter, statuses: withToggled(filter.statuses, s) })}
               >
                 {translateStatus(s)}

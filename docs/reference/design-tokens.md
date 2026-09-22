@@ -79,8 +79,9 @@ emoji: an emoji carries fixed colors and turns into a smudge on a solid fill, wh
 inherits `currentColor`. Cuisines keep emoji — on a pastel pill the color is an asset.
 
 A selected filter chip wears what it filters for: a verdict chip takes that verdict's own fill,
-a status chip the neutral status pill, and a cuisine chip — having no color of its own to borrow —
-the brand fill. Four identical brand-colored pills would say nothing about which verdict is selected.
+"to try" the neutral pill its badge wears, and a chip with no color of its own to borrow — a
+cuisine, or "visited", whose places show their verdict rather than a badge — the brand fill. Four
+identical brand-colored pills would say nothing about which verdict is selected.
 
 Every cuisine color is an `oklch()` value, so the palette needs a browser that parses it
 (Baseline since mid-2023). An older engine drops the declaration and renders the badge

@@ -162,6 +162,15 @@ describe('FilterBar', () => {
     expect(screen.getByRole('button', { name: 'Never again' })).not.toHaveClass('bg-verdict-never')
   })
 
+  it('fills a selected "Visited" chip with the brand color, since no badge of its own exists to borrow', () => {
+    const filter = { ...emptyFilter(), statuses: new Set(['visited'] as const) }
+    render(<FilterBar restaurants={PLACES} filter={filter} onChange={vi.fn()} />)
+
+    const visited = screen.getByRole('button', { name: 'Visited' })
+    expect(visited).toHaveClass('bg-brand', 'text-white')
+    expect(visited).not.toHaveClass('bg-gray-200')
+  })
+
   it('collapses cuisines beyond 6 behind a "+N more" control, expandable via "Collapse"', async () => {
     const many = ['Thai', 'Indian', 'French', 'Italian', 'Japanese', 'Chinese', 'Mexican'].map(
       (cuisine, i) => r({ id: `p${i}`, cuisine }),
