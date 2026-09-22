@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 
-// gray-600, not gray-400: an eyebrow sits on the canvas or on white, and gray-400 measured
-// under 2.5:1 on either.
+// gray-600, not gray-400: an eyebrow is small, and gray-400 measured under 2.5:1 on white.
 const EYEBROW_CLASSES = 'text-xs font-semibold uppercase tracking-wide text-gray-600'
 
 /**

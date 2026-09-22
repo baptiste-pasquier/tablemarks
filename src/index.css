@@ -97,10 +97,10 @@
   --shadow-chip: 0 1px 2px rgb(16 24 40 / 0.12), 0 4px 10px rgb(16 24 40 / 0.14);
   --shadow-brand: 0 6px 16px rgb(234 88 12 / 0.28);
 
-  /* The whole interface sits on this, header included, so white surfaces -- cards, chips,
-     secondary buttons -- lift off it with no band between zones. Text placed directly on it
-     uses gray-600: gray-500 lands near 3.6:1 here. */
-  --color-canvas: #f3f4f6;
+  /* The page behind everything: root, header, list pane. White today -- surfaces separate by
+     `--shadow-card` and `--shadow-chip` alone. Kept as a token so the page color stays one edit:
+     a tinted canvas was tried, and text placed directly on it then needs gray-600 or darker. */
+  --color-canvas: #fff;
 }
 
 html,

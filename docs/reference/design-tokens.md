@@ -18,16 +18,16 @@ below is defined anywhere else, and no component hardcodes a value one of these 
 | `--color-brand`                        | `#ea580c`             | Primary actions, and the fill of a selected chip                             |
 | `--color-brand-strong`                 | `#b93a0c`             | Hover and active states of a primary action, link text                       |
 | `--color-brand-soft`                   | `#ffede3`             | Hover wash on a brand-tinted control, and the active segment in the sort bar |
-| `--color-canvas`                       | `#f3f4f6`             | The whole interface, header included — everything white sits on it           |
+| `--color-canvas`                       | `#ffffff`             | The page behind everything — root, header, list pane                         |
 | `--color-gray-50` … `--color-gray-950` | `#f8fafb` … `#070b11` | Every neutral surface and text color                                         |
 
 White text on `--color-brand` measures 3.56:1, under AA — no vivid orange reaches it, and a
 darker one reads as the terracotta identity this replaced. Text in the brand color therefore uses
 `--color-brand-strong` (5.72:1 on white).
 
-Text placed directly on `--color-canvas` is `--color-gray-600` or darker: `gray-500` lands near
-3.6:1 there and `gray-400` under 2.5:1. Inside a white surface the same rule holds for eyebrows,
-which are small enough that `gray-400` was never legible.
+Secondary text and eyebrows are `--color-gray-600` or darker (6.00:1 on white): `gray-500`
+measures 3.98:1 and `gray-400` under 2.5:1, both under AA for text this small. The margin matters
+if `--color-canvas` is ever tinted: on `#f3f4f6`, `gray-600` still clears 5.45:1.
 
 ## Verdicts and statuses
 

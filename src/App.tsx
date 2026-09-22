@@ -344,7 +344,7 @@ export default function App() {
     <div className="flex h-full flex-col bg-canvas text-gray-900">
       <header
         ref={headerRef}
-        className="sticky top-0 z-20 flex items-center justify-between bg-canvas/85 px-4 py-3 backdrop-blur"
+        className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-canvas/85 px-4 py-3 backdrop-blur"
       >
         {/* min-w-0/flex-1 + truncate (bug fix): without a shrink target, this group's natural width
             plus the right group's (sign-in/settings) forced the header wider than a narrow phone
@@ -422,7 +422,7 @@ export default function App() {
             view === 'list' ? 'flex' : 'hidden',
           )}
         >
-          <div className="space-y-2 p-3">
+          <div className="space-y-2 border-b border-gray-200 p-3">
             <Button variant="primary" className="w-full" onClick={() => setAdding(true)}>
               {t('shell.addPlace')}
             </Button>

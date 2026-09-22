@@ -39,3 +39,9 @@ orange cuisine chip was indistinguishable.
 ## More Information
 
 The token contract and every figure above: `docs/reference/design-tokens.md`.
+
+## Amendment — 2026-09-22
+
+The gray canvas was reverted the same day, at the owner's preference for white. The page is
+white again, and surfaces separate by `--shadow-card` and `--shadow-chip` alone, as they did
+before this decision. Paprika, the indigo detour and the darker secondary text stand.
