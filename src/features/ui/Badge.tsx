@@ -29,13 +29,13 @@ type BadgeProps = {
   /**
    * Solid mode: Tailwind classes for the surface *and* its text color. The text color belongs
    * with the fill rather than being fixed to white here, because which one is readable depends
-   * on the fill -- the Soft Pop verdict colors include bright ambers and roses that white text
-   * cannot sit on. See `VERDICT_BADGE_CLASS` in `StatusBadge.tsx` for the measured pairings.
+   * on the fill -- white on a verdict, gray-700 on a status's gray. See `VERDICT_BADGE_CLASS` and
+   * `STATUS_PILL_CLASS` in `display.ts`.
    */
   (| { tone: string; pastel?: never }
     /**
      * Pastel mode: an explicit background/text pair, contrast-guaranteed by whoever computed it
-     * (`cuisinePillTokens` for a cuisine, a fixed gray pair for a status). Replaces the former
+     * (`cuisinePillTokens` for a cuisine). Replaces the former
      * `color` mode, which took one solid color and picked its text color by luminance — a
      * guess the hue system makes unnecessary.
      */

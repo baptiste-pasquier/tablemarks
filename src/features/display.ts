@@ -21,14 +21,19 @@ export const VERDICT_BADGE_CLASS: Record<Verdict, string> = {
 }
 
 /**
+ * The neutral pill a plain status's badge wears ("to try", "resolving"): a status says nothing
+ * about the place, so it stays gray where the four verdicts are colored.
+ */
+export const STATUS_PILL_CLASS = 'bg-gray-200 text-gray-700'
+
+/**
  * The same borrowing for the two plain statuses. "To try" wears the neutral pill its badge wears
- * on a tile — kept in step with `STATUS_PILL` in `StatusBadge.tsx`, which needs the same pair as
- * inline style values rather than classes. "Visited" has no badge of its own (a visited place
+ * on a tile. "Visited" has no badge of its own (a visited place
  * shows its verdict instead), so like a cuisine it takes the brand fill: `undefined` leaves
  * `ToggleChip` on its default.
  */
 export const STATUS_CHIP_CLASS: Record<RestaurantStatus, string | undefined> = {
-  to_try: 'bg-gray-200 text-gray-700',
+  to_try: STATUS_PILL_CLASS,
   visited: undefined,
 }
 

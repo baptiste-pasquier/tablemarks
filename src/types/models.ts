@@ -27,7 +27,6 @@ export const VERDICT_RANK: Record<Verdict, number> = {
   never_again: 1,
 }
 
-/** Icon distinguishing each verdict from its color alone (R6). */
 /** Fields every synced record carries, keyed by a stable client-generated id. */
 export interface SyncFields {
   id: string

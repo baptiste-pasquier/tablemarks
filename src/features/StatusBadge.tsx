@@ -1,5 +1,11 @@
 import { Badge } from './ui/Badge'
-import { badgeState, STATUS_ICON, VERDICT_BADGE_CLASS, VERDICT_ICON } from './display'
+import {
+  badgeState,
+  STATUS_ICON,
+  STATUS_PILL_CLASS,
+  VERDICT_BADGE_CLASS,
+  VERDICT_ICON,
+} from './display'
 import {
   translatePending,
   translateStatus,
@@ -8,13 +14,6 @@ import {
   type RestaurantStatus,
   type Verdict,
 } from '../types/models'
-
-/**
- * Statuses are not verdicts: "to try" and "resolving" say nothing about the place, so they get
- * the pastel pill shape the cuisine badges use, while the four verdicts stay solid. The shape
- * carries the distinction, which is what makes "has this been visited" readable at a glance.
- */
-const STATUS_PILL = { background: 'var(--color-gray-200)', color: 'var(--color-gray-700)' }
 
 /** One visit's own verdict badge, always in "verdict" mode — used per entry in the visit history. */
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {
@@ -28,13 +27,17 @@ export function VerdictBadge({ verdict }: { verdict: Verdict }) {
   )
 }
 
-/** A plain status's pastel pill, led by its own icon the way a verdict's badge is. */
+/**
+ * A plain status's neutral pill, led by its own icon the way a verdict's badge is. Statuses are
+ * not verdicts: gray where the four verdicts are colored, which is what makes "has this been
+ * visited" readable at a glance.
+ */
 function StatusPill({ status }: { status: RestaurantStatus }) {
   const Icon = STATUS_ICON[status]
   return (
     <Badge
       text={translateStatus(status)}
-      pastel={STATUS_PILL}
+      tone={STATUS_PILL_CLASS}
       icon={<Icon size={13} strokeWidth={2.4} />}
     />
   )
@@ -51,7 +54,7 @@ export function StatusBadge({
   restaurant: Pick<Restaurant, 'pending' | 'visitCount' | 'latestVerdict'>
 }) {
   const state = badgeState(restaurant)
-  if (state.kind === 'pending') return <Badge text={translatePending()} pastel={STATUS_PILL} />
+  if (state.kind === 'pending') return <Badge text={translatePending()} tone={STATUS_PILL_CLASS} />
   if (state.kind === 'to_try') return <StatusPill status="to_try" />
   if (state.verdict) return <VerdictBadge verdict={state.verdict} />
   return <StatusPill status="visited" />
