@@ -1,5 +1,5 @@
 /**
- * A cuisine's color identity is a hue, not a hex. Three rendered forms derive from it by
+ * A cuisine's color identity is a hue, not a hex. Four rendered forms derive from it by
  * formula, so a cuisine nobody curated - one a user typed - gets the same contrast guarantees
  * as a curated one. Recipes and their measured contrast floors: docs/reference/design-tokens.md.
  */
@@ -11,6 +11,9 @@ export interface CuisineTone {
 }
 
 const PILL_BACKGROUND = { lightness: 0.96, chroma: 0.045 }
+// A shade deeper than the pill: the avatar is the only color on a white tile, so it carries more.
+// It holds an emoji, never text, so it has no contrast floor of its own.
+const AVATAR_BACKGROUND = { lightness: 0.93, chroma: 0.07 }
 const PILL_TEXT = { lightness: 0.4, chroma: 0.13 }
 const SOLID = { lightness: 0.48, chroma: 0.15 }
 
@@ -113,6 +116,11 @@ export function cuisinePillTokens(cuisine: string | null | undefined): {
 } {
   const tone = toneForCuisine(cuisine)
   return { background: render(PILL_BACKGROUND, tone), color: render(PILL_TEXT, tone) }
+}
+
+/** Avatar form — the square behind a list tile's cuisine emoji. */
+export function cuisineAvatarBackground(cuisine: string | null | undefined): string {
+  return render(AVATAR_BACKGROUND, toneForCuisine(cuisine))
 }
 
 /** The one cuisine-to-emoji source, mirroring `colorForCuisine`'s normalize-then-lookup shape. */

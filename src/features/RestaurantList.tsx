@@ -1,8 +1,13 @@
 import { useTranslation } from 'react-i18next'
+import { MapPin } from 'lucide-react'
 import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
-import { cuisineDisplayName, cuisinePillTokens, emojiForCuisine } from './facets/cuisines'
-import { Badge } from './ui/Badge'
+import {
+  cuisineAvatarBackground,
+  cuisineDisplayName,
+  cuisinePillTokens,
+  emojiForCuisine,
+} from './facets/cuisines'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
 import { distanceLabelFor } from '../lib/geo'
@@ -53,26 +58,46 @@ export function RestaurantList({
               onBlur={() => onHover?.(null)}
               className="block w-full rounded-card bg-white p-3 text-left shadow-card transition hover:shadow-lg"
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 truncate text-base font-bold tracking-tight text-gray-900">
-                  {r.name}
+              {/* The cuisine leads as an avatar, so the name's line is shared only with the
+                  status, and the cuisine's own color carries into its name on the line below. */}
+              <div className="flex items-start gap-3">
+                <span
+                  aria-hidden="true"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[22px]"
+                  style={{ background: cuisineAvatarBackground(r.cuisine) }}
+                >
+                  {emojiForCuisine(r.cuisine)}
                 </span>
-                <Badge
-                  text={cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
-                  icon={emojiForCuisine(r.cuisine)}
-                  pastel={cuisinePillTokens(r.cuisine)}
-                />
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <StatusBadge restaurant={r} />
-                  {visited && (
-                    <span className="text-xs text-gray-600">
-                      {translateVisitsCount(r.visitCount)}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-base font-bold tracking-tight text-gray-900">
+                      {r.name}
                     </span>
-                  )}
+                    <StatusBadge restaurant={r} />
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs whitespace-nowrap">
+                    <span
+                      className="min-w-0 truncate font-semibold"
+                      style={{ color: cuisinePillTokens(r.cuisine).color }}
+                    >
+                      {cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
+                    </span>
+                    {visited && (
+                      <>
+                        <span aria-hidden="true" className="text-gray-400">
+                          ·
+                        </span>
+                        <span className="text-gray-600">{translateVisitsCount(r.visitCount)}</span>
+                      </>
+                    )}
+                    {distanceLabel && (
+                      <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-gray-600">
+                        <MapPin size={13} strokeWidth={2.2} aria-hidden="true" />
+                        {distanceLabel}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {distanceLabel && <span className="text-xs text-gray-600">{distanceLabel}</span>}
               </div>
             </button>
           </li>

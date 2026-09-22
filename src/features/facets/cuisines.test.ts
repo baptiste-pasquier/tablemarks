@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   colorForCuisine,
+  cuisineAvatarBackground,
   cuisinePillTokens,
   cuisineOptions,
   emojiForCuisine,
@@ -86,6 +87,14 @@ describe('cuisinePillTokens', () => {
       background: 'oklch(0.96 0 0)',
       color: 'oklch(0.4 0 0)',
     })
+  })
+})
+
+describe('cuisineAvatarBackground', () => {
+  it('is a shade deeper than the pill background, in the same hue and chroma scale', () => {
+    expect(cuisineAvatarBackground('Thai')).toBe('oklch(0.93 0.07 281)')
+    expect(cuisineAvatarBackground('Café')).toBe('oklch(0.93 0.035 60)')
+    expect(cuisineAvatarBackground(null)).toBe('oklch(0.93 0 0)')
   })
 })
 
@@ -209,6 +218,11 @@ describe('cuisine palette contrast floors', () => {
   it.each(PAINTED)('%s: pill text clears AA on its pill background', (name) => {
     const { background, color } = cuisinePillTokens(name)
     expect(contrast(color, background)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  // The list tile sets the cuisine name in the pill's text color straight on the white card.
+  it.each(PAINTED)('%s: pill text clears AA on a white tile', (name) => {
+    expect(contrast(cuisinePillTokens(name).color, 'oklch(1 0 0)')).toBeGreaterThanOrEqual(4.5)
   })
 
   it.each(PAINTED)('%s: white clears AA on the solid form', (name) => {
