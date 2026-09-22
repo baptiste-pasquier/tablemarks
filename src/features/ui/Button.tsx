@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, Ref } from 'react'
 import { cn } from '../../lib/cn'
 
 type ButtonVariant =
@@ -30,13 +30,19 @@ type StyledVariant = Exclude<ButtonVariant, 'icon-dismiss' | 'menu-item'>
 // `link` covers the brand-underline text-buttons duplicated across AddPlace.tsx, DecidePanel.tsx
 // and FilterBar.tsx (R1/KTD1); like `secondary`, its text size is kept out of this base string
 // (see TEXT_SIZE below) rather than baked in here.
+// The shape `primary` and `danger` share, so the two filled pills cannot drift apart; each adds
+// only its fill (a base property neither sets, so `cn` has no conflict to resolve).
+const FILLED_PILL =
+  'rounded-full px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50'
+
 const VARIANT_STYLES: Record<StyledVariant, string> = {
-  primary:
-    'rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-brand transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50',
-  // The confirming step of an irreversible action (RestaurantDetail's place delete): `primary`'s
-  // shape in red, so the one button that destroys data never wears the brand color.
-  danger:
-    'rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 active:bg-red-700 disabled:opacity-50',
+  primary: cn(
+    FILLED_PILL,
+    'bg-brand shadow-brand hover:bg-brand-strong active:bg-brand-strong active:shadow-none',
+  ),
+  // The confirming step of an irreversible action (the place delete): `primary`'s shape in red,
+  // so the one button that destroys data never wears the brand color.
+  danger: cn(FILLED_PILL, 'bg-red-600 hover:bg-red-700 active:bg-red-700'),
   secondary:
     'rounded-full bg-white px-3 py-1.5 font-medium shadow-chip transition hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50',
   // The two actions on the Paprika band (App.tsx), where a brand-filled button would vanish into
@@ -127,7 +133,7 @@ export function Button({
   | { variant: 'icon-dismiss'; iconOnly?: false; size?: never; tone: ButtonTone }
   | { variant: 'menu-item'; iconOnly?: false; size?: never; tone: MenuItemTone }
 ) &
-  ButtonHTMLAttributes<HTMLButtonElement>) {
+  ButtonHTMLAttributes<HTMLButtonElement> & { ref?: Ref<HTMLButtonElement> }) {
   let base: string
   if (iconOnly) {
     base = ICON_ONLY_SECONDARY

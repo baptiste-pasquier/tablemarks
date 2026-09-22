@@ -520,6 +520,28 @@ describe('hover wiring end-to-end (U2 R1-R3, KTD1)', () => {
     expect(mockLastMapViewProps.current?.hoveredId).toBeNull()
   })
 
+  it('still lights the next hovered pin after a place is deleted from its detail, whose list card cannot take focus back', async () => {
+    const user = userEvent.setup()
+    await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
+    await createRestaurant({ id: 'r2', name: 'R2 Place', lat: 2, lng: 2, cuisine: 'French' })
+
+    render(<App />)
+    const card = (await screen.findByText('R1 Place')).closest('button')
+    if (!card) throw new Error('restaurant card button not found')
+
+    await user.click(card)
+    await user.click(await screen.findByRole('button', { name: 'Delete this place' }))
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(screen.queryByText('R1 Place')).not.toBeInTheDocument())
+
+    // The deleted card is gone, so no focus-restore ever consumes a suppression armed for it;
+    // one left armed would swallow this genuine hover.
+    const other = screen.getByText('R2 Place').closest('button')
+    if (!other) throw new Error('restaurant card button not found')
+    fireEvent.mouseEnter(other)
+    expect(mockLastMapViewProps.current?.hoveredId).toBe('r2')
+  })
+
   it('clears a stale hoveredId once the hovered restaurant drops out of the filtered list (code-review finding)', async () => {
     await createRestaurant({ id: 'r1', name: 'French Place', lat: 1, lng: 1, cuisine: 'French' })
     await createRestaurant({ id: 'r2', name: 'Thai Place', lat: 2, lng: 2, cuisine: 'Thai' })

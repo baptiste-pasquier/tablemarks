@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
@@ -7,16 +7,22 @@ import {
   createRestaurant,
   getRestaurant,
   mutateRestaurant,
+  removeRestaurant,
   updateRestaurant,
 } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 import { instantToLocalDay } from '../../lib/dates'
 import { VERDICTS, translateVerdict } from '../../types/models'
 
-// Partial mock: the real repository, with `updateRestaurant` spied so one test can make a save fail.
+// Partial mock: the real repository, with `updateRestaurant` spied so one test can make a save
+// fail, and `removeRestaurant` so one can hold a delete mid-write.
 vi.mock('../../data/restaurants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../data/restaurants')>()
-  return { ...actual, updateRestaurant: vi.fn(actual.updateRestaurant) }
+  return {
+    ...actual,
+    updateRestaurant: vi.fn(actual.updateRestaurant),
+    removeRestaurant: vi.fn(actual.removeRestaurant),
+  }
 })
 
 beforeEach(freshDB)
@@ -34,7 +40,7 @@ describe('RestaurantDetail', () => {
     await createVisit({ restaurantId: r.id, date: '2024-01-01', verdict: 'go_back' })
     await createVisit({ restaurantId: r.id, date: '2026-06-01', verdict: 'once_was_enough' })
 
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     expect(await screen.findByText('(2)')).toBeInTheDocument()
     // "Once was enough" appears twice: once in the header's fused status badge (the latest
@@ -46,7 +52,7 @@ describe('RestaurantDetail', () => {
 
   it('flips a to-try place to visited with one-tap "I\'m here now"', async () => {
     const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     expect(await screen.findByText('To try')).toBeInTheDocument()
@@ -62,7 +68,7 @@ describe('RestaurantDetail', () => {
 
   it('renders the verdict-picker buttons through the shared Button secondary variant', async () => {
     const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     expect(await screen.findByText('To try')).toBeInTheDocument()
@@ -73,7 +79,7 @@ describe('RestaurantDetail', () => {
 
   it('leads every verdict-picker button with its verdict icon, in both pickers', async () => {
     const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     await screen.findByText('To try')
@@ -95,7 +101,7 @@ describe('RestaurantDetail', () => {
 
   it('edits and persists the cuisine through the picker', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
@@ -106,7 +112,7 @@ describe('RestaurantDetail', () => {
 
   it('persists a free-typed cuisine through "Other…"', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
@@ -119,7 +125,7 @@ describe('RestaurantDetail', () => {
   it('tells the user when a category could not be saved', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
     vi.mocked(updateRestaurant).mockRejectedValueOnce(new Error('QuotaExceededError'))
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
@@ -130,7 +136,7 @@ describe('RestaurantDetail', () => {
 
   it('clears the cuisine, leaving the place uncategorized', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, cuisine: 'French' })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Category: French' }))
@@ -141,14 +147,14 @@ describe('RestaurantDetail', () => {
 
   it('pre-fills the notes textarea with an existing note', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1, note: 'Great terrace' })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     expect(await screen.findByLabelText('Notes')).toHaveValue('Great terrace')
   })
 
   it('edits and persists the note on blur', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     await user.type(await screen.findByLabelText('Notes'), 'Ask for the corner table')
@@ -161,7 +167,7 @@ describe('RestaurantDetail', () => {
 
   it('renders an empty notes textarea when there is no existing note, with no leftover placeholder text after typing', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     const textarea = await screen.findByLabelText('Notes')
@@ -173,7 +179,7 @@ describe('RestaurantDetail', () => {
 
   it('inserts a newline on Enter in the notes textarea instead of saving', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     const textarea = await screen.findByLabelText('Notes')
@@ -186,7 +192,7 @@ describe('RestaurantDetail', () => {
 
   it('keeps in-progress unsaved note text when an external store write lands while the field is focused', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, note: 'original note' })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     const textarea = await screen.findByLabelText('Notes')
@@ -211,7 +217,7 @@ describe('RestaurantDetail', () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2026-06-01', verdict: 'go_back' })
 
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     // gray-400 and gray-500 measure under AA at this size (design-tokens.md): the floor is gray-600.
     const light = /\btext-gray-(300|400|500)\b/
@@ -238,7 +244,7 @@ describe('RestaurantDetail', () => {
     await createVisit({ restaurantId: r.id, date: '2024-01-01', verdict: 'go_back' })
     await createVisit({ restaurantId: r.id, date: '2026-06-01', verdict: 'once_was_enough' })
 
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     const dates = (await screen.findAllByText(/^\d{4}-\d{2}-\d{2}$/)).map((el) => el.textContent)
     expect(dates).toEqual(['2026-06-01', '2024-01-01'])
@@ -247,7 +253,7 @@ describe('RestaurantDetail', () => {
   it('returns a place to to-try when its last visit is deleted', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2025-01-01', verdict: 'go_back' })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
     await user.click(await screen.findByLabelText(/delete visit on 2025-01-01/i))
@@ -263,7 +269,7 @@ describe('RestaurantDetail', () => {
       lng: 1,
       mapsUrl: 'https://maps.google.com/?q=1,1',
     })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
     expect(link.href).toBe('https://maps.google.com/?q=1,1')
@@ -271,7 +277,7 @@ describe('RestaurantDetail', () => {
 
   it('shows "Google Maps" but hides "Go to" when only mapsUrl is known, with no address or coordinates', async () => {
     const r = await createRestaurant({ name: 'X', mapsUrl: 'https://maps.google.com/?q=1,1' })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
     expect(link.href).toBe('https://maps.google.com/?q=1,1')
@@ -280,7 +286,7 @@ describe('RestaurantDetail', () => {
 
   it('falls back "Google Maps" to a search URL built from the address when mapsUrl is absent', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, address: '1 Rue de Paris' })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
     expect(link.href).toBe(
@@ -290,7 +296,7 @@ describe('RestaurantDetail', () => {
 
   it('shows both coordinate-based links when there is no mapsUrl or address', async () => {
     const r = await createRestaurant({ name: 'X', lat: 48.85, lng: 2.35 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     const destination = '48.85,2.35'
     const mapsLink = (await screen.findByRole('link', {
@@ -314,7 +320,7 @@ describe('RestaurantDetail', () => {
       address: '1 Rue de Paris',
       mapsUrl: 'https://maps.google.com/?q=1,1',
     })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     const link = (await screen.findByRole('link', { name: /go to/i })) as HTMLAnchorElement
     expect(link.href).toBe(
@@ -324,7 +330,7 @@ describe('RestaurantDetail', () => {
 
   it('renders neither location link when there is no mapsUrl, address, or coordinates', async () => {
     const r = await createRestaurant({ name: 'X' })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     await screen.findByText('X')
     expect(screen.queryByRole('link', { name: /google maps/i })).not.toBeInTheDocument()
@@ -337,6 +343,7 @@ describe('RestaurantDetail', () => {
       <RestaurantDetail
         restaurantId={r.id}
         onClose={vi.fn()}
+        onDeleted={vi.fn()}
         currentPosition={{ lat: 48.8606, lng: 2.3376 }}
       />,
     )
@@ -347,7 +354,7 @@ describe('RestaurantDetail', () => {
 
   it('renders no distance when there is no current position', async () => {
     const r = await createRestaurant({ name: 'X', lat: 48.8566, lng: 2.3522 })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     await screen.findByText('X')
     expect(screen.queryByText(/\d+(\.\d+)? (m|km)$/)).not.toBeInTheDocument()
@@ -359,6 +366,7 @@ describe('RestaurantDetail', () => {
       <RestaurantDetail
         restaurantId={r.id}
         onClose={vi.fn()}
+        onDeleted={vi.fn()}
         currentPosition={{ lat: 48.8606, lng: 2.3376 }}
       />,
     )
@@ -376,7 +384,7 @@ describe('RestaurantDetail', () => {
       existing ? { ...existing, added: '2026-08-30T23:30:00Z' } : existing,
     )
 
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     expect(await screen.findByText(/2026-08-30/)).toBeInTheDocument()
     expect(screen.queryByText(/2026-08-31/)).not.toBeInTheDocument()
@@ -392,7 +400,7 @@ describe('RestaurantDetail', () => {
       return rest as typeof existing
     })
 
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     await screen.findByText('X')
     expect(screen.queryByText(new RegExp(instantToLocalDay(r.added!)))).not.toBeInTheDocument()
@@ -403,7 +411,7 @@ describe('RestaurantDetail', () => {
     const originalDatePart = instantToLocalDay(r.added!)
     await mutateRestaurant(r.id, (existing) => (existing ? { ...existing, added: '' } : existing))
 
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     await screen.findByText('X')
     expect(screen.queryByText(new RegExp(originalDatePart))).not.toBeInTheDocument()
@@ -415,7 +423,7 @@ describe('RestaurantDetail', () => {
       address: '1 Rue de Paris',
       mapsUrl: 'javascript:alert(1)',
     })
-    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     const link = (await screen.findByRole('link', { name: /google maps/i })) as HTMLAnchorElement
     expect(link.href).toBe(
@@ -423,12 +431,13 @@ describe('RestaurantDetail', () => {
     )
   })
 
-  it('deletes the place from its detail with its live visit count, then closes the detail', async () => {
+  it('deletes the place from its detail with its live visit count, reporting a delete rather than a close', async () => {
     const r = await createRestaurant({ name: 'Chez Paul', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2026-05-20', verdict: 'go_back' })
     await createVisit({ restaurantId: r.id, date: '2026-07-14', verdict: 'go_back' })
     const onClose = vi.fn()
-    render(<RestaurantDetail restaurantId={r.id} onClose={onClose} />)
+    const onDeleted = vi.fn()
+    render(<RestaurantDetail restaurantId={r.id} onClose={onClose} onDeleted={onDeleted} />)
     const user = userEvent.setup()
 
     await screen.findByText('(2)')
@@ -436,7 +445,42 @@ describe('RestaurantDetail', () => {
     expect(screen.getByText('Delete “Chez Paul” and its 2 visits?')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Delete' }))
 
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1))
+    expect(onClose).not.toHaveBeenCalled()
     expect((await getRestaurant(r.id))?.deleted).toBe(true)
+  })
+
+  it('leaves when the place is deleted elsewhere, so no visit can be logged against a tombstone', async () => {
+    const r = await createRestaurant({ name: 'Chez Paul', lat: 1, lng: 1 })
+    const onDeleted = vi.fn()
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={onDeleted} />)
+    await screen.findByRole('heading', { name: 'Chez Paul' })
+
+    // Another device's delete arriving through sync, or another tab's, lands as a store write.
+    await act(() => removeRestaurant(r.id))
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1))
+    expect(screen.queryByRole('heading', { name: 'Chez Paul' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /here now/i })).not.toBeInTheDocument()
+  })
+
+  it('refuses to close while a delete is being written, so a failure cannot land on an unmounted detail', async () => {
+    let finish!: () => void
+    vi.mocked(removeRestaurant).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (finish = resolve)),
+    )
+    const r = await createRestaurant({ name: 'Chez Paul', lat: 1, lng: 1 })
+    const onClose = vi.fn()
+    render(<RestaurantDetail restaurantId={r.id} onClose={onClose} onDeleted={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await screen.findByRole('heading', { name: 'Chez Paul' })
+    await user.click(screen.getByRole('button', { name: 'Delete this place' }))
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: /close/i }))
+
+    expect(onClose).not.toHaveBeenCalled()
+    await act(async () => finish())
   })
 })

@@ -1,19 +1,20 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { DeleteRestaurant } from './DeleteRestaurant'
+import { VerdictButtons } from './VerdictButtons'
+import { VisitHistory } from './VisitHistory'
 import { useRestaurants } from '../useRestaurants'
-import { createVisit, removeVisit } from '../../data/visits'
+import { createVisit } from '../../data/visits'
 import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
 import { cuisineOptions } from '../facets/cuisines'
 import { CuisinePicker } from '../facets/CuisinePicker'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { Button } from '../ui/Button'
-import { StatusBadge, VerdictBadge } from '../StatusBadge'
-import { VERDICT_ICON } from '../display'
-import { VERDICTS, translateVerdict, type Verdict } from '../../types/models'
+import { StatusBadge } from '../StatusBadge'
+import type { Verdict } from '../../types/models'
 import type { GeoPoint } from '../../lib/geolocate'
 import { distanceLabelFor } from '../../lib/geo'
 import { instantToLocalDay } from '../../lib/dates'
@@ -24,52 +25,34 @@ import {
   googleMapsDirectionsUrl,
 } from '../../lib/mapsLinks'
 
-function VerdictButtons({
-  onPick,
-  disabled,
-}: {
-  onPick: (v: Verdict) => void
-  disabled?: boolean
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {/* Each button sits on its own white backing: disabled, a button drops to half opacity, and on
-          the tinted "add a past visit" panel that let the orange show through it. */}
-      {VERDICTS.map((v) => {
-        const Icon = VERDICT_ICON[v]
-        return (
-          <span key={v} className="rounded-full bg-white">
-            <Button
-              variant="secondary"
-              className="inline-flex items-center gap-1.5"
-              disabled={disabled}
-              onClick={() => onPick(v)}
-            >
-              <Icon size={14} strokeWidth={2.4} aria-hidden="true" />
-              {translateVerdict(v)}
-            </Button>
-          </span>
-        )
-      })}
-    </div>
-  )
-}
-
 export function RestaurantDetail({
   restaurantId,
   onClose,
+  onDeleted,
   currentPosition,
 }: {
   restaurantId: string
   onClose: () => void
+  /**
+   * The place was deleted — from this detail or another device. Distinct from `onClose`: nothing
+   * is left to restore focus to, so the caller must not prepare for that.
+   */
+  onDeleted: () => void
   currentPosition?: GeoPoint | null
 }) {
   const { t } = useTranslation()
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
+  // `getRestaurant` returns tombstones too; a deleted place must not stay open to log visits on.
+  const deleted = restaurant?.deleted ?? false
+  useEffect(() => {
+    if (deleted) onDeleted()
+  }, [deleted, onDeleted])
+  // True while a delete is being written: closing then would unmount the one place its failure
+  // can be shown.
+  const [deleting, setDeleting] = useState(false)
   const restaurants = useRestaurants()
   const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
   const [logging, setLogging] = useState(false)
-  const [pastDate, setPastDate] = useState('')
   const [saveFailed, setSaveFailed] = useState(false)
   // Guards the notes field against being remounted (and thus reset to the store value) while the
   // user is mid-edit — see saveField/noteKey below. Refs, not state: flipping
@@ -88,7 +71,7 @@ export function RestaurantDetail({
   // once the field is blurred.
   const [noteKey, setNoteKey] = useState('')
 
-  if (!restaurant) return null
+  if (!restaurant || deleted) return null
 
   // Recompute the notes field's key from the current store value, but only while it is unfocused
   // (see noteKey's declaration above for why this can't be a plain inline ternary).
@@ -130,15 +113,14 @@ export function RestaurantDetail({
     setLogging(false)
   }
 
-  async function logPast(verdict: Verdict) {
-    if (!pastDate) return
-    await createVisit({ restaurantId, date: pastDate, verdict })
-    setPastDate('')
+  // Escape, the backdrop and the ✕ all come through here.
+  function close() {
+    if (!deleting) onClose()
   }
 
   return (
-    <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
-      <ModalHeader title={restaurant.name} onClose={onClose} variant="detail" />
+    <Modal onClose={close} panelClassName="max-h-[90vh] overflow-y-auto">
+      <ModalHeader title={restaurant.name} onClose={close} variant="detail" />
 
       {/* Above everything, since the category and the notes, far apart, both save through it. */}
       {saveFailed && (
@@ -249,76 +231,14 @@ export function RestaurantDetail({
         )}
       </div>
 
-      {/* Visit history (R7/R8): always-expanded timeline, most-recent-first (already guaranteed by
-          visitsForRestaurant's sort — see useRestaurantDetail), with "add a past visit" rendered as
-          the timeline's last row. Its <details>/<summary> reveal mechanism (KTD9) is unchanged. */}
-      <div className="mt-5">
-        <h3 className="text-sm font-semibold text-gray-700">
-          {t('visitDetail.visitsHeading')}{' '}
-          {visits.length > 0 && (
-            <span className="font-normal text-gray-600">({visits.length})</span>
-          )}
-        </h3>
-        {visits.length === 0 && (
-          <p className="mt-1 text-sm text-gray-600">{t('visitDetail.noVisitsYet')}</p>
-        )}
-        {visits.length > 0 && (
-          <ul className="mt-2">
-            {visits.map((v, i) => (
-              <li key={v.id} className="relative flex gap-3 pb-3 last:pb-0">
-                {i < visits.length - 1 && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute top-0 bottom-0 left-[3px] w-0.5 bg-gray-200"
-                  />
-                )}
-                <span
-                  aria-hidden="true"
-                  className="relative z-10 mt-0.5 h-2 w-2 shrink-0 rounded-full bg-brand"
-                />
-                <div className="flex-1 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <VerdictBadge verdict={v.verdict} />
-                      <span className="font-medium text-gray-700">{v.date}</span>
-                    </span>
-                    <Button
-                      variant="icon-dismiss"
-                      tone="destructive"
-                      onClick={() => void removeVisit(v.id)}
-                      aria-label={t('visitDetail.deleteVisitAria', { date: v.date })}
-                    >
-                      ✕
-                    </Button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        <details className="mt-3 rounded-lg border border-dashed border-brand/40 bg-brand-soft p-2.5 text-center">
-          <summary className="cursor-pointer list-none text-sm font-semibold text-brand-strong">
-            {t('visitDetail.addPastVisit')}
-          </summary>
-          <div className="mt-2.5 space-y-2 text-left">
-            <input
-              type="date"
-              value={pastDate}
-              onChange={(e) => setPastDate(e.target.value)}
-              aria-label={t('visitDetail.visitDateAria')}
-              className="rounded-md border border-gray-300 bg-white p-1.5 text-sm"
-            />
-            <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
-          </div>
-        </details>
-      </div>
+      <VisitHistory restaurantId={restaurantId} visits={visits} />
 
-      {/* Last, below the visits it would take with it; closes the detail once the delete commits. */}
+      {/* Last, below the visits it would take with it. */}
       <DeleteRestaurant
         restaurantId={restaurantId}
         name={restaurant.name}
         visitCount={visits.length}
-        onDeleted={onClose}
+        onPendingChange={setDeleting}
       />
     </Modal>
   )

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
@@ -14,28 +14,36 @@ vi.mock('../../data/restaurants', async (importOriginal) => {
 
 beforeEach(freshDB)
 
+function renderDelete(
+  props: { restaurantId?: string; name?: string; visitCount?: number } = {},
+  onPendingChange = vi.fn(),
+) {
+  render(
+    <DeleteRestaurant
+      restaurantId={props.restaurantId ?? 'r1'}
+      name={props.name ?? 'Chez Paul'}
+      visitCount={props.visitCount ?? 0}
+      onPendingChange={onPendingChange}
+    />,
+  )
+  return { onPendingChange, user: userEvent.setup() }
+}
+
 describe('DeleteRestaurant', () => {
   it('asks before deleting: the first click deletes nothing and moves focus to Cancel', async () => {
     const r = await createRestaurant({ name: 'Chez Paul', lat: 1, lng: 1 })
-    const onDeleted = vi.fn()
-    render(
-      <DeleteRestaurant restaurantId={r.id} name={r.name} visitCount={0} onDeleted={onDeleted} />,
-    )
-    const user = userEvent.setup()
+    const { onPendingChange, user } = renderDelete({ restaurantId: r.id })
 
     await user.click(screen.getByRole('button', { name: 'Delete this place' }))
 
     expect(screen.getByText('Delete “Chez Paul”?')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
     expect((await getRestaurant(r.id))?.deleted).toBe(false)
-    expect(onDeleted).not.toHaveBeenCalled()
+    expect(onPendingChange).not.toHaveBeenCalled()
   })
 
   it('names the visits that go with the place, so the cost of confirming is visible', async () => {
-    render(
-      <DeleteRestaurant restaurantId="r1" name="Chez Paul" visitCount={3} onDeleted={vi.fn()} />,
-    )
-    const user = userEvent.setup()
+    const { user } = renderDelete({ visitCount: 3 })
 
     await user.click(screen.getByRole('button', { name: 'Delete this place' }))
 
@@ -44,10 +52,7 @@ describe('DeleteRestaurant', () => {
 
   it('backs out on Cancel: the place stays and focus returns to the delete button', async () => {
     const r = await createRestaurant({ name: 'Chez Paul', lat: 1, lng: 1 })
-    render(
-      <DeleteRestaurant restaurantId={r.id} name={r.name} visitCount={0} onDeleted={vi.fn()} />,
-    )
-    const user = userEvent.setup()
+    const { user } = renderDelete({ restaurantId: r.id })
 
     await user.click(screen.getByRole('button', { name: 'Delete this place' }))
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -57,42 +62,54 @@ describe('DeleteRestaurant', () => {
     expect((await getRestaurant(r.id))?.deleted).toBe(false)
   })
 
-  it('tombstones the place and its visits on confirm, then reports the deletion', async () => {
+  it('tombstones the place and its visits on confirm, reporting the write as pending', async () => {
     const r = await createRestaurant({ name: 'Chez Paul', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2026-05-20', verdict: 'go_back' })
-    const onDeleted = vi.fn()
-    render(
-      <DeleteRestaurant restaurantId={r.id} name={r.name} visitCount={1} onDeleted={onDeleted} />,
-    )
-    const user = userEvent.setup()
+    const { onPendingChange, user } = renderDelete({ restaurantId: r.id, visitCount: 1 })
 
     await user.click(screen.getByRole('button', { name: 'Delete this place' }))
     await user.click(screen.getByRole('button', { name: 'Delete' }))
 
-    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1))
-    expect((await getRestaurant(r.id))?.deleted).toBe(true)
+    await waitFor(async () => expect((await getRestaurant(r.id))?.deleted).toBe(true))
     expect((await allVisitsForSync()).every((v) => v.deleted)).toBe(true)
+    // Never released on success: the detail, seeing the tombstone, unmounts this instead.
+    expect(onPendingChange.mock.calls).toEqual([[true]])
   })
 
-  it('tells the user when the delete fails, stays open, and lets them retry', async () => {
+  it('tells the user when the delete fails, releases the pending state, and lets them retry', async () => {
     vi.mocked(removeRestaurant).mockRejectedValueOnce(new Error('QuotaExceededError'))
     const r = await createRestaurant({ name: 'Chez Paul', lat: 1, lng: 1 })
-    const onDeleted = vi.fn()
-    render(
-      <DeleteRestaurant restaurantId={r.id} name={r.name} visitCount={0} onDeleted={onDeleted} />,
-    )
-    const user = userEvent.setup()
+    const { onPendingChange, user } = renderDelete({ restaurantId: r.id })
 
     await user.click(screen.getByRole('button', { name: 'Delete this place' }))
     await user.click(screen.getByRole('button', { name: 'Delete' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not delete this place.')
-    expect(onDeleted).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled()
+    expect(onPendingChange.mock.calls).toEqual([[true], [false]])
+    expect((await getRestaurant(r.id))?.deleted).toBe(false)
 
     await user.click(screen.getByRole('button', { name: 'Delete' }))
-    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1))
-    expect((await getRestaurant(r.id))?.deleted).toBe(true)
+    await waitFor(async () => expect((await getRestaurant(r.id))?.deleted).toBe(true))
+  })
+
+  it('hands focus back to Delete after a failure, which disabling it during the write had dropped', async () => {
+    let fail!: (e: Error) => void
+    vi.mocked(removeRestaurant).mockImplementationOnce(
+      () => new Promise<void>((_, reject) => (fail = reject)),
+    )
+    const { user } = renderDelete()
+
+    await user.click(screen.getByRole('button', { name: 'Delete this place' }))
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    // A browser drops focus from a control the moment it is disabled; jsdom keeps it there (and
+    // ignores blur() on a disabled control), so move it away by hand.
+    const elsewhere = document.body.appendChild(document.createElement('input'))
+    act(() => elsewhere.focus())
+    await act(async () => fail(new Error('QuotaExceededError')))
+
+    await screen.findByRole('alert')
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveFocus()
+    elsewhere.remove()
   })
 
   it('disables both buttons while the delete is being written, so a double tap cannot race it', async () => {
@@ -100,16 +117,14 @@ describe('DeleteRestaurant', () => {
     vi.mocked(removeRestaurant).mockImplementationOnce(
       () => new Promise<void>((resolve) => (finish = resolve)),
     )
-    render(
-      <DeleteRestaurant restaurantId="r1" name="Chez Paul" visitCount={0} onDeleted={vi.fn()} />,
-    )
-    const user = userEvent.setup()
+    const { user } = renderDelete()
 
     await user.click(screen.getByRole('button', { name: 'Delete this place' }))
     await user.click(screen.getByRole('button', { name: 'Delete' }))
 
     expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
-    finish()
+    // Settle the write inside the test, so its state updates cannot leak into the next one.
+    await act(async () => finish())
   })
 })

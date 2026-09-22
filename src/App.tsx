@@ -546,6 +546,12 @@ export default function App() {
             setSelectedId(null)
             setHoveredId(null)
           }}
+          // A deleted place's list card is gone with it, so no focus-restore will come to consume
+          // a suppression — armed here, it would swallow the next genuine hover instead.
+          onDeleted={() => {
+            setSelectedId(null)
+            setHoveredId(null)
+          }}
           currentPosition={currentPosition}
         />
       )}
