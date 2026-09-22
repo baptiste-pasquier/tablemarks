@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Plus } from 'lucide-react'
 import { useRestaurants } from './features/useRestaurants'
 import { useAuth } from './auth/useAuth'
 import { RestaurantList } from './features/RestaurantList'
@@ -417,9 +418,10 @@ export default function App() {
               type="button"
               onClick={() => setAdding(true)}
               aria-label={t('shell.addPlaceAria')}
-              className="absolute right-5 bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-3xl leading-none text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
+              className="absolute right-5 bottom-[calc(var(--safe-area-floating-offset)+0.5rem)] z-[1000] grid h-14 w-14 place-items-center rounded-full bg-brand text-white shadow-lg ring-1 ring-black/10 transition hover:bg-brand-strong active:bg-brand-strong active:shadow-md md:hidden"
             >
-              +
+              {/* An icon, not a "+" character: the font sets that glyph above the circle's center. */}
+              <Plus className="h-7 w-7" strokeWidth={2.5} aria-hidden="true" />
             </button>
           )}
           {/* Mobile-only "Filtres · N" pill (U4, R4) — same trigger, same position, and the same

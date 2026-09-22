@@ -293,6 +293,17 @@ describe('App shell', () => {
     expect(fab).toHaveClass('bottom-[calc(var(--safe-area-floating-offset)+0.5rem)]')
     expect(pill).toHaveClass('bottom-[calc(var(--safe-area-floating-offset)+0.5rem)]')
   })
+
+  it('draws the "+" FAB as an icon rather than a text glyph, which the font sets off-center', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText(/no places yet/i)
+    await user.click(screen.getByRole('button', { name: /^map$/i }))
+
+    const fab = screen.getByRole('button', { name: 'Add a place' })
+    expect(fab.textContent).toBe('')
+    expect(fab.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+  })
 })
 
 describe('currentPosition state and fetch wiring (U2)', () => {
