@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 type ToggleChipShape = 'segment' | 'pill'
@@ -12,17 +12,26 @@ type ToggleChipShape = 'segment' | 'pill'
  */
 const DEFAULT_ACTIVE_PILL = 'bg-brand text-white'
 
+/** A background/text pair a pill wears in both states, e.g. a cuisine's pastel pair. */
+type ChipTint = { background: string; color: string }
+
 function chipClass(
   shape: ToggleChipShape,
   active: boolean,
   disabled: boolean,
   activeTone: string | undefined,
+  tinted: boolean,
 ): string {
   if (shape === 'segment') {
     if (disabled) return 'min-h-10 px-3 py-1.5 text-xs font-medium text-gray-300 cursor-not-allowed'
     return `min-h-10 px-3 py-1.5 text-xs font-medium transition ${
       active ? 'bg-brand-soft font-semibold text-brand-strong' : 'text-gray-600 hover:bg-gray-50'
     }`
+  }
+  // A tinted pill already reads as its thing without being selected, so it keeps its colors in
+  // both states and the selection shows as a ring (see `chipStyle`) instead of a fill.
+  if (tinted) {
+    return 'inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition hover:brightness-95'
   }
   // Soft Pop is borderless, so relief tells a chip from the white card it sits on -- `shadow-chip`
   // is denser than a card's for that reason. Only the selected chip takes a fill, which is what
@@ -32,6 +41,21 @@ function chipClass(
       ? `${activeTone ?? DEFAULT_ACTIVE_PILL} font-semibold shadow-chip`
       : 'bg-white text-gray-700 shadow-chip hover:bg-gray-50'
   }`
+}
+
+function chipStyle(
+  active: boolean,
+  tint: ChipTint | undefined,
+  activeColor: string | undefined,
+): CSSProperties | undefined {
+  if (tint) {
+    return {
+      background: tint.background,
+      color: tint.color,
+      boxShadow: active ? `0 0 0 2px ${tint.color}` : undefined,
+    }
+  }
+  return active && activeColor ? { background: activeColor } : undefined
 }
 
 /**
@@ -55,6 +79,7 @@ export function ToggleChip({
   active,
   activeTone,
   activeColor,
+  tint,
   disabled = false,
   onClick,
   className = '',
@@ -74,6 +99,12 @@ export function ToggleChip({
    * text, which the solid cuisine form is tested to carry at AA.
    */
   activeColor?: string
+  /**
+   * Pill only: colors worn in both states, for a chip that picks one of many colored things — the
+   * cuisine picker's options. Selected, it adds a ring in the tint's text color rather than a fill.
+   * Wins over `activeTone` and `activeColor`.
+   */
+  tint?: ChipTint
   disabled?: boolean
   onClick: () => void
   className?: string
@@ -86,10 +117,16 @@ export function ToggleChip({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        chipClass(shape, active, disabled, activeColor ? 'text-white' : activeTone),
+        chipClass(
+          shape,
+          active,
+          disabled,
+          activeColor ? 'text-white' : activeTone,
+          shape === 'pill' && tint !== undefined,
+        ),
         className,
       )}
-      style={active && activeColor ? { background: activeColor } : undefined}
+      style={chipStyle(active, shape === 'pill' ? tint : undefined, activeColor)}
     >
       {children}
     </button>

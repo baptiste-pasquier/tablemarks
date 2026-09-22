@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { CuisinePicker } from './CuisinePicker'
@@ -84,5 +84,64 @@ describe('CuisinePicker', () => {
     await user.click(screen.getByRole('button', { name: 'OK' }))
 
     expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('keeps a free-typed category when focus leaves the picker without OK', async () => {
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <>
+        <CuisinePicker value={undefined} options={OPTIONS} onChange={onChange} />
+        <button type="button">Elsewhere</button>
+      </>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: 'Other…' }))
+    await user.type(screen.getByLabelText('Other category'), 'Ethiopian')
+    await user.click(screen.getByRole('button', { name: 'Elsewhere' }))
+
+    expect(onChange).toHaveBeenCalledWith('Ethiopian')
+  })
+
+  it('drops the draft when closed from its own trigger, and reopens clean', async () => {
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(<CuisinePicker value={undefined} options={OPTIONS} onChange={onChange} />)
+
+    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: 'Other…' }))
+    await user.type(screen.getByLabelText('Other category'), 'Eth')
+    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('Other category')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Other…' })).toBeInTheDocument()
+  })
+
+  it('does not take Enter while an input method is still composing', async () => {
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(<CuisinePicker value={undefined} options={OPTIONS} onChange={onChange} />)
+
+    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: 'Other…' }))
+    const input = screen.getByLabelText('Other category')
+    fireEvent.change(input, { target: { value: 'らーめん' } })
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('truncates a long option name rather than letting its pill overflow the modal', async () => {
+    const user = userEvent.setup()
+    const long = 'Traditional Lyonnaise bouchon with a very long name'
+    render(<CuisinePicker value={undefined} options={[long]} onChange={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+
+    expect(screen.getByText(long)).toHaveClass('truncate', 'min-w-0')
+    expect(screen.getByRole('button', { name: new RegExp(long) })).toHaveClass('max-w-full')
   })
 })

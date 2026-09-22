@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../../test/idb'
@@ -76,6 +76,33 @@ describe('AddPlace', () => {
       const r = (await allRestaurants()).find((x) => x.name === 'Chez Marcel')
       expect(r?.cuisine).toBe('Ramen')
     })
+  })
+
+  it('keeps a typed "Other…" category when Add is clicked without OK', async () => {
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText(/paste a google maps link/i), FULL_URL)
+    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: 'Other…' }))
+    await user.type(screen.getByLabelText('Other category'), 'Ramen')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    await waitFor(async () => {
+      const r = (await allRestaurants()).find((x) => x.name === 'Chez Marcel')
+      expect(r?.cuisine).toBe('Ramen')
+    })
+  })
+
+  it('does not submit on Enter while an input method is still composing', async () => {
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    const input = screen.getByLabelText(/paste a google maps link/i)
+
+    fireEvent.change(input, { target: { value: FULL_URL } })
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(await allRestaurants()).toHaveLength(0)
   })
 
   it('offers the existing place on a near-match duplicate', async () => {

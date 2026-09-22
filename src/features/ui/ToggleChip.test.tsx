@@ -43,6 +43,30 @@ describe('ToggleChip', () => {
       expect(button).not.toHaveClass('bg-brand')
     })
 
+    it('wears a tint in both states, marking the selection with a ring in its text color', () => {
+      const tint = { background: 'oklch(0.96 0.045 249)', color: 'oklch(0.4 0.13 249)' }
+      const { rerender } = render(
+        <ToggleChip shape="pill" active={false} tint={tint} onClick={vi.fn()}>
+          French
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'French' })
+      expect(button).toHaveClass('min-h-10', 'rounded-full', 'text-xs', 'font-semibold')
+      expect(button).not.toHaveClass('bg-white', 'bg-brand', 'shadow-chip')
+      expect(button.style.background).toBe(tint.background)
+      expect(button.style.color).toBe(tint.color)
+      expect(button.style.boxShadow).toBe('')
+
+      rerender(
+        <ToggleChip shape="pill" active tint={tint} onClick={vi.fn()}>
+          French
+        </ToggleChip>,
+      )
+      expect(button.style.background).toBe(tint.background)
+      expect(button.style.boxShadow).toBe(`0 0 0 2px ${tint.color}`)
+      expect(button).not.toHaveClass('text-white')
+    })
+
     it('ignores activeTone while inactive, which keeps the unselected row uniform', () => {
       render(
         <ToggleChip

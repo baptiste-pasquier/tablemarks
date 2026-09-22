@@ -130,7 +130,8 @@ export function AddPlace({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !busy) void submit()
+            // Not while an input method is composing: that Enter confirms the characters.
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing && !busy) void submit()
           }}
           className="min-w-0 flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500"
           placeholder={t('capture.pastePlaceholder')}
