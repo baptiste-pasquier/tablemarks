@@ -24,6 +24,13 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('rounded-full', 'shadow-brand')
   })
 
+  it('fills the danger variant red, never with the brand color, so an irreversible action reads apart', () => {
+    render(<Button variant="danger">Delete</Button>)
+    const button = screen.getByRole('button', { name: 'Delete' })
+    expect(button).toHaveClass('rounded-full', 'bg-red-600', 'text-white', 'disabled:opacity-50')
+    expect(button).not.toHaveClass('bg-brand')
+  })
+
   it('inverts the primary action for the brand band: a white pill with brand-strong text', () => {
     render(<Button variant="on-brand">Go</Button>)
     const button = screen.getByRole('button', { name: 'Go' })

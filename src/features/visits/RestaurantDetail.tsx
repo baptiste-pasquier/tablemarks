@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
+import { DeleteRestaurant } from './DeleteRestaurant'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit, removeVisit } from '../../data/visits'
 import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
@@ -311,6 +312,14 @@ export function RestaurantDetail({
           </div>
         </details>
       </div>
+
+      {/* Last, below the visits it would take with it; closes the detail once the delete commits. */}
+      <DeleteRestaurant
+        restaurantId={restaurantId}
+        name={restaurant.name}
+        visitCount={visits.length}
+        onDeleted={onClose}
+      />
     </Modal>
   )
 }

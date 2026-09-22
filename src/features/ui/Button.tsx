@@ -3,6 +3,7 @@ import { cn } from '../../lib/cn'
 
 type ButtonVariant =
   | 'primary'
+  | 'danger'
   | 'on-brand'
   | 'on-brand-glass'
   | 'band-icon'
@@ -32,6 +33,10 @@ type StyledVariant = Exclude<ButtonVariant, 'icon-dismiss' | 'menu-item'>
 const VARIANT_STYLES: Record<StyledVariant, string> = {
   primary:
     'rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-brand transition hover:bg-brand-strong active:bg-brand-strong active:shadow-none disabled:opacity-50',
+  // The confirming step of an irreversible action (RestaurantDetail's place delete): `primary`'s
+  // shape in red, so the one button that destroys data never wears the brand color.
+  danger:
+    'rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 active:bg-red-700 disabled:opacity-50',
   secondary:
     'rounded-full bg-white px-3 py-1.5 font-medium shadow-chip transition hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50',
   // The two actions on the Paprika band (App.tsx), where a brand-filled button would vanish into
@@ -112,7 +117,7 @@ export function Button({
   ...rest
 }: (
   | {
-      variant: 'primary' | 'on-brand' | 'on-brand-glass' | 'band-icon'
+      variant: 'primary' | 'danger' | 'on-brand' | 'on-brand-glass' | 'band-icon'
       iconOnly?: false
       size?: never
       tone?: never
@@ -140,6 +145,7 @@ export function Button({
       case 'menu-item':
         base = cn(MENU_ITEM_BASE, MENU_ITEM_TONE[tone])
         break
+      case 'danger':
       case 'on-brand':
       case 'on-brand-glass':
       case 'band-icon':

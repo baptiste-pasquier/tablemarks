@@ -422,4 +422,21 @@ describe('RestaurantDetail', () => {
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('1 Rue de Paris')}`,
     )
   })
+
+  it('deletes the place from its detail with its live visit count, then closes the detail', async () => {
+    const r = await createRestaurant({ name: 'Chez Paul', lat: 1, lng: 1 })
+    await createVisit({ restaurantId: r.id, date: '2026-05-20', verdict: 'go_back' })
+    await createVisit({ restaurantId: r.id, date: '2026-07-14', verdict: 'go_back' })
+    const onClose = vi.fn()
+    render(<RestaurantDetail restaurantId={r.id} onClose={onClose} />)
+    const user = userEvent.setup()
+
+    await screen.findByText('(2)')
+    await user.click(screen.getByRole('button', { name: 'Delete this place' }))
+    expect(screen.getByText('Delete “Chez Paul” and its 2 visits?')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect((await getRestaurant(r.id))?.deleted).toBe(true)
+  })
 })

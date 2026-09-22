@@ -70,7 +70,15 @@
     "googleMaps": "Google Maps",
     "goTo": "Go to",
     "addedOn": "Added {{date}}",
-    "errorSave": "Could not save this change."
+    "errorSave": "Could not save this change.",
+    "deletePlace": "Delete this place",
+    "deleteConfirm_zero": "Delete “{{name}}”?",
+    "deleteConfirm_one": "Delete “{{name}}” and its visit?",
+    "deleteConfirm_other": "Delete “{{name}}” and its {{count}} visits?",
+    "deleteIrreversible": "This can’t be undone.",
+    "deleteConfirmAction": "Delete",
+    "deleteCancel": "Cancel",
+    "errorDelete": "Could not delete this place."
   },
   "filters": {
     "title": "Filter",
