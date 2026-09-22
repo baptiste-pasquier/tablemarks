@@ -6,6 +6,7 @@ import { RestaurantDetail } from './RestaurantDetail'
 import { createRestaurant, getRestaurant, mutateRestaurant } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 import { instantToLocalDay } from '../../lib/dates'
+import { VERDICTS, translateVerdict } from '../../types/models'
 
 beforeEach(freshDB)
 afterEach(() => vi.unstubAllEnvs())
@@ -57,6 +58,28 @@ describe('RestaurantDetail', () => {
     await user.click(screen.getByRole('button', { name: /here now/i }))
     const button = enabled(await screen.findAllByRole('button', { name: 'Go back' }))
     expect(button).toHaveClass('hover:bg-gray-50', 'active:bg-gray-100', 'py-1.5')
+  })
+
+  it('leads every verdict-picker button with its verdict icon, in both pickers', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await screen.findByText('To try')
+    await user.click(screen.getByRole('button', { name: /here now/i }))
+
+    // Both pickers are in the DOM now: "I'm here now" and the collapsed "Add a past visit".
+    const drawn = new Set<string>()
+    for (const v of VERDICTS) {
+      const buttons = await screen.findAllByRole('button', { name: translateVerdict(v) })
+      expect(buttons).toHaveLength(2)
+      for (const button of buttons) {
+        const icon = button.querySelector('svg')
+        expect(icon).toHaveAttribute('aria-hidden', 'true')
+        drawn.add((icon as SVGElement).outerHTML)
+      }
+    }
+    expect(drawn.size).toBe(VERDICTS.length)
   })
 
   it('edits and persists the cuisine', async () => {
