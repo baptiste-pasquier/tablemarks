@@ -60,4 +60,16 @@ describe('MarkerTooltipContent', () => {
     expect(screen.getByText('🍽️')).toBeInTheDocument()
     expect(screen.queryByText('·')).not.toBeInTheDocument()
   })
+
+  it('truncates a long cuisine name, keeping the visit count whole', () => {
+    render(
+      <MarkerTooltipContent
+        marker={marker({ cuisine: 'Traditional Lyonnaise bouchon' })}
+        currentPosition={null}
+      />,
+    )
+
+    expect(screen.getByText('Traditional Lyonnaise bouchon')).toHaveClass('truncate', 'min-w-0')
+    expect(screen.getByText('2 visits')).toHaveClass('shrink-0', 'whitespace-nowrap')
+  })
 })

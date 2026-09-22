@@ -39,19 +39,25 @@ export function MarkerTooltipContent({
           </span>
         )}
       </span>
-      <span className="mt-1.5 flex items-center gap-1.5 text-xs whitespace-nowrap">
-        <span aria-hidden="true" className="text-[15px] leading-none">
+      {/* A free-typed cuisine can be any length: it truncates, the visit count never does. */}
+      <span className="mt-1.5 flex items-center gap-1.5 text-xs">
+        <span aria-hidden="true" className="shrink-0 text-[15px] leading-none">
           {emojiForCuisine(marker.cuisine)}
         </span>
-        <span className="font-semibold" style={{ color: cuisinePillTokens(marker.cuisine).color }}>
+        <span
+          className="min-w-0 truncate font-semibold"
+          style={{ color: cuisinePillTokens(marker.cuisine).color }}
+        >
           {cuisineDisplayName(marker.cuisine, t('common.uncategorized'))}
         </span>
         {visited && (
           <>
-            <span aria-hidden="true" className="text-gray-400">
+            <span aria-hidden="true" className="shrink-0 text-gray-400">
               ·
             </span>
-            <span className="text-gray-600">{translateVisitsCount(marker.visitCount)}</span>
+            <span className="shrink-0 whitespace-nowrap text-gray-600">
+              {translateVisitsCount(marker.visitCount)}
+            </span>
           </>
         )}
       </span>
