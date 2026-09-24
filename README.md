@@ -34,6 +34,7 @@ This starts the app with **no backend**, the same as the demo. To enable Google 
 
 - **Add a place:** click _+ Add a place_, paste a Google Maps link or type a name, and save.
 - **Log a visit:** open a place and tap _I'm here now_, then pick a verdict.
+- **Delete a place:** open it, tap _Delete this place_ at the bottom, and confirm — its visits go with it.
 - **Sign in (optional):** use _Sign in with Google_ to back up and sync; signing out keeps your local data.
 
 ## Scripts

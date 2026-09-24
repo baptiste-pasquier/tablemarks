@@ -70,7 +70,15 @@
     "googleMaps": "Google Maps",
     "goTo": "Itinéraire",
     "addedOn": "Ajouté le {{date}}",
-    "errorSave": "Impossible d'enregistrer cette modification."
+    "errorSave": "Impossible d'enregistrer cette modification.",
+    "deletePlace": "Supprimer ce lieu",
+    "deleteConfirm_zero": "Supprimer « {{name}} » ?",
+    "deleteConfirm_one": "Supprimer « {{name}} » et sa visite ?",
+    "deleteConfirm_other": "Supprimer « {{name}} » et ses {{count}} visites ?",
+    "deleteIrreversible": "Cette action est définitive.",
+    "deleteConfirmAction": "Supprimer",
+    "deleteCancel": "Annuler",
+    "errorDelete": "Impossible de supprimer ce lieu."
   },
   "filters": {
     "title": "Filtrer",

@@ -38,3 +38,6 @@ pocketbase/pocketbase
 
 # ESLint cache (pre-commit hook)
 .eslintcache
+
+# Throwaway UI mockups (brainstorming)
+.mockups/

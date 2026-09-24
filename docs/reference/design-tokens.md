@@ -27,6 +27,19 @@ White text on `--color-brand` measures 3.56:1, under AA — no vivid orange reac
 darker one reads as the terracotta identity this replaced. Text in the brand color therefore uses
 `--color-brand-strong` (5.72:1 on white).
 
+## Destructive actions
+
+An action that destroys data is red, never the brand color. These are Tailwind's stock reds, not
+`@theme` tokens.
+
+| Class     | Used for                                                  | Contrast                  |
+| --------- | --------------------------------------------------------- | ------------------------- |
+| `red-600` | `danger` fill; error and destructive text on white        | 4.76:1 against white text |
+| `red-700` | `danger` hover and active; error text on a `red-50` panel | 6.42:1 against white text |
+| `red-50`  | The confirm panel, with a `red-200` edge                  | —                         |
+
+Error text on a `red-50` panel steps down to `red-700`: `red-600` there measures 4.36:1, under AA.
+
 ## The header band
 
 The header and the two actions under it form one Paprika band: `--color-brand-bright` to
