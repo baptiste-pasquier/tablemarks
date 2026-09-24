@@ -83,7 +83,7 @@
   "filters": {
     "title": "Filtrer",
     "clearAll": "Tout effacer",
-    "cuisineGroup": "Cuisine",
+    "cuisineGroup": "Catégorie",
     "statusVerdictGroup": "Statut & verdict",
     "collapse": "Réduire",
     "showMore": "+{{count}} autres",

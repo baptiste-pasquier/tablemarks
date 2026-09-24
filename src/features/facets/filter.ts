@@ -1,5 +1,6 @@
 import { statusOf, type RestaurantStatus, type Verdict } from '../../types/models'
 import type { Restaurant } from '../../types/models'
+import { resolveCuisine } from './cuisineCatalog'
 
 /** Sentinel cuisine value for the "no cuisine" chip — distinct from any real cuisine name. */
 export const UNCATEGORIZED = '__uncategorized__'
@@ -9,7 +10,7 @@ export const UNCATEGORIZED = '__uncategorized__'
  * An empty set imposes no constraint (matches every place on that facet).
  */
 export interface FacetFilter {
-  /** Lowercased cuisine names, plus the `UNCATEGORIZED` sentinel — stored normalized for O(1) matching. */
+  /** Category keys (see resolveCuisine), plus the UNCATEGORIZED sentinel — normalized for O(1) matching. */
   cuisines: ReadonlySet<string>
   statuses: ReadonlySet<RestaurantStatus>
   verdicts: ReadonlySet<Verdict>
@@ -28,10 +29,9 @@ export function activeFilterCount(f: FacetFilter): number {
   return f.cuisines.size + f.statuses.size + f.verdicts.size
 }
 
-/** Place's cuisine reduced to a comparison key: lowercased name, or the uncategorized sentinel. */
+/** A place's category as a filter key: its resolved key, or the uncategorized sentinel. */
 function cuisineKey(r: Pick<Restaurant, 'cuisine'>): string {
-  const c = r.cuisine?.trim()
-  return c ? c.toLowerCase() : UNCATEGORIZED
+  return resolveCuisine(r.cuisine)?.key ?? UNCATEGORIZED
 }
 
 /** Pure facet predicate: AND across facets, OR within each (empty facet = no constraint). */

@@ -9,6 +9,8 @@ import {
 } from '../../types/models'
 import { STATUS_CHIP_CLASS, STATUS_ICON, VERDICT_BADGE_CLASS, VERDICT_ICON } from '../display'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
+import { splitRows } from './cuisineRanking'
+import { useRankedCuisines } from './useRankedCuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
 import { Button } from '../ui/Button'
 import { Eyebrow } from '../ui/Eyebrow'
@@ -52,61 +54,6 @@ function GroupLabel({ layout, children }: { layout: FilterBarLayout; children: s
   )
 }
 
-/** Distinct cuisines actually in use, ranked by restaurant count (desc), alphabetical tie-break. */
-function rankedCuisines(restaurants: Restaurant[]): string[] {
-  const byKey = new Map<string, { label: string; count: number }>()
-  for (const r of restaurants) {
-    const c = r.cuisine?.trim()
-    if (!c) continue
-    const key = c.toLowerCase()
-    const entry = byKey.get(key)
-    if (entry) entry.count++
-    else byKey.set(key, { label: c, count: 1 })
-  }
-  return [...byKey.values()]
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-    .map((e) => e.label)
-}
-
-/**
- * Split ranked cuisines into the default (collapsed) row and the overflow revealed by "+N autres"
- * (R1, R2, KTD4). The default row is the top 6 by rank, but any cuisine currently active in the
- * filter is pinned into it — bumping the least-used non-active entry when 6 or fewer cuisines are
- * active, or growing the row past 6 when more than 6 are active — so an active filter is never
- * hidden behind the overflow toggle. Recomputed from the current filter on every render, so
- * deselecting a pinned cuisine reflows the row immediately.
- */
-function splitCuisineRows(
-  ranked: string[],
-  activeCuisineKeys: ReadonlySet<string>,
-): { visible: string[]; overflow: string[] } {
-  const isActive = (name: string) => activeCuisineKeys.has(name.toLowerCase())
-  const activeRanked = ranked.filter(isActive)
-
-  const defaultSet = new Set(ranked.slice(0, DEFAULT_CUISINE_ROW_SIZE))
-  if (activeRanked.length > DEFAULT_CUISINE_ROW_SIZE) {
-    defaultSet.clear()
-    for (const name of activeRanked) defaultSet.add(name)
-  } else {
-    for (const active of activeRanked) {
-      if (defaultSet.has(active)) continue
-      for (let i = ranked.length - 1; i >= 0; i--) {
-        const candidate = ranked[i]
-        if (defaultSet.has(candidate) && !isActive(candidate)) {
-          defaultSet.delete(candidate)
-          break
-        }
-      }
-      defaultSet.add(active)
-    }
-  }
-
-  return {
-    visible: ranked.filter((c) => defaultSet.has(c)),
-    overflow: ranked.filter((c) => !defaultSet.has(c)),
-  }
-}
-
 /**
  * Clearable facet chips for cuisine / status / verdict. The shell owns the filter state.
  *
@@ -131,10 +78,10 @@ export function FilterBar({
   // an ambiguous aria-controls target for assistive tech.
   const cuisineGroupId = useId()
   const [expanded, setExpanded] = useState(false)
-  const ranked = useMemo(() => rankedCuisines(restaurants), [restaurants])
+  const ranked = useRankedCuisines(restaurants, false)
   const hasUncategorized = useMemo(() => restaurants.some((r) => !r.cuisine?.trim()), [restaurants])
   const { visible, overflow } = useMemo(
-    () => splitCuisineRows(ranked, filter.cuisines),
+    () => splitRows(ranked, filter.cuisines, DEFAULT_CUISINE_ROW_SIZE),
     [ranked, filter.cuisines],
   )
   const shownCuisines = expanded ? ranked : visible
@@ -159,18 +106,18 @@ export function FilterBar({
             <div id={cuisineGroupId} className={CHIPS_ROW_CLASS[layout]}>
               {shownCuisines.map((c) => (
                 <ToggleChip
-                  key={c}
+                  key={c.key}
                   shape="pill"
-                  active={filter.cuisines.has(c.toLowerCase())}
-                  activeColor={colorForCuisine(c)}
+                  active={filter.cuisines.has(c.key)}
+                  activeColor={colorForCuisine(c.value)}
                   onClick={() =>
-                    onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.toLowerCase()) })
+                    onChange({ ...filter, cuisines: withToggled(filter.cuisines, c.key) })
                   }
                 >
                   <span aria-hidden="true" className="text-base leading-none">
-                    {emojiForCuisine(c)}
+                    {emojiForCuisine(c.value)}
                   </span>
-                  {c}
+                  {c.label}
                 </ToggleChip>
               ))}
               {hasUncategorized && (

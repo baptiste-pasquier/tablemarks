@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { FilterBar } from './FilterBar'
@@ -92,7 +92,7 @@ describe('FilterBar', () => {
 
   it('renders the cuisine and status/verdict groups under separate labels', () => {
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
-    expect(screen.getByText('Cuisine')).toBeInTheDocument()
+    expect(screen.getByText('Category')).toBeInTheDocument()
     expect(screen.getByText('Status & verdict')).toBeInTheDocument()
   })
 
@@ -269,7 +269,7 @@ describe('FilterBar', () => {
     render(
       <FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />,
     )
-    const cuisineGroupRow = screen.getByText('Cuisine').parentElement as HTMLElement
+    const cuisineGroupRow = screen.getByText('Category').parentElement as HTMLElement
     const statusGroupRow = screen.getByText('Status & verdict').parentElement as HTMLElement
 
     expect(cuisineGroupRow).toHaveClass('flex', 'items-center', 'gap-3')
@@ -335,5 +335,39 @@ describe('FilterBar', () => {
     rerender(<FilterBar restaurants={restaurants} filter={emptyFilter()} onChange={vi.fn()} />)
     expect(screen.queryByRole('button', { name: 'Ethiopian' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '+1 more' })).toBeInTheDocument()
+  })
+
+  it('folds legacy and translated names into one chip toggling the curated key', async () => {
+    const onChange = vi.fn()
+    const places = [
+      r({ id: 'a', cuisine: 'French' }),
+      r({ id: 'b', cuisine: 'french' }),
+      r({ id: 'c', cuisine: 'Français' }),
+    ]
+    render(<FilterBar restaurants={places} filter={emptyFilter()} onChange={onChange} />)
+
+    expect(screen.getAllByRole('button', { name: 'French' })).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'French' }))
+    expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['french'])
+  })
+
+  it('relabels and re-sorts the chips when the language changes', async () => {
+    const places = [r({ id: 'a', cuisine: 'greek' }), r({ id: 'b', cuisine: 'ice_cream' })]
+    const { rerender } = render(
+      <FilterBar restaurants={places} filter={emptyFilter()} onChange={vi.fn()} />,
+    )
+    const greek = screen.getByRole('button', { name: 'Greek' })
+    const iceCream = screen.getByRole('button', { name: 'Ice cream' })
+    expect(greek.compareDocumentPosition(iceCream) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await act(async () => {
+      await mockI18n.changeLanguage('fr')
+    })
+    rerender(<FilterBar restaurants={places} filter={emptyFilter()} onChange={vi.fn()} />)
+
+    expect(screen.getByText('Catégorie')).toBeInTheDocument()
+    const glacier = screen.getByRole('button', { name: 'Glacier' })
+    const grec = screen.getByRole('button', { name: 'Grec' })
+    expect(glacier.compareDocumentPosition(grec) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
