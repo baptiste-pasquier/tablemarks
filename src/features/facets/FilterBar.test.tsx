@@ -154,9 +154,9 @@ describe('FilterBar', () => {
       'bg-gray-200',
       'text-gray-700',
     )
-    // A cuisine wears the color its markers wear on the map (Thai is hue 281 on the wheel).
+    // A cuisine wears the color its markers wear on the map (Thai is Asia's fourth member, hue 290 at half chroma).
     const thai = screen.getByRole('button', { name: /Thai/ })
-    expect(thai.getAttribute('style')).toContain('oklch(0.48 0.15 281)')
+    expect(thai.getAttribute('style')).toContain('oklch(0.48 0.075 290)')
     expect(thai).toHaveClass('text-white')
     expect(thai).not.toHaveClass('bg-brand')
 

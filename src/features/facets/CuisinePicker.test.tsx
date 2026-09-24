@@ -44,9 +44,9 @@ describe('CuisinePicker', () => {
     const trigger = screen.getByRole('button', { name: 'Category: French' })
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     expect(within(trigger).getByText('🥖')).toHaveAttribute('aria-hidden', 'true')
-    // French is hue 249 on the wheel: the name wears the cuisine's own text color.
+    // French leads the France family, hue 245: the name wears the cuisine's own text color.
     expect(within(trigger).getByText('French').getAttribute('style')).toContain(
-      'oklch(0.4 0.13 249)',
+      'oklch(0.4 0.13 245)',
     )
     expect(screen.queryByText(/^cuisine$/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('group')).not.toBeInTheDocument()

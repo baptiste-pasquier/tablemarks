@@ -41,8 +41,8 @@ describe('MarkerTooltipContent', () => {
     render(<MarkerTooltipContent marker={marker()} currentPosition={null} />)
 
     const cuisine = screen.getByText('Japanese')
-    // Japanese is hue 313 on the wheel.
-    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.13 313)')
+    // Japanese leads the Asia family, hue 290.
+    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.13 290)')
     expect(screen.getByText('🍣')).toHaveAttribute('aria-hidden', 'true')
     expect(cuisine.parentElement).toBe(screen.getByText('2 visits').parentElement)
   })

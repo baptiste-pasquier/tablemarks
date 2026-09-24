@@ -5,17 +5,19 @@ import {
   cuisinePillTokens,
   emojiForCuisine,
   toneForCuisine,
-  CURATED_CUISINES,
+  CURATED_TONES,
   CUSTOM_TONES,
   UNCATEGORIZED_COLOR,
   UNCATEGORIZED_EMOJI,
   GENERIC_CUISINE_EMOJI,
 } from './cuisines'
+import { CUISINE_CATALOG, FAMILY_HUES } from './cuisineCatalog'
 
 describe('colorForCuisine', () => {
-  it('derives the solid form from the cuisine hue, case-insensitively', () => {
-    expect(colorForCuisine('French')).toBe('oklch(0.48 0.15 249)')
-    expect(colorForCuisine('french')).toBe(colorForCuisine('French'))
+  it('derives the solid form from the category tone, whatever name it is stored under', () => {
+    expect(colorForCuisine('french')).toBe('oklch(0.48 0.15 245)')
+    expect(colorForCuisine('French')).toBe(colorForCuisine('french'))
+    expect(colorForCuisine('Français')).toBe(colorForCuisine('french'))
   })
 
   it('returns the neutral color for empty/undefined', () => {
@@ -31,53 +33,72 @@ describe('colorForCuisine', () => {
   })
 
   it('never maps a real cuisine onto the neutral color', () => {
-    for (const c of [...CURATED_CUISINES.map((x) => x.name), 'Ethiopian', 'Peruvian', 'Ramen']) {
+    for (const c of [...CUISINE_CATALOG.map((e) => e.key), 'Ethiopian', 'Peruvian', 'Ramen']) {
       expect(colorForCuisine(c)).not.toBe(UNCATEGORIZED_COLOR)
     }
   })
 })
 
-describe('the cuisine hue wheel', () => {
-  it('spaces the eleven wheel cuisines 32 degrees apart, Café excepted', () => {
-    const wheel = CURATED_CUISINES.filter((c) => c.chroma === 1).map((c) => c.hue)
-    expect(wheel).toEqual([25, 57, 89, 121, 153, 185, 217, 249, 281, 313, 345])
-    for (let i = 1; i < wheel.length; i++) {
-      expect(wheel[i] - wheel[i - 1]).toBe(32)
+describe('the hue families', () => {
+  it('tones each member from its family base: 0, -12, +12, then the same muted', () => {
+    expect(toneForCuisine('japanese')).toEqual({ hue: 290, chroma: 1 })
+    expect(toneForCuisine('chinese')).toEqual({ hue: 278, chroma: 1 })
+    expect(toneForCuisine('korean')).toEqual({ hue: 302, chroma: 1 })
+    expect(toneForCuisine('thai')).toEqual({ hue: 290, chroma: 0.5 })
+    expect(toneForCuisine('vietnamese')).toEqual({ hue: 278, chroma: 0.5 })
+    expect(toneForCuisine('indian')).toEqual({ hue: 302, chroma: 0.5 })
+    expect(toneForCuisine('coffee_shop')).toEqual({ hue: 70, chroma: 0.5 })
+    expect(toneForCuisine('bar')).toEqual({ hue: 335, chroma: 1 })
+  })
+
+  it('gives every curated category a tone within 12 degrees of its family base', () => {
+    expect(CURATED_TONES.size).toBe(CUISINE_CATALOG.length)
+    for (const entry of CUISINE_CATALOG) {
+      const tone = CURATED_TONES.get(entry.key)!
+      expect(Math.abs(tone.hue - FAMILY_HUES[entry.family])).toBeLessThanOrEqual(12)
     }
   })
 
-  it('gives Café the Burger hue at half chroma, so it reads brown rather than a second amber', () => {
-    const cafe = CURATED_CUISINES.find((c) => c.name === 'Café')!
-    expect(cafe).toEqual({ name: 'Café', hue: 60, chroma: 0.5 })
+  it('never gives two curated categories of different families the same tone', () => {
+    const owner = new Map<string, string>()
+    for (const entry of CUISINE_CATALOG) {
+      const { hue, chroma } = CURATED_TONES.get(entry.key)!
+      const id = `${hue}:${chroma}`
+      expect(owner.get(id) ?? entry.family).toBe(entry.family)
+      owner.set(id, entry.family)
+    }
   })
 
-  it('offers 22 fallback tones and never reuses a curated hue for a free-text cuisine', () => {
-    expect(CUSTOM_TONES).toHaveLength(22)
-    const curated = new Set(CURATED_CUISINES.map((c) => c.hue))
+  it('offers 16 fallback tones, each at least 10 degrees from every curated hue', () => {
+    expect(CUSTOM_TONES).toHaveLength(16)
     for (const tone of CUSTOM_TONES) {
-      expect(curated.has(tone.hue)).toBe(false)
+      for (const [key, curated] of CURATED_TONES) {
+        const d = Math.abs(tone.hue - curated.hue)
+        const gap = Math.min(d, 360 - d)
+        expect(gap, `fallback hue ${tone.hue} vs ${key}`).toBeGreaterThanOrEqual(10)
+      }
     }
   })
 
-  it('resolves a free-text cuisine to one of the fallback tones, deterministically', () => {
-    const tone = toneForCuisine('Ethiopian')
+  it('resolves a free-text category to one fallback tone, whatever its case or accents', () => {
+    const tone = toneForCuisine('Éthiopien')
     expect(CUSTOM_TONES).toContainEqual(tone)
-    expect(toneForCuisine('ethiopian')).toEqual(tone)
+    expect(toneForCuisine('ethiopien')).toEqual(tone)
   })
 })
 
 describe('cuisinePillTokens', () => {
   it('pairs a very light background with a dark text of the same hue', () => {
-    expect(cuisinePillTokens('Thai')).toEqual({
-      background: 'oklch(0.96 0.045 281)',
-      color: 'oklch(0.4 0.13 281)',
+    expect(cuisinePillTokens('japanese')).toEqual({
+      background: 'oklch(0.96 0.045 290)',
+      color: 'oklch(0.4 0.13 290)',
     })
   })
 
   it('scales both halves by the tone chroma, so Café stays brown', () => {
-    expect(cuisinePillTokens('Café')).toEqual({
-      background: 'oklch(0.96 0.0225 60)',
-      color: 'oklch(0.4 0.065 60)',
+    expect(cuisinePillTokens('coffee_shop')).toEqual({
+      background: 'oklch(0.96 0.0225 70)',
+      color: 'oklch(0.4 0.065 70)',
     })
   })
 
@@ -91,8 +112,8 @@ describe('cuisinePillTokens', () => {
 
 describe('cuisineAvatarBackground', () => {
   it('is a shade deeper than the pill background, in the same hue and chroma scale', () => {
-    expect(cuisineAvatarBackground('Thai')).toBe('oklch(0.93 0.07 281)')
-    expect(cuisineAvatarBackground('Café')).toBe('oklch(0.93 0.035 60)')
+    expect(cuisineAvatarBackground('japanese')).toBe('oklch(0.93 0.07 290)')
+    expect(cuisineAvatarBackground('coffee_shop')).toBe('oklch(0.93 0.035 70)')
     expect(cuisineAvatarBackground(null)).toBe('oklch(0.93 0 0)')
   })
 })
@@ -114,25 +135,10 @@ describe('emojiForCuisine', () => {
     expect(emojiForCuisine('Ethiopian')).toBe(GENERIC_CUISINE_EMOJI)
   })
 
-  it('maps each curated cuisine to its own specific assigned emoji', () => {
-    const expected: Record<string, string> = {
-      Burger: '🍔',
-      French: '🥖',
-      Italian: '🍝',
-      Indian: '🍛',
-      Japanese: '🍣',
-      Chinese: '🥡',
-      Thai: '🍜',
-      Mexican: '🌮',
-      Pizza: '🍕',
-      Korean: '🍲',
-      Vietnamese: '🥢',
-      Café: '☕️',
-    }
-    expect(Object.keys(expected).sort()).toEqual(CURATED_CUISINES.map((c) => c.name).sort())
-    for (const c of CURATED_CUISINES) {
-      expect(emojiForCuisine(c.name)).toBe(expected[c.name])
-    }
+  it('takes each curated emoji from the catalog, whatever name the category is stored under', () => {
+    for (const entry of CUISINE_CATALOG) expect(emojiForCuisine(entry.key)).toBe(entry.emoji)
+    expect(emojiForCuisine('Boulangerie')).toBe('🥐')
+    expect(emojiForCuisine('Café')).toBe('☕️')
   })
 
   it('falls back to the generic emoji instead of leaking an Object.prototype member', () => {
@@ -143,10 +149,10 @@ describe('emojiForCuisine', () => {
 })
 
 /**
- * The palette's promise is a *measured* floor, not a chosen one: every tone -- the twelve curated
- * hues and the twenty-two fallbacks alike -- must clear WCAG AA on both rendered forms. Without
- * this, a thirteenth cuisine or a tweak to a recipe's lightness silently drops a badge below
- * legibility, since nothing else in the suite reads a color as a color.
+ * The palette's promise is a *measured* floor, not a chosen one: every tone -- the twenty-four
+ * curated tones and the sixteen fallbacks alike -- must clear WCAG AA on both rendered forms.
+ * Without this, a twenty-fifth category or a tweak to a recipe's lightness silently drops a badge
+ * below legibility, since nothing else in the suite reads a color as a color.
  *
  * It measures what the module returns, never a copy of the recipes: a test holding its own
  * lightness/chroma numbers would keep passing after someone changed the real ones.
@@ -184,7 +190,7 @@ describe('cuisine palette contrast floors', () => {
    * reach them all is itself a failure -- it would mean a tone nothing can ever be assigned.
    */
   function everyPaintedName(): string[] {
-    const names = CURATED_CUISINES.map(({ name }) => name)
+    const names: string[] = CUISINE_CATALOG.map(({ key }) => key)
     const unseen = new Set(CUSTOM_TONES.map(({ hue, chroma }) => `${hue}:${chroma}`))
     for (let i = 0; unseen.size > 0 && i < 5000; i += 1) {
       const probe = `probe-${i}`

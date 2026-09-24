@@ -83,10 +83,10 @@ describe('RestaurantList', () => {
     expect(card).toHaveClass('bg-white', 'rounded-card', 'shadow-card')
     expect(card.getAttribute('style')).toBeNull()
 
-    // Thai is hue 281 on the wheel: the avatar takes the deeper avatar tint, decorative only.
+    // Thai is Asia's fourth member, hue 290 at half chroma: the avatar takes the deeper avatar tint, decorative only.
     const avatar = within(card).getByText('🍜')
     expect(avatar).toHaveAttribute('aria-hidden', 'true')
-    expect(avatar.getAttribute('style')).toContain('oklch(0.93 0.07 281)')
+    expect(avatar.getAttribute('style')).toContain('oklch(0.93 0.035 290)')
 
     // The name shares its line with the status badge alone ...
     const name = screen.getByText('Baan Thaï')
@@ -95,7 +95,7 @@ describe('RestaurantList', () => {
 
     // ... and the cuisine, set in its own text color, sits below with the visit count.
     const cuisine = screen.getByText('Thai')
-    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.13 281)')
+    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.065 290)')
     expect(cuisine.parentElement).toBe(screen.getByText('3 visits').parentElement)
     expect(cuisine.parentElement).not.toBe(name.parentElement)
   })
