@@ -185,6 +185,10 @@ describe('CuisinePicker', () => {
     expect(pills()).toHaveLength(8)
     const showAll = screen.getByRole('button', { name: 'Show all (4)' })
     expect(showAll).toHaveAttribute('aria-expanded', 'false')
+    expect(showAll).toHaveAttribute(
+      'aria-controls',
+      screen.getByRole('group', { name: 'Categories' }).id,
+    )
 
     await user.click(showAll)
     expect(pills()).toHaveLength(12)

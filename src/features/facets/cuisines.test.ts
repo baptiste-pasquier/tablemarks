@@ -69,6 +69,16 @@ describe('the hue families', () => {
     }
   })
 
+  it('keeps every family at 6 members or fewer, so no two members share a tone', () => {
+    const sizes = new Map<string, number>()
+    for (const entry of CUISINE_CATALOG) {
+      sizes.set(entry.family, (sizes.get(entry.family) ?? 0) + 1)
+    }
+    for (const [family, size] of sizes) {
+      expect(size, `family "${family}" has ${size} members`).toBeLessThanOrEqual(6)
+    }
+  })
+
   it('offers 16 fallback tones, each at least 10 degrees from every curated hue', () => {
     expect(CUSTOM_TONES).toHaveLength(16)
     for (const tone of CUSTOM_TONES) {

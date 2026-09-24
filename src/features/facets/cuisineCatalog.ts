@@ -63,9 +63,17 @@ export type ResolvedCuisine =
   | { kind: 'curated'; key: CuisineKey; entry: CatalogEntry }
   | { kind: 'custom'; key: string; label: string }
 
-/** The comparison form of a typed name: no accents, single spaces, trimmed, lowercase. */
+/**
+ * The comparison form of a typed name: no accents, underscores as spaces, single spaces, trimmed,
+ * lowercase — so "Coffee shop" meets the key `coffee_shop`.
+ */
 export function normalizeCuisineText(text: string): string {
-  return text.normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase()
+  return text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[\s_]+/g, ' ')
+    .trim()
+    .toLowerCase()
 }
 
 // Every key and every label in every language, so a value picked or typed in either language,

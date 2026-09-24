@@ -161,6 +161,7 @@ export function CuisinePicker({
               variant="secondary"
               size="xs"
               aria-expanded={expanded}
+              aria-controls={optionsId}
               onClick={() => setExpanded(!expanded)}
             >
               {expanded
