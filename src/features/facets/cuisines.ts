@@ -129,16 +129,3 @@ export function emojiForCuisine(cuisine: string | null | undefined): string {
   if (!key) return UNCATEGORIZED_EMOJI
   return CUISINE_EMOJI.get(key.toLowerCase()) ?? GENERIC_CUISINE_EMOJI
 }
-
-/** Picker options: curated cuisines unioned with any already in use, de-duped case-insensitively, sorted. */
-export function cuisineOptions(restaurants: ReadonlyArray<{ cuisine?: string | null }>): string[] {
-  // Keyed by lowercase so 'french' and 'French' collapse to one option, keeping the
-  // curated casing (or the first-seen custom casing) as the display label.
-  const byKey = new Map<string, string>()
-  for (const c of CURATED_CUISINES) byKey.set(c.name.toLowerCase(), c.name)
-  for (const r of restaurants) {
-    const c = normalize(r.cuisine)
-    if (c && !byKey.has(c.toLowerCase())) byKey.set(c.toLowerCase(), c)
-  }
-  return [...byKey.values()].sort((a, b) => a.localeCompare(b))
-}

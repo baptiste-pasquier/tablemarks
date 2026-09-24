@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
@@ -8,7 +8,7 @@ import { VisitHistory } from './VisitHistory'
 import { useRestaurants } from '../useRestaurants'
 import { createVisit } from '../../data/visits'
 import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
-import { cuisineOptions } from '../facets/cuisines'
+import { useRankedCuisines } from '../facets/useRankedCuisines'
 import { CuisinePicker } from '../facets/CuisinePicker'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
@@ -51,7 +51,7 @@ export function RestaurantDetail({
   // can be shown.
   const [deleting, setDeleting] = useState(false)
   const restaurants = useRestaurants()
-  const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
+  const options = useRankedCuisines(restaurants, true)
   const [logging, setLogging] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
   // Guards the notes field against being remounted (and thus reset to the store value) while the

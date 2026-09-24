@@ -2,18 +2,23 @@ import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Check, Plus } from 'lucide-react'
 import { cuisineAvatarBackground, cuisinePillTokens, emojiForCuisine } from './cuisines'
-import { cuisineLabel } from './cuisineCatalog'
+import { cuisineLabel, resolveCuisine, storedCuisine } from './cuisineCatalog'
+import { splitRows, type RankedCuisine } from './cuisineRanking'
 import { Button } from '../ui/Button'
 import { ToggleChip } from '../ui/ToggleChip'
 import { cn } from '../../lib/cn'
 
+const PICKER_ROW_SIZE = 8
+
 /**
- * Picks a place's cuisine: closed, it reads the way the list tile does — the avatar and the name
- * in its own color — with no "Cuisine" label, so a future category ("Bar", "Bakery") fits without
- * a rename. Open, every option is a pastel pill, one tap picks and closes, picking the chosen one
- * again clears it, and "Other…" takes a free-typed name — kept when focus leaves the field, so a
- * name typed without OK is not lost. Saving is the caller's: the detail modal writes on every
- * pick, the add form holds the value until it submits.
+ * Picks a place's category: closed, it reads the way the list tile does — the avatar and the name
+ * in its own color, in the reader's language — with no "Cuisine" label, since a category may as
+ * well be a bar or a bakery. Open, every option is a pastel pill ranked by use — the top eight,
+ * the current one always among them, then "Show all" — and one tap picks and closes, picking the
+ * chosen one again clears it, and "Other…" takes a free-typed name (saved as a curated key when it
+ * names one, in either language) — kept when focus leaves the field, so a name typed without OK
+ * is not lost. Saving is the caller's: the detail modal writes on every pick, the add form holds
+ * the value until it submits.
  */
 export function CuisinePicker({
   value,
@@ -21,36 +26,49 @@ export function CuisinePicker({
   onChange,
 }: {
   value: string | null | undefined
-  options: readonly string[]
+  options: readonly RankedCuisine[]
   onChange: (cuisine: string | undefined) => void
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [typing, setTyping] = useState(false)
   const [custom, setCustom] = useState('')
   const optionsId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const groupRef = useRef<HTMLDivElement>(null)
   const chosen = value?.trim() || undefined
+  const chosenKey = resolveCuisine(chosen)?.key
   const name = cuisineLabel(chosen, t)
+  // Not memoized: a few dozen options split in a blink, and a `useMemo` here fails
+  // `react-hooks/preserve-manual-memoization` (the compiler cannot prove `chosenKey` stable).
+  const { visible, overflow } = splitRows(
+    options,
+    new Set(chosenKey ? [chosenKey] : []),
+    PICKER_ROW_SIZE,
+  )
+  const shown = expanded ? options : visible
 
   function pick(next: string | undefined) {
     onChange(next)
     setOpen(false)
+    setExpanded(false)
     setTyping(false)
     setCustom('')
   }
 
   function submitCustom() {
-    const next = custom.trim()
+    const next = storedCuisine(custom)
     if (next) pick(next)
   }
 
-  // Closing from the trigger is a cancel: the next opening starts from the options, not the draft.
+  // Closing from the trigger is a cancel: the next opening starts from the top options, not the
+  // draft or the expanded list.
   function toggle() {
     if (open) {
       setTyping(false)
       setCustom('')
+      setExpanded(false)
     }
     setOpen(!open)
   }
@@ -61,7 +79,7 @@ export function CuisinePicker({
   function keepDraft(to: EventTarget | null) {
     if (to === triggerRef.current) return
     if (to instanceof Node && groupRef.current?.contains(to)) return
-    const next = custom.trim()
+    const next = storedCuisine(custom)
     if (next) onChange(next)
   }
 
@@ -115,28 +133,41 @@ export function CuisinePicker({
           aria-label={t('cuisinePicker.optionsAria')}
           className="mt-2.5 flex flex-wrap gap-1.5"
         >
-          {options.map((option) => {
-            const selected = option.toLowerCase() === chosen?.toLowerCase()
-            const tokens = cuisinePillTokens(option)
+          {shown.map((option) => {
+            const selected = option.key === chosenKey
+            const tokens = cuisinePillTokens(option.value)
             return (
               <ToggleChip
-                key={option}
+                key={option.key}
                 shape="pill"
                 active={selected}
                 tint={tokens}
-                onClick={() => pick(selected ? undefined : option)}
+                onClick={() => pick(selected ? undefined : option.value)}
                 className="max-w-full"
               >
                 <span aria-hidden="true" className="shrink-0">
-                  {emojiForCuisine(option)}
+                  {emojiForCuisine(option.value)}
                 </span>
-                <span className="min-w-0 truncate">{option}</span>
+                <span className="min-w-0 truncate">{option.label}</span>
                 {selected && (
                   <Check size={14} strokeWidth={2.6} aria-hidden="true" className="shrink-0" />
                 )}
               </ToggleChip>
             )
           })}
+          {overflow.length > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              aria-expanded={expanded}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded
+                ? t('cuisinePicker.showLess')
+                : t('cuisinePicker.showAll', { count: overflow.length })}
+            </Button>
+          )}
           {typing ? (
             <span className="flex w-full items-center gap-2">
               <input

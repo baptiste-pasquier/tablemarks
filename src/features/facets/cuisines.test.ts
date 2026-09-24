@@ -3,7 +3,6 @@ import {
   colorForCuisine,
   cuisineAvatarBackground,
   cuisinePillTokens,
-  cuisineOptions,
   emojiForCuisine,
   toneForCuisine,
   CURATED_CUISINES,
@@ -140,22 +139,6 @@ describe('emojiForCuisine', () => {
     expect(emojiForCuisine('constructor')).toBe(GENERIC_CUISINE_EMOJI)
     expect(emojiForCuisine('__proto__')).toBe(GENERIC_CUISINE_EMOJI)
     expect(emojiForCuisine('hasOwnProperty')).toBe(GENERIC_CUISINE_EMOJI)
-  })
-})
-
-describe('cuisineOptions', () => {
-  it('unions curated with in-use cuisines, de-duplicates, and drops blanks', () => {
-    const options = cuisineOptions([
-      { cuisine: 'Ethiopian' },
-      { cuisine: 'French' }, // already curated -> no dupe
-      { cuisine: '  ' },
-      { cuisine: null },
-      {},
-    ])
-    expect(options).toContain('Ethiopian')
-    expect(options.filter((o) => o === 'French')).toHaveLength(1)
-    expect(options).not.toContain('')
-    expect(options).toEqual([...options].sort((a, b) => a.localeCompare(b)))
   })
 })
 
