@@ -1,6 +1,6 @@
+import { resolveCuisine } from './cuisineCatalog'
 import { statusOf, type RestaurantStatus, type Verdict } from '../../types/models'
 import type { Restaurant } from '../../types/models'
-import { resolveCuisine } from './cuisineCatalog'
 
 /** Sentinel cuisine value for the "no cuisine" chip — distinct from any real cuisine name. */
 export const UNCATEGORIZED = '__uncategorized__'
@@ -36,8 +36,9 @@ function cuisineKey(r: Pick<Restaurant, 'cuisine'>): string {
 
 /** Pure facet predicate: AND across facets, OR within each (empty facet = no constraint). */
 export function matches(r: Restaurant, f: FacetFilter): boolean {
-  // `cuisineKey` and the stored set are both lowercased (UNCATEGORIZED for no cuisine),
-  // so an O(1) lookup is correct and case-insensitive without per-call array allocation.
+  // `cuisineKey` and the stored set are both resolved category keys (see `resolveCuisine`;
+  // UNCATEGORIZED for no cuisine), so the lookup is O(1) and folds case, accents and translated
+  // names without per-call array allocation.
   if (f.cuisines.size > 0 && !f.cuisines.has(cuisineKey(r))) return false
   if (f.statuses.size > 0 && !f.statuses.has(statusOf(r))) return false
   if (f.verdicts.size > 0 && (!r.latestVerdict || !f.verdicts.has(r.latestVerdict))) return false

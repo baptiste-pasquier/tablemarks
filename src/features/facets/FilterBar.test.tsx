@@ -347,6 +347,7 @@ describe('FilterBar', () => {
     render(<FilterBar restaurants={places} filter={emptyFilter()} onChange={onChange} />)
 
     expect(screen.getAllByRole('button', { name: 'French' })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Français' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'French' }))
     expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['french'])
   })
