@@ -12,7 +12,7 @@ status: approved
 
 Turn the cuisine facet into a translated, usage-ordered category list:
 
-- grow the curated set from 12 to 22 entries, including places that are not cuisines
+- grow the curated set from 12 to 24 entries, including places that are not cuisines
   (bakery, bar, ice cream);
 - show every curated entry in the reader's language (French and English), whatever
   language it was picked in;
@@ -26,9 +26,10 @@ and the picker; an English reader on the same data sees "Bakery".
 
 | Question                   | Answer                                                                    |
 | -------------------------- | ------------------------------------------------------------------------- |
-| Curated additions          | Boulangerie, Pâtisserie, Bar, Glacier, Crêperie, Brunch, Libanais, Grec, Espagnol, Végétarien |
+| Curated additions          | Boulangerie, Pâtisserie, Bar, Glacier, Crêperie, Brunch, Libanais, Grec, Espagnol, Végétarien, Africain, Kebab |
 | Stored value               | Normalized to a stable key; a breaking change, no backward compatibility owed |
-| Colors for 22 entries      | Hue families: color signals a family, the emoji tells members apart       |
+| Key format                 | OpenStreetMap tag values, ready for a later prefill from OSM              |
+| Colors for 24 entries      | Hue families: color signals a family, the emoji tells members apart       |
 | "Cuisine" wording          | UI label becomes "Catégorie" / "Category"; the `cuisine` field and code names stay |
 | Picker length              | Top 8 by rank, then a "Show all (N)" toggle                              |
 | Filter tie-break           | Translated label, alphabetical in the display language                   |
@@ -57,14 +58,21 @@ error through `src/types/i18next.d.ts`.
 | Family         | Base hue | Members, in order                                        |
 | -------------- | -------- | -------------------------------------------------------- |
 | `americas`     | 25       | burger 🍔, mexican 🌮                                     |
-| `sweet`        | 70       | bakery 🥐, pastry 🍰, ice_cream 🍦, cafe ☕️, brunch 🍳    |
-| `vegetarian`   | 135      | vegetarian 🥦                                             |
-| `mediterranean`| 175      | italian 🍝, pizza 🍕, greek 🥙, lebanese 🧆, spanish 🥘   |
-| `france`       | 245      | french 🥖, creperie 🥞                                    |
+| `sweet`        | 70       | bakery 🥐, pastry 🍰, ice_cream 🍦, coffee_shop ☕️, brunch 🍳 |
+| `africa`       | 110      | african 🌍                                                |
+| `vegetarian`   | 140      | vegetarian 🥦                                             |
+| `mediterranean`| 175      | italian 🍝, pizza 🍕, greek 🫒, lebanese 🧆, spanish 🥘, kebab 🥙 |
+| `france`       | 245      | french 🥖, crepe 🥞                                       |
 | `asia`         | 290      | japanese 🍣, chinese 🥡, korean 🍲, thai 🍜, vietnamese 🥢, indian 🍛 |
 | `bar`          | 335      | bar 🍹                                                    |
 
-Keys are lowercase ASCII `snake_case`; they are the stored value and never change once shipped.
+Keys are the stored value and never change once shipped. They follow OpenStreetMap, so a
+later prefill from OSM maps tags to keys without a translation table:
+
+- a cuisine key is the OSM `cuisine=*` value: `french`, `coffee_shop` (labelled Café),
+  `crepe` (labelled Crêperie), `ice_cream`, `kebab`, `african`, `brunch`, `vegetarian`…;
+- a key OSM carries on another tag reuses that tag's value: `bakery` (`shop=bakery`),
+  `pastry` (`shop=pastry`), `bar` (`amenity=bar`).
 
 ### Stored value
 
@@ -102,11 +110,11 @@ Each family owns a base hue. Member `i` of a family (0-based, catalog order) get
 - chroma multiplier `1` for `i < 3`, `0.5` otherwise.
 
 So a family spans at most `base ± 12`, and its fourth to sixth members are the muted twins of
-the first three. Family bands: [13, 37], [58, 82], [135], [163, 187], [233, 257],
+the first three. Family bands: [13, 37], [58, 82], [110], [140], [163, 187], [233, 257],
 [278, 302], [335].
 
 Free-typed categories hash into `CUSTOM_TONES`: the gap midpoints between bands,
-`[47, 108, 149, 210, 267, 318, 354]`, each at chroma `1` and `0.5`, 14 tones. None falls
+`[47, 96, 125, 151, 210, 267, 318, 354]`, each at chroma `1` and `0.5`, 16 tones. None falls
 inside a family band. The four recipes (pill background, pill text, solid, avatar) and their
 contrast floors do not change.
 
@@ -141,7 +149,7 @@ free-typed name emits the resolved key or the typed text.
 a curated key, the typed text for a custom one, `common.uncategorized` for none. The list tile,
 the map tooltip and the picker trigger use it.
 
-**i18n.** New `categories.*` keys (22 entries), `filters.cuisineGroup` becomes
+**i18n.** New `categories.*` keys (24 entries), `filters.cuisineGroup` becomes
 "Catégorie" / "Category", and `cuisinePicker` gains a show-all and a collapse label.
 
 ## Testing
@@ -150,7 +158,7 @@ Tests first, co-located:
 
 - `cuisines.test.ts`: resolution by key, English label and French label, regardless of case
   and accents; custom fallthrough and normalized custom key; every catalog key has an emoji
-  and a label in `en` and `fr`; contrast floors hold for all 22 curated tones and all 14
+  and a label in `en` and `fr`; contrast floors hold for all 24 curated tones and all 16
   custom tones; no custom hue falls inside a family band.
 - `cuisineRanking.test.ts`: count order; tie-break flips between `fr` and `en`; legacy
   "French" folds into `french`; unused curated entries trail when included and are absent
