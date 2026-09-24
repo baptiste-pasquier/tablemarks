@@ -191,5 +191,31 @@
     "otherAria": "Autre catégorie",
     "otherPlaceholder": "Nom…",
     "add": "OK"
+  },
+  "categories": {
+    "burger": "Burger",
+    "mexican": "Mexicain",
+    "bakery": "Boulangerie",
+    "pastry": "Pâtisserie",
+    "ice_cream": "Glacier",
+    "coffee_shop": "Café",
+    "brunch": "Brunch",
+    "african": "Africain",
+    "vegetarian": "Végétarien",
+    "italian": "Italien",
+    "pizza": "Pizza",
+    "greek": "Grec",
+    "lebanese": "Libanais",
+    "spanish": "Espagnol",
+    "kebab": "Kebab",
+    "french": "Français",
+    "crepe": "Crêperie",
+    "japanese": "Japonais",
+    "chinese": "Chinois",
+    "korean": "Coréen",
+    "thai": "Thaï",
+    "vietnamese": "Vietnamien",
+    "indian": "Indien",
+    "bar": "Bar"
   }
 }
