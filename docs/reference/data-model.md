@@ -28,7 +28,7 @@ name                          required
 lat, lng                      number | null  (null while a short link resolves)
 address?                      reverse-geocoded from coordinates
 mapsUrl?                       the pasted Google Maps link
-cuisine?                       stored when given; filtering is a later layer
+cuisine?                       a curated key (an OpenStreetMap value: french, bakery…) or free text
 note?                          free text (e.g. why you saved a to-try place)
 pending                       provisional record awaiting coordinate resolution
 latestVerdict, latestVisitDate, visitCount   denormalized rollup (local-derived)

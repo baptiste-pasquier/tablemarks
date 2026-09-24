@@ -4,7 +4,7 @@ Save your favorite and to-try restaurants on a map. Tablemarks is **local-first*
 
 - Paste a Google Maps link (or search by name) to add a place in seconds
 - Track visits with a simple returnability verdict — _Go back · Worth a detour · Once was enough · Never again_
-- Filter by cuisine and status, all on a map
+- Filter by category (cuisine, bakery, bar…) and status, all on a map
 - Your data lives in your browser; the cloud is an optional mirror
 
 ## Try it

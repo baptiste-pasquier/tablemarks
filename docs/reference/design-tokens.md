@@ -132,22 +132,28 @@ sets the cuisine's name in the pill text color straight on the white card, and
 
 ### Rules
 
-- **Curated hues sit 32 degrees apart.** A thirteenth curated cuisine does not get a spare
-  angle — it gets a re-spaced wheel, or it goes in the fallback set.
-- **Café is the one entry off the wheel**: hue 60 at chroma 0.5, so it reads brown rather than
-  a second amber.
-- **A free-text cuisine hashes into `CUSTOM_TONES`**, 22 tones whose hues sit at the midpoints
-  of the curated pairs. No fallback hue equals a curated hue.
+- **A category's color says its family.** Each family owns a base hue. Member `i` of a family,
+  in the order of `src/features/facets/cuisineCatalog.ts`, takes the hue
+  `base + [0, −12, +12][i mod 3]`, at chroma 1 for the first three and 0.5 after. Members look
+  alike on purpose; the emoji tells them apart.
+- **A new curated category joins a family**, it does not get a hue of its own. A seventh member
+  would repeat a tone, so a family that full gets split instead.
+- **A free-text category hashes into `CUSTOM_TONES`**, 16 tones on the midpoints of the gaps
+  between family bands. No fallback hue sits within 10 degrees of a curated hue.
 - **Uncategorized is achromatic**, not a gray hex.
 
-| Cuisine | Hue | Cuisine    | Hue             |
-| ------- | --- | ---------- | --------------- |
-| Pizza   | 25  | Vietnamese | 217             |
-| Indian  | 57  | French     | 249             |
-| Burger  | 89  | Thai       | 281             |
-| Mexican | 121 | Japanese   | 313             |
-| Italian | 153 | Chinese    | 345             |
-| Korean  | 185 | Café       | 60 (chroma 0.5) |
+| Family        | Base hue | Members, in order                                   |
+| ------------- | -------- | --------------------------------------------------- |
+| Americas      | 25       | Burger, Mexican                                     |
+| Sweet         | 70       | Bakery, Pastry, Ice cream, Café, Brunch             |
+| Africa        | 110      | African                                             |
+| Vegetarian    | 140      | Vegetarian                                          |
+| Mediterranean | 175      | Italian, Pizza, Greek, Lebanese, Spanish, Kebab     |
+| France        | 245      | French, Crêperie                                    |
+| Asia          | 290      | Japanese, Chinese, Korean, Thai, Vietnamese, Indian |
+| Bar           | 335      | Bar                                                 |
+
+Fallback hues: 47, 96, 125, 151, 210, 267, 318, 354.
 
 ## Icons
 

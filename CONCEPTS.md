@@ -46,7 +46,11 @@ An orthogonal dimension a Restaurant can be filtered by. The facets are Cuisine,
 
 ### Cuisine
 
-A Restaurant's single optional cuisine label (e.g. burger, French, Indian) — drawn from a curated set or typed freely. Each cuisine maps to one color used for both its map marker and its filter chip; a Restaurant with no cuisine is "uncategorized."
+A Restaurant's single optional category, labelled "Category" in the interface: a cuisine
+(French, Indian) or a kind of place (bakery, bar). A curated category is stored as its
+OpenStreetMap key and shown in the reader's language; a free-typed one is stored as typed. Each
+category maps to one color, shared by its map marker and its filter chip, and curated categories
+of one family share a hue; a Restaurant with no category is "uncategorized."
 
 ## Time
 
