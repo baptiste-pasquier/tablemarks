@@ -3,7 +3,8 @@ import { MapPin } from 'lucide-react'
 import type { MapMarker } from './markers'
 import { StatusBadge } from '../StatusBadge'
 import { badgeState } from '../display'
-import { cuisineDisplayName, cuisinePillTokens, emojiForCuisine } from '../facets/cuisines'
+import { cuisinePillTokens, emojiForCuisine } from '../facets/cuisines'
+import { cuisineLabel } from '../facets/cuisineCatalog'
 import type { GeoPoint } from '../../lib/geolocate'
 import { distanceLabelFor } from '../../lib/geo'
 import { translateVisitsCount } from '../../types/models'
@@ -48,7 +49,7 @@ export function MarkerTooltipContent({
           className="min-w-0 truncate font-semibold"
           style={{ color: cuisinePillTokens(marker.cuisine).color }}
         >
-          {cuisineDisplayName(marker.cuisine, t('common.uncategorized'))}
+          {cuisineLabel(marker.cuisine, t)}
         </span>
         {visited && (
           <>

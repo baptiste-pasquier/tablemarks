@@ -2,12 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { MapPin } from 'lucide-react'
 import { StatusBadge } from './StatusBadge'
 import { badgeState } from './display'
-import {
-  cuisineAvatarBackground,
-  cuisineDisplayName,
-  cuisinePillTokens,
-  emojiForCuisine,
-} from './facets/cuisines'
+import { cuisineAvatarBackground, cuisinePillTokens, emojiForCuisine } from './facets/cuisines'
+import { cuisineLabel } from './facets/cuisineCatalog'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
 import { distanceLabelFor } from '../lib/geo'
@@ -80,7 +76,7 @@ export function RestaurantList({
                       className="min-w-0 truncate font-semibold"
                       style={{ color: cuisinePillTokens(r.cuisine).color }}
                     >
-                      {cuisineDisplayName(r.cuisine, t('common.uncategorized'))}
+                      {cuisineLabel(r.cuisine, t)}
                     </span>
                     {visited && (
                       <>

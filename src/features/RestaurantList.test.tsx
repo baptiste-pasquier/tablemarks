@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { RestaurantList } from './RestaurantList'
+import { mockI18n } from '../test/setup'
 import { VERDICTS, translateVerdict, type Restaurant } from '../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'name'>): Restaurant {
@@ -259,5 +260,23 @@ describe('RestaurantList', () => {
       fireEvent.blur(card)
       fireEvent.click(card)
     }).not.toThrow()
+  })
+
+  it('names a curated category in the display language, legacy values included', async () => {
+    await act(async () => {
+      await mockI18n.changeLanguage('fr')
+    })
+    render(
+      <RestaurantList
+        items={[
+          r({ id: 'a', name: 'Maison', cuisine: 'bakery' }),
+          r({ id: 'b', name: 'Bouillon', cuisine: 'French' }),
+          r({ id: 'c', name: 'Anahuacalli', cuisine: 'Tex-Mex' }),
+        ]}
+      />,
+    )
+    expect(screen.getByText('Boulangerie')).toBeInTheDocument()
+    expect(screen.getByText('Français')).toBeInTheDocument()
+    expect(screen.getByText('Tex-Mex')).toBeInTheDocument()
   })
 })

@@ -1,12 +1,8 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Check, Plus } from 'lucide-react'
-import {
-  cuisineAvatarBackground,
-  cuisineDisplayName,
-  cuisinePillTokens,
-  emojiForCuisine,
-} from './cuisines'
+import { cuisineAvatarBackground, cuisinePillTokens, emojiForCuisine } from './cuisines'
+import { cuisineLabel } from './cuisineCatalog'
 import { Button } from '../ui/Button'
 import { ToggleChip } from '../ui/ToggleChip'
 import { cn } from '../../lib/cn'
@@ -36,7 +32,7 @@ export function CuisinePicker({
   const triggerRef = useRef<HTMLButtonElement>(null)
   const groupRef = useRef<HTMLDivElement>(null)
   const chosen = value?.trim() || undefined
-  const name = cuisineDisplayName(chosen, t('common.uncategorized'))
+  const name = cuisineLabel(chosen, t)
 
   function pick(next: string | undefined) {
     onChange(next)
