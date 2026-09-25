@@ -64,13 +64,16 @@ export type ResolvedCuisine =
   | { kind: 'custom'; key: string; label: string }
 
 /**
- * The comparison form of a typed name: no accents, underscores as spaces, single spaces, trimmed,
- * lowercase — so "Coffee shop" meets the key `coffee_shop`.
+ * The comparison form of a typed name: no Latin accents, underscores as spaces, single spaces,
+ * trimmed, lowercase — so "Coffee shop" meets the key `coffee_shop`. Only the combining
+ * diacritics block (U+0300–U+036F) is stripped: in other scripts a mark changes the word (パン is
+ * bread, ハン is not), so those are recomposed intact.
  */
 export function normalizeCuisineText(text: string): string {
   return text
     .normalize('NFD')
-    .replace(/\p{M}/gu, '')
+    .replace(/[\u0300-\u036f]/g, '')
+    .normalize('NFC')
     .replace(/[\s_]+/g, ' ')
     .trim()
     .toLowerCase()
@@ -91,13 +94,28 @@ function buildAliases(): ReadonlyMap<string, CatalogEntry> {
 
 const ALIASES = buildAliases()
 
-/** The one reader of a stored cuisine. Tone, emoji, label, filter key and ranking all go through it. */
-export function resolveCuisine(value: string | null | undefined): ResolvedCuisine | null {
-  const label = value?.trim()
-  if (!label) return null
+// A list tile, a marker and a chip each resolve their value several times per render, and the
+// distinct stored values are few, so each is normalized once.
+const RESOLVED = new Map<string, ResolvedCuisine | null>()
+
+function resolveUncached(value: string): ResolvedCuisine | null {
+  const label = value.trim()
   const key = normalizeCuisineText(label)
+  // A value made only of spaces or underscores names nothing: it reads as uncategorized.
+  if (!key) return null
   const entry = ALIASES.get(key)
   return entry ? { kind: 'curated', key: entry.key, entry } : { kind: 'custom', key, label }
+}
+
+/** The one reader of a stored cuisine. Tone, emoji, label, filter key and ranking all go through it. */
+export function resolveCuisine(value: string | null | undefined): ResolvedCuisine | null {
+  if (!value) return null
+  let resolved = RESOLVED.get(value)
+  if (resolved === undefined) {
+    resolved = resolveUncached(value)
+    RESOLVED.set(value, resolved)
+  }
+  return resolved
 }
 
 /** What a typed name is saved as: its curated key when it names one, else the trimmed text. */

@@ -110,6 +110,17 @@ describe('resolveCuisine', () => {
     expect(resolveCuisine('ETHIOPIEN')?.key).toBe('ethiopien')
   })
 
+  it('folds only Latin accents, so marks that change a word in another script keep it apart', () => {
+    expect(resolveCuisine('パン')?.key).toBe('パン')
+    expect(resolveCuisine('パン')?.key).not.toBe(resolveCuisine('ハン')?.key)
+    expect(resolveCuisine('हिंदी')?.key).toBe('हिंदी')
+  })
+
+  it('resolves a repeated value once, returning the same result', () => {
+    expect(resolveCuisine('Tex-Mex')).toBe(resolveCuisine('Tex-Mex'))
+    expect(resolveCuisine('French')).toBe(resolveCuisine('French'))
+  })
+
   it('does not treat Object.prototype members as curated', () => {
     for (const name of ['constructor', '__proto__', 'hasOwnProperty']) {
       expect(resolveCuisine(name)?.kind).toBe('custom')
@@ -121,6 +132,11 @@ describe('resolveCuisine', () => {
     expect(resolveCuisine(null)).toBeNull()
     expect(resolveCuisine('')).toBeNull()
     expect(resolveCuisine('   ')).toBeNull()
+  })
+
+  it('returns null for a value that normalizes to nothing', () => {
+    expect(resolveCuisine('_')).toBeNull()
+    expect(resolveCuisine(' __ ')).toBeNull()
   })
 })
 
@@ -134,6 +150,7 @@ describe('storedCuisine', () => {
   it('stores a custom name trimmed, as typed, and nothing for a blank one', () => {
     expect(storedCuisine('  Tex-Mex ')).toBe('Tex-Mex')
     expect(storedCuisine('   ')).toBeUndefined()
+    expect(storedCuisine('_')).toBeUndefined()
   })
 })
 
