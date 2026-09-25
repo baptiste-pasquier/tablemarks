@@ -14,7 +14,7 @@ const PICKER_ROW_SIZE = 8
  * Picks a place's category: closed, it reads the way the list tile does — the avatar and the name
  * in its own color, in the reader's language — with no "Cuisine" label, since a category may as
  * well be a bar or a bakery. Open, every option is a pastel pill ranked by use — the top eight,
- * the current one always among them, then "Show all" — and one tap picks and closes, picking the
+ * the current one always among them, then "+N more" — and one tap picks and closes, picking the
  * chosen one again clears it, and "Other…" takes a free-typed name (saved as a curated key when it
  * names one, in either language) — kept when focus leaves the field, so a name typed without OK
  * is not lost. Saving is the caller's: the detail modal writes on every pick, the add form holds
@@ -166,7 +166,7 @@ export function CuisinePicker({
             >
               {expanded
                 ? t('cuisinePicker.showLess')
-                : t('cuisinePicker.showAll', { count: overflow.length })}
+                : t('cuisinePicker.showMore', { count: overflow.length })}
             </Button>
           )}
           {typing ? (

@@ -105,7 +105,7 @@ describe('RestaurantDetail', () => {
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
-    await user.click(screen.getByRole('button', { name: /Show all/ }))
+    await user.click(screen.getByRole('button', { name: /^\+\d+ more$/ }))
     await user.click(screen.getByRole('button', { name: /French/ }))
 
     await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('french'))
@@ -130,7 +130,7 @@ describe('RestaurantDetail', () => {
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
-    await user.click(screen.getByRole('button', { name: /Show all/ }))
+    await user.click(screen.getByRole('button', { name: /^\+\d+ more$/ }))
     await user.click(screen.getByRole('button', { name: /French/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')

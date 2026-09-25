@@ -191,7 +191,7 @@
     "otherAria": "Other category",
     "otherPlaceholder": "Name…",
     "add": "OK",
-    "showAll": "Show all ({{count}})",
+    "showMore": "+{{count}} more",
     "showLess": "Show less"
   },
   "categories": {

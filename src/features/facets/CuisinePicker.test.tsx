@@ -176,21 +176,21 @@ describe('CuisinePicker', () => {
     expect(screen.getByText(long)).toHaveClass('truncate', 'min-w-0')
     expect(screen.getByRole('button', { name: new RegExp(long) })).toHaveClass('max-w-full')
   })
-  it('opens on the top 8, reveals the rest behind "Show all", and folds back on close', async () => {
+  it('opens on the top 8, reveals the rest behind "+N more", and folds back on close', async () => {
     const user = userEvent.setup()
     render(<CuisinePicker value={undefined} options={TWELVE} onChange={vi.fn()} />)
     const trigger = screen.getByRole('button', { name: 'Category: Uncategorized' })
 
     await user.click(trigger)
     expect(pills()).toHaveLength(8)
-    const showAll = screen.getByRole('button', { name: 'Show all (4)' })
-    expect(showAll).toHaveAttribute('aria-expanded', 'false')
-    expect(showAll).toHaveAttribute(
+    const showMore = screen.getByRole('button', { name: '+4 more' })
+    expect(showMore).toHaveAttribute('aria-expanded', 'false')
+    expect(showMore).toHaveAttribute(
       'aria-controls',
       screen.getByRole('group', { name: 'Categories' }).id,
     )
 
-    await user.click(showAll)
+    await user.click(showMore)
     expect(pills()).toHaveLength(12)
     expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute(
       'aria-expanded',
