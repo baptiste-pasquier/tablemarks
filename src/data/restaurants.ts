@@ -1,7 +1,7 @@
 import { getDB } from './db'
 import { newId, now } from './ids'
 import { emitLocalChange, emitStoreChange } from './events'
-import type { Restaurant } from '../types/models'
+import type { OsmSnapshot, Restaurant } from '../types/models'
 
 export interface RestaurantInput {
   id?: string
@@ -12,13 +12,17 @@ export interface RestaurantInput {
   mapsUrl?: string
   cuisine?: string
   note?: string
+  osm?: OsmSnapshot
   /** Provisional record awaiting coordinate resolution. */
   pending?: boolean
 }
 
 /** Content fields a user can edit (excludes sync + derived rollup fields). */
 export type RestaurantPatch = Partial<
-  Pick<Restaurant, 'name' | 'lat' | 'lng' | 'address' | 'mapsUrl' | 'cuisine' | 'note' | 'pending'>
+  Pick<
+    Restaurant,
+    'name' | 'lat' | 'lng' | 'address' | 'mapsUrl' | 'cuisine' | 'note' | 'osm' | 'pending'
+  >
 >
 
 export async function createRestaurant(input: RestaurantInput): Promise<Restaurant> {
@@ -31,6 +35,7 @@ export async function createRestaurant(input: RestaurantInput): Promise<Restaura
     mapsUrl: input.mapsUrl,
     cuisine: input.cuisine,
     note: input.note,
+    osm: input.osm,
     pending: input.pending ?? false,
     latestVerdict: null,
     latestVisitDate: null,

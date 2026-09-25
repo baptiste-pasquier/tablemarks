@@ -102,4 +102,30 @@ describe('mappers', () => {
     const back = visitFromRemote(remote)
     expect(back.updated).toBe('')
   })
+
+  const osm = {
+    type: 'node',
+    id: 3602657896,
+    checkedAt: '2026-09-19T10:00:00.000Z',
+    street: '80 Rue de Charonne',
+    postcode: '75011',
+    city: 'Paris',
+    openingHours: 'Mo 19:00-22:30; Tu-Fr 12:15-14:00,19:00-22:30',
+  } as const
+
+  it('round-trips the OSM snapshot', () => {
+    const remote = restaurantToRemote({ ...restaurant, osm }, 'user1')
+    expect(remote.osm).toEqual(osm)
+    expect(restaurantFromRemote(remote).osm).toEqual(osm)
+  })
+
+  it('reads an empty remote JSON field (null) as no snapshot', () => {
+    const remote = { ...restaurantToRemote(restaurant, 'user1'), osm: null }
+    expect(restaurantFromRemote(remote).osm).toBeUndefined()
+  })
+
+  it('drops a malformed remote snapshot instead of trusting it', () => {
+    const remote = { ...restaurantToRemote(restaurant, 'user1'), osm: { type: 'area', id: 'x' } }
+    expect(restaurantFromRemote(remote).osm).toBeUndefined()
+  })
 })

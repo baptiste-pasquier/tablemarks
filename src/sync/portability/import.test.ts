@@ -341,6 +341,33 @@ describe('parseImport', () => {
     expect(res.ok).toBe(false)
   })
 
+  function withOsm(osm: unknown): string {
+    const base = JSON.parse(envelope()) as { records: { restaurants: Record<string, unknown>[] } }
+    base.records.restaurants[0].osm = osm
+    return JSON.stringify(base)
+  }
+
+  it('keeps a well-formed OSM snapshot, known keys only', () => {
+    const res = parseImport(
+      withOsm({ type: 'way', id: 42, checkedAt: '2026-09-19T10:00:00Z', city: 'Lyon', extra: 1 }),
+    )
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.records.restaurants[0].osm).toEqual({
+      type: 'way',
+      id: 42,
+      checkedAt: '2026-09-19T10:00:00Z',
+      city: 'Lyon',
+    })
+  })
+
+  it('rejects a restaurant whose OSM snapshot is malformed', () => {
+    expect(parseImport(withOsm({ type: 'node', id: 1.5, checkedAt: 'x' })).ok).toBe(false)
+    expect(parseImport(withOsm({ type: 'node', id: 1, checkedAt: '2026-01-01', city: 3 })).ok).toBe(
+      false,
+    )
+  })
+
   it('rejects a restaurant whose latestVisitDate is a full instant instead of a local day (R6)', () => {
     const res = parseImport(
       envelope({

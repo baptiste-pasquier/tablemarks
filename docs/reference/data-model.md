@@ -30,11 +30,21 @@ address?                      reverse-geocoded from coordinates
 mapsUrl?                       the pasted Google Maps link
 cuisine?                       a curated key (an OpenStreetMap value: french, bakery…) or free text
 note?                          free text (e.g. why you saved a to-try place)
+osm?                           read-only OpenStreetMap snapshot (below), replaced whole on refresh
 pending                       provisional record awaiting coordinate resolution
 latestVerdict, latestVisitDate, visitCount   denormalized rollup (local-derived)
 ```
 
 **Status is derived, never stored:** zero visits ⇒ _to-try_, one or more ⇒ _visited_ (`statusOf`).
+
+### OSM snapshot
+
+`osm` holds `type` (`node` | `way` | `relation`), `id`, `checkedAt` (ISO instant) and, when OSM has
+them, `street`, `postcode`, `city`, `suburb`, `quarter`, `openingHours` (the raw tag), `phone` and
+`website`. It is written only by capture, "Complete from OpenStreetMap" and "Refresh", never
+edited, and always replaced whole. The short zone ("Paris 11e"), the compact address and the open
+state are derived from it at render. It is one PocketBase `json` field; an empty field reads as
+absent, a malformed one as absent on sync and as a rejected file on import.
 
 ## Visit
 
@@ -83,5 +93,7 @@ The IndexedDB model and the PocketBase schema differ in three places; `src/sync/
 | `updated`                  | `syncedAt`              | PocketBase reserves `updated` as a system autodate field it overwrites on save.   |
 | `restaurantId` (on visits) | `restaurant` (relation) | PocketBase models the link as a relation.                                         |
 | —                          | `owner`                 | Set on push to the signed-in user; absent locally (no-account mode has no owner). |
+
+`osm` passes through unchanged as a `json` field on both sides.
 
 Verdict strings coming back from PocketBase are runtime-validated against the known set before use, guarding against drift or manual edits. Full backend schema and collection rules are in [pocketbase/README.md](../../pocketbase/README.md).

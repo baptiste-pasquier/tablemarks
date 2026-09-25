@@ -1,5 +1,11 @@
 import { normalizeInstant } from '../lib/dates'
-import { VERDICTS, type Restaurant, type Verdict, type Visit } from '../types/models'
+import {
+  readOsmSnapshot,
+  VERDICTS,
+  type Restaurant,
+  type Verdict,
+  type Visit,
+} from '../types/models'
 
 /** Coerce a remote string to a known Verdict, guarding against corrupt/drifted remote data. */
 function asVerdict(value: string | null | undefined): Verdict | null {
@@ -22,6 +28,8 @@ export interface RemoteRestaurant {
   cuisine?: string
   note?: string
   added?: string
+  /** PocketBase `json` field: an empty one comes back as null. */
+  osm?: unknown
   pending: boolean
   latestVerdict: string | null
   latestVisitDate: string | null
@@ -53,6 +61,7 @@ export function restaurantToRemote(r: Restaurant, owner: string): RemoteRestaura
     cuisine: r.cuisine,
     note: r.note,
     added: r.added,
+    osm: r.osm,
     pending: r.pending,
     latestVerdict: r.latestVerdict,
     latestVisitDate: r.latestVisitDate,
@@ -73,6 +82,8 @@ export function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
     cuisine: r.cuisine,
     note: r.note,
     added: r.added ? normalizeInstant(r.added) : r.added,
+    // A malformed row is treated as unmatched, like a drifted verdict is coerced (`asVerdict`).
+    osm: readOsmSnapshot(r.osm) ?? undefined,
     pending: r.pending,
     latestVerdict: asVerdict(r.latestVerdict),
     latestVisitDate: r.latestVisitDate,
