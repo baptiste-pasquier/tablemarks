@@ -65,14 +65,14 @@ export type ResolvedCuisine =
 
 /**
  * The comparison form of a typed name: no Latin accents, underscores as spaces, single spaces,
- * trimmed, lowercase — so "Coffee shop" meets the key `coffee_shop`. Only the combining
- * diacritics block (U+0300–U+036F) is stripped: in other scripts a mark changes the word (パン is
- * bread, ハン is not), so those are recomposed intact.
+ * trimmed, lowercase — so "Coffee shop" meets the key `coffee_shop`. A mark is stripped only
+ * from a Latin letter: in other scripts it changes the word (パン is bread, ハン is not; й is not
+ * и), so those are recomposed intact.
  */
 export function normalizeCuisineText(text: string): string {
   return text
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/(\p{Script=Latin})\p{M}+/gu, '$1')
     .normalize('NFC')
     .replace(/[\s_]+/g, ' ')
     .trim()
@@ -120,7 +120,8 @@ export function resolveCuisine(value: string | null | undefined): ResolvedCuisin
 
 /** What a typed name is saved as: its curated key when it names one, else the trimmed text. */
 export function storedCuisine(text: string): string | undefined {
-  const resolved = resolveCuisine(text)
+  // Uncached: a draft typed into "Other…" is seen once, and must not grow the stored-value cache.
+  const resolved = resolveUncached(text)
   if (!resolved) return undefined
   return resolved.kind === 'curated' ? resolved.key : resolved.label
 }

@@ -69,6 +69,12 @@ describe('FilterBar', () => {
     expect(screen.getByRole('button', { name: 'Uncategorized' })).toBeInTheDocument()
   })
 
+  it('counts a category that names nothing ("_") as uncategorized, so its place stays reachable', () => {
+    const places = [r({ id: 'a', cuisine: 'thai' }), r({ id: 'b', cuisine: '_' })]
+    render(<FilterBar restaurants={places} filter={emptyFilter()} onChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Uncategorized' })).toBeInTheDocument()
+  })
+
   it('marks the active selection as pressed and clears all filters', async () => {
     const onChange = vi.fn()
     const filter = { ...emptyFilter(), cuisines: new Set(['thai']) }

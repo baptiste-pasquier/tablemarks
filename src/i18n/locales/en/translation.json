@@ -190,9 +190,7 @@
     "other": "Other…",
     "otherAria": "Other category",
     "otherPlaceholder": "Name…",
-    "add": "OK",
-    "showMore": "+{{count}} more",
-    "showLess": "Show less"
+    "add": "OK"
   },
   "categories": {
     "burger": "Burger",

@@ -21,8 +21,9 @@ export function useCuisinePicker(
   const [custom, setCustom] = useState('')
   const triggerRef = useRef<HTMLButtonElement>(null)
   const groupRef = useRef<HTMLDivElement>(null)
-  const chosen = value?.trim() || undefined
-  const chosenKey = resolveCuisine(chosen)?.key
+  // A value that names nothing ("_") reads as no choice, the same as the catalog reads it.
+  const chosenKey = resolveCuisine(value)?.key
+  const chosen = chosenKey ? value?.trim() : undefined
   // Not memoized: a few dozen options split in a blink, and a `useMemo` here fails
   // `react-hooks/preserve-manual-memoization` (the compiler cannot prove `chosenKey` stable).
   const { visible, overflow } = splitRows(

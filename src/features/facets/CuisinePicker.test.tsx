@@ -60,6 +60,13 @@ describe('CuisinePicker', () => {
     expect(within(trigger).getByText('Choose')).toBeInTheDocument()
   })
 
+  it('reads a category that names nothing ("__") as uncategorized, not as a choice', () => {
+    render(<CuisinePicker value="__" options={OPTIONS} onChange={vi.fn()} />)
+
+    const trigger = screen.getByRole('button', { name: 'Category: Uncategorized' })
+    expect(within(trigger).getByText('Choose')).toBeInTheDocument()
+  })
+
   it('opens onto every option, the chosen one pressed, and reports a pick then closes', async () => {
     const onChange = vi.fn()
     const user = userEvent.setup()
@@ -192,7 +199,7 @@ describe('CuisinePicker', () => {
 
     await user.click(showMore)
     expect(pills()).toHaveLength(12)
-    expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute(
       'aria-expanded',
       'true',
     )

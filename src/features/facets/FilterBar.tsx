@@ -9,6 +9,7 @@ import {
 } from '../../types/models'
 import { STATUS_CHIP_CLASS, STATUS_ICON, VERDICT_BADGE_CLASS, VERDICT_ICON } from '../display'
 import { colorForCuisine, emojiForCuisine } from './cuisines'
+import { resolveCuisine } from './cuisineCatalog'
 import { splitRows } from './cuisineRanking'
 import { useRankedCuisines } from './useRankedCuisines'
 import { emptyFilter, isEmptyFilter, withToggled, UNCATEGORIZED, type FacetFilter } from './filter'
@@ -79,7 +80,10 @@ export function FilterBar({
   const cuisineGroupId = useId()
   const [expanded, setExpanded] = useState(false)
   const ranked = useRankedCuisines(restaurants, false)
-  const hasUncategorized = useMemo(() => restaurants.some((r) => !r.cuisine?.trim()), [restaurants])
+  const hasUncategorized = useMemo(
+    () => restaurants.some((r) => !resolveCuisine(r.cuisine)),
+    [restaurants],
+  )
   const { visible, overflow } = useMemo(
     () => splitRows(ranked, filter.cuisines, DEFAULT_CUISINE_ROW_SIZE),
     [ranked, filter.cuisines],

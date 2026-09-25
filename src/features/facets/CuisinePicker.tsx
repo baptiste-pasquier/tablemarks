@@ -133,9 +133,7 @@ export function CuisinePicker({
               aria-controls={optionsId}
               onClick={toggleExpanded}
             >
-              {expanded
-                ? t('cuisinePicker.showLess')
-                : t('cuisinePicker.showMore', { count: hiddenCount })}
+              {expanded ? t('filters.collapse') : t('filters.showMore', { count: hiddenCount })}
             </Button>
           )}
           {typing ? (

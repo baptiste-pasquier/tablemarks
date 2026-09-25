@@ -114,6 +114,8 @@ describe('resolveCuisine', () => {
     expect(resolveCuisine('パン')?.key).toBe('パン')
     expect(resolveCuisine('パン')?.key).not.toBe(resolveCuisine('ハン')?.key)
     expect(resolveCuisine('हिंदी')?.key).toBe('हिंदी')
+    expect(resolveCuisine('Мой')?.key).toBe('мой')
+    expect(resolveCuisine('Ελληνικά')?.key).toBe('ελληνικά')
   })
 
   it('resolves a repeated value once, returning the same result', () => {
