@@ -30,6 +30,7 @@ beforeEach(async () => {
   setGeocodeProvider({
     search: async () => [],
     reverse: async () => '1 Rue de Rivoli, Paris',
+    lookup: async () => null,
   })
 })
 

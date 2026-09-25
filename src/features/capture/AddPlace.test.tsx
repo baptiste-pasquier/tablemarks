@@ -23,7 +23,11 @@ beforeEach(async () => {
   await freshDB()
   vi.mocked(resolveShortLink).mockReset()
   setBackendPresence({ status: 'configured', pocketbaseUrl: 'https://pb.example.test' })
-  setGeocodeProvider({ search: async () => [], reverse: async () => '1 Rue de Rivoli, Paris' })
+  setGeocodeProvider({
+    search: async () => [],
+    reverse: async () => '1 Rue de Rivoli, Paris',
+    lookup: async () => null,
+  })
 })
 
 async function pasteAndSubmit(text: string): Promise<void> {
@@ -228,7 +232,11 @@ describe('AddPlace', () => {
 
   describe('search failures', () => {
     it('tells an empty result set apart from a failed search, and offers the full-URL fallback', async () => {
-      setGeocodeProvider({ search: async () => [], reverse: async () => undefined })
+      setGeocodeProvider({
+        search: async () => [],
+        reverse: async () => undefined,
+        lookup: async () => null,
+      })
       const { unmount } = render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
       await pasteAndSubmit('Chez Marcel Paris')
       const empty = await screen.findByText(/no matching places found/i)
@@ -240,6 +248,7 @@ describe('AddPlace', () => {
           throw new Error('provider down')
         },
         reverse: async () => undefined,
+        lookup: async () => null,
       })
       render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
       await pasteAndSubmit('Chez Marcel Paris')
