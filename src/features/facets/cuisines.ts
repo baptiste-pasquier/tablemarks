@@ -1,12 +1,15 @@
+import { CUISINE_CATALOG, FAMILY_HUES, resolveCuisine, type CuisineKey } from './cuisineCatalog'
+
 /**
  * A cuisine's color identity is a hue, not a hex. Four rendered forms derive from it by
  * formula, so a cuisine nobody curated - one a user typed - gets the same contrast guarantees
- * as a curated one. Recipes and their measured contrast floors: docs/reference/design-tokens.md.
+ * as a curated one. Recipes, families and their measured contrast floors:
+ * docs/reference/design-tokens.md.
  */
 export interface CuisineTone {
   /** OKLCH hue angle in degrees. */
   hue: number
-  /** Chroma multiplier applied to every recipe. 1 on the wheel; 0.5 makes Café a true brown. */
+  /** Chroma multiplier applied to every recipe. 1, or 0.5 for a muted family member. */
   chroma: number
 }
 
@@ -33,57 +36,37 @@ export const UNCATEGORIZED_EMOJI = '🍽️'
 /** Generic emoji for a free-text cuisine with no curated match. */
 export const GENERIC_CUISINE_EMOJI = '🍴'
 
-/**
- * Curated cuisines. The eleven wheel entries sit 32 degrees apart so no two converge once
- * lightened into a pastel pill — the fault this replaced was three near-identical oranges and
- * three near-identical reds. Café is the one entry off the wheel: Burger's hue at half chroma.
- * The vocabulary stays open — users add their own, and those hash into CUSTOM_TONES.
- */
-export const CURATED_CUISINES: ReadonlyArray<{ name: string; hue: number; chroma: number }> = [
-  { name: 'Pizza', hue: 25, chroma: 1 },
-  { name: 'Indian', hue: 57, chroma: 1 },
-  { name: 'Burger', hue: 89, chroma: 1 },
-  { name: 'Mexican', hue: 121, chroma: 1 },
-  { name: 'Italian', hue: 153, chroma: 1 },
-  { name: 'Korean', hue: 185, chroma: 1 },
-  { name: 'Vietnamese', hue: 217, chroma: 1 },
-  { name: 'French', hue: 249, chroma: 1 },
-  { name: 'Thai', hue: 281, chroma: 1 },
-  { name: 'Japanese', hue: 313, chroma: 1 },
-  { name: 'Chinese', hue: 345, chroma: 1 },
-  { name: 'Café', hue: 60, chroma: 0.5 },
-]
+// A family's first three members sit on its base hue and 12 degrees either side; the next three
+// repeat those hues at half chroma. Color names the family, the emoji names the member.
+const MEMBER_HUE_OFFSETS = [0, -12, 12]
+const MUTED_CHROMA = 0.5
 
-const CURATED_BY_KEY = new Map<string, CuisineTone>(
-  CURATED_CUISINES.map((c) => [c.name.toLowerCase(), { hue: c.hue, chroma: c.chroma }]),
-)
+function familyTones(): ReadonlyMap<CuisineKey, CuisineTone> {
+  const tones = new Map<CuisineKey, CuisineTone>()
+  const position = new Map<string, number>()
+  for (const entry of CUISINE_CATALOG) {
+    const i = position.get(entry.family) ?? 0
+    position.set(entry.family, i + 1)
+    tones.set(entry.key, {
+      hue: FAMILY_HUES[entry.family] + MEMBER_HUE_OFFSETS[i % 3],
+      chroma: i < 3 ? 1 : MUTED_CHROMA,
+    })
+  }
+  return tones
+}
 
-// Fallback wheel for free-text cuisines, assigned by name hash. Each hue sits at the midpoint
-// of a curated pair, so a user cuisine never lands on a curated hue; the same eleven repeat at
-// half chroma to reach 22 distinct tones. Collisions past that are acceptable: the color is a
-// scannability hint, not an identifier, and the emoji carries the meaning.
-const FALLBACK_HUES = [9, 41, 73, 105, 137, 169, 201, 233, 265, 297, 329]
+/** Every curated category's tone, derived from its family and its place in the catalog. */
+export const CURATED_TONES = familyTones()
+
+// Fallback wheel for free-text categories, assigned by name hash: the midpoints of the gaps
+// between family bands, so a user category never passes for a family member, at full then half
+// chroma. Collisions past 16 are acceptable: the color is a scannability hint, not an identifier.
+const FALLBACK_HUES = [47, 96, 125, 151, 210, 267, 318, 354]
 
 export const CUSTOM_TONES: readonly CuisineTone[] = [
   ...FALLBACK_HUES.map((hue) => ({ hue, chroma: 1 })),
-  ...FALLBACK_HUES.map((hue) => ({ hue, chroma: 0.5 })),
+  ...FALLBACK_HUES.map((hue) => ({ hue, chroma: MUTED_CHROMA })),
 ]
-
-/** Curated cuisine -> representative emoji, keyed the same way as `CURATED_BY_KEY`. */
-const CUISINE_EMOJI = new Map([
-  ['burger', '🍔'],
-  ['french', '🥖'],
-  ['italian', '🍝'],
-  ['indian', '🍛'],
-  ['japanese', '🍣'],
-  ['chinese', '🥡'],
-  ['thai', '🍜'],
-  ['mexican', '🌮'],
-  ['pizza', '🍕'],
-  ['korean', '🍲'],
-  ['vietnamese', '🥢'],
-  ['café', '☕️'],
-])
 
 function hashString(s: string): number {
   let h = 0
@@ -91,17 +74,12 @@ function hashString(s: string): number {
   return Math.abs(h)
 }
 
-function normalize(cuisine: string | null | undefined): string | null {
-  const c = cuisine?.trim()
-  return c ? c : null
-}
-
-/** The one cuisine-to-tone source. Every rendered cuisine color goes through here. */
+/** The one category-to-tone source. Every rendered category color goes through here. */
 export function toneForCuisine(cuisine: string | null | undefined): CuisineTone {
-  const key = normalize(cuisine)
-  if (!key) return UNCATEGORIZED_TONE
-  const lower = key.toLowerCase()
-  return CURATED_BY_KEY.get(lower) ?? CUSTOM_TONES[hashString(lower) % CUSTOM_TONES.length]
+  const resolved = resolveCuisine(cuisine)
+  if (!resolved) return UNCATEGORIZED_TONE
+  if (resolved.kind === 'curated') return CURATED_TONES.get(resolved.key) ?? UNCATEGORIZED_TONE
+  return CUSTOM_TONES[hashString(resolved.key) % CUSTOM_TONES.length]
 }
 
 /** Solid form — map markers and filter dots. Dark enough that white text on it stays legible. */
@@ -123,30 +101,9 @@ export function cuisineAvatarBackground(cuisine: string | null | undefined): str
   return render(AVATAR_BACKGROUND, toneForCuisine(cuisine))
 }
 
-/** The one cuisine-to-emoji source, mirroring `colorForCuisine`'s normalize-then-lookup shape. */
+/** The one category-to-emoji source, resolved the same way as `toneForCuisine`. */
 export function emojiForCuisine(cuisine: string | null | undefined): string {
-  const key = normalize(cuisine)
-  if (!key) return UNCATEGORIZED_EMOJI
-  return CUISINE_EMOJI.get(key.toLowerCase()) ?? GENERIC_CUISINE_EMOJI
-}
-
-/** The one cuisine-to-display-name source: its own trimmed name, or the given uncategorized label. */
-export function cuisineDisplayName(
-  cuisine: string | null | undefined,
-  uncategorizedLabel: string,
-): string {
-  return cuisine?.trim() || uncategorizedLabel
-}
-
-/** Picker options: curated cuisines unioned with any already in use, de-duped case-insensitively, sorted. */
-export function cuisineOptions(restaurants: ReadonlyArray<{ cuisine?: string | null }>): string[] {
-  // Keyed by lowercase so 'french' and 'French' collapse to one option, keeping the
-  // curated casing (or the first-seen custom casing) as the display label.
-  const byKey = new Map<string, string>()
-  for (const c of CURATED_CUISINES) byKey.set(c.name.toLowerCase(), c.name)
-  for (const r of restaurants) {
-    const c = normalize(r.cuisine)
-    if (c && !byKey.has(c.toLowerCase())) byKey.set(c.toLowerCase(), c)
-  }
-  return [...byKey.values()].sort((a, b) => a.localeCompare(b))
+  const resolved = resolveCuisine(cuisine)
+  if (!resolved) return UNCATEGORIZED_EMOJI
+  return resolved.kind === 'curated' ? resolved.entry.emoji : GENERIC_CUISINE_EMOJI
 }

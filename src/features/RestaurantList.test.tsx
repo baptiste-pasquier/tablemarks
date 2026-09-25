@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { RestaurantList } from './RestaurantList'
+import { mockI18n } from '../test/setup'
 import { VERDICTS, translateVerdict, type Restaurant } from '../types/models'
 
 function r(over: Partial<Restaurant> & Pick<Restaurant, 'id' | 'name'>): Restaurant {
@@ -82,10 +83,10 @@ describe('RestaurantList', () => {
     expect(card).toHaveClass('bg-white', 'rounded-card', 'shadow-card')
     expect(card.getAttribute('style')).toBeNull()
 
-    // Thai is hue 281 on the wheel: the avatar takes the deeper avatar tint, decorative only.
+    // Thai is Asia's fourth member, hue 290 at half chroma: the avatar takes the deeper avatar tint, decorative only.
     const avatar = within(card).getByText('🍜')
     expect(avatar).toHaveAttribute('aria-hidden', 'true')
-    expect(avatar.getAttribute('style')).toContain('oklch(0.93 0.07 281)')
+    expect(avatar.getAttribute('style')).toContain('oklch(0.93 0.035 290)')
 
     // The name shares its line with the status badge alone ...
     const name = screen.getByText('Baan Thaï')
@@ -94,7 +95,7 @@ describe('RestaurantList', () => {
 
     // ... and the cuisine, set in its own text color, sits below with the visit count.
     const cuisine = screen.getByText('Thai')
-    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.13 281)')
+    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.065 290)')
     expect(cuisine.parentElement).toBe(screen.getByText('3 visits').parentElement)
     expect(cuisine.parentElement).not.toBe(name.parentElement)
   })
@@ -259,5 +260,23 @@ describe('RestaurantList', () => {
       fireEvent.blur(card)
       fireEvent.click(card)
     }).not.toThrow()
+  })
+
+  it('names a curated category in the display language, legacy values included', async () => {
+    await act(async () => {
+      await mockI18n.changeLanguage('fr')
+    })
+    render(
+      <RestaurantList
+        items={[
+          r({ id: 'a', name: 'Maison', cuisine: 'bakery' }),
+          r({ id: 'b', name: 'Bouillon', cuisine: 'French' }),
+          r({ id: 'c', name: 'Anahuacalli', cuisine: 'Tex-Mex' }),
+        ]}
+      />,
+    )
+    expect(screen.getByText('Boulangerie')).toBeInTheDocument()
+    expect(screen.getByText('Français')).toBeInTheDocument()
+    expect(screen.getByText('Tex-Mex')).toBeInTheDocument()
   })
 })

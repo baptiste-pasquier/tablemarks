@@ -1,3 +1,4 @@
+import { resolveCuisine } from './cuisineCatalog'
 import { statusOf, type RestaurantStatus, type Verdict } from '../../types/models'
 import type { Restaurant } from '../../types/models'
 
@@ -9,7 +10,7 @@ export const UNCATEGORIZED = '__uncategorized__'
  * An empty set imposes no constraint (matches every place on that facet).
  */
 export interface FacetFilter {
-  /** Lowercased cuisine names, plus the `UNCATEGORIZED` sentinel — stored normalized for O(1) matching. */
+  /** Category keys (see resolveCuisine), plus the UNCATEGORIZED sentinel — normalized for O(1) matching. */
   cuisines: ReadonlySet<string>
   statuses: ReadonlySet<RestaurantStatus>
   verdicts: ReadonlySet<Verdict>
@@ -28,16 +29,16 @@ export function activeFilterCount(f: FacetFilter): number {
   return f.cuisines.size + f.statuses.size + f.verdicts.size
 }
 
-/** Place's cuisine reduced to a comparison key: lowercased name, or the uncategorized sentinel. */
+/** A place's category as a filter key: its resolved key, or the uncategorized sentinel. */
 function cuisineKey(r: Pick<Restaurant, 'cuisine'>): string {
-  const c = r.cuisine?.trim()
-  return c ? c.toLowerCase() : UNCATEGORIZED
+  return resolveCuisine(r.cuisine)?.key ?? UNCATEGORIZED
 }
 
 /** Pure facet predicate: AND across facets, OR within each (empty facet = no constraint). */
 export function matches(r: Restaurant, f: FacetFilter): boolean {
-  // `cuisineKey` and the stored set are both lowercased (UNCATEGORIZED for no cuisine),
-  // so an O(1) lookup is correct and case-insensitive without per-call array allocation.
+  // `cuisineKey` and the stored set are both resolved category keys (see `resolveCuisine`;
+  // UNCATEGORIZED for no cuisine), so the lookup is O(1) and folds case, accents and translated
+  // names without per-call array allocation.
   if (f.cuisines.size > 0 && !f.cuisines.has(cuisineKey(r))) return false
   if (f.statuses.size > 0 && !f.statuses.has(statusOf(r))) return false
   if (f.verdicts.size > 0 && (!r.latestVerdict || !f.verdicts.has(r.latestVerdict))) return false

@@ -41,8 +41,8 @@ describe('MarkerTooltipContent', () => {
     render(<MarkerTooltipContent marker={marker()} currentPosition={null} />)
 
     const cuisine = screen.getByText('Japanese')
-    // Japanese is hue 313 on the wheel.
-    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.13 313)')
+    // Japanese leads the Asia family, hue 290.
+    expect(cuisine.getAttribute('style')).toContain('oklch(0.4 0.13 290)')
     expect(screen.getByText('🍣')).toHaveAttribute('aria-hidden', 'true')
     expect(cuisine.parentElement).toBe(screen.getByText('2 visits').parentElement)
   })
@@ -71,5 +71,13 @@ describe('MarkerTooltipContent', () => {
 
     expect(screen.getByText('Traditional Lyonnaise bouchon')).toHaveClass('truncate', 'min-w-0')
     expect(screen.getByText('2 visits')).toHaveClass('shrink-0', 'whitespace-nowrap')
+  })
+
+  it('names a curated category by its label, not its stored key', () => {
+    render(
+      <MarkerTooltipContent marker={marker({ cuisine: 'ice_cream' })} currentPosition={null} />,
+    )
+    expect(screen.getByText('Ice cream')).toBeInTheDocument()
+    expect(screen.queryByText('ice_cream')).not.toBeInTheDocument()
   })
 })

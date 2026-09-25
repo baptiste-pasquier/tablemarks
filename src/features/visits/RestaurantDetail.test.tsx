@@ -105,9 +105,10 @@ describe('RestaurantDetail', () => {
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: /^\+\d+ more$/ }))
     await user.click(screen.getByRole('button', { name: /French/ }))
 
-    await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('French'))
+    await waitFor(async () => expect((await getRestaurant(r.id))?.cuisine).toBe('french'))
   })
 
   it('persists a free-typed cuisine through "Other…"', async () => {
@@ -129,6 +130,7 @@ describe('RestaurantDetail', () => {
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
+    await user.click(screen.getByRole('button', { name: /^\+\d+ more$/ }))
     await user.click(screen.getByRole('button', { name: /French/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')

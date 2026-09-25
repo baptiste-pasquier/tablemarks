@@ -1,23 +1,23 @@
-import { useId, useRef, useState } from 'react'
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Check, Plus } from 'lucide-react'
-import {
-  cuisineAvatarBackground,
-  cuisineDisplayName,
-  cuisinePillTokens,
-  emojiForCuisine,
-} from './cuisines'
+import { cuisineAvatarBackground, cuisinePillTokens, emojiForCuisine } from './cuisines'
+import { cuisineLabel } from './cuisineCatalog'
+import { useCuisinePicker } from './useCuisinePicker'
+import type { RankedCuisine } from './cuisineRanking'
 import { Button } from '../ui/Button'
 import { ToggleChip } from '../ui/ToggleChip'
 import { cn } from '../../lib/cn'
 
 /**
- * Picks a place's cuisine: closed, it reads the way the list tile does — the avatar and the name
- * in its own color — with no "Cuisine" label, so a future category ("Bar", "Bakery") fits without
- * a rename. Open, every option is a pastel pill, one tap picks and closes, picking the chosen one
- * again clears it, and "Other…" takes a free-typed name — kept when focus leaves the field, so a
- * name typed without OK is not lost. Saving is the caller's: the detail modal writes on every
- * pick, the add form holds the value until it submits.
+ * Picks a place's category: closed, it reads the way the list tile does — the avatar and the name
+ * in its own color, in the reader's language — with no "Cuisine" label, since a category may as
+ * well be a bar or a bakery. Open, every option is a pastel pill ranked by use — the top eight,
+ * the current one always among them, then "+N more" — and one tap picks and closes, picking the
+ * chosen one again clears it, and "Other…" takes a free-typed name (saved as a curated key when it
+ * names one, in either language) — kept when focus leaves the field, so a name typed without OK
+ * is not lost. Saving is the caller's: the detail modal writes on every pick, the add form holds
+ * the value until it submits.
  */
 export function CuisinePicker({
   value,
@@ -25,49 +25,32 @@ export function CuisinePicker({
   onChange,
 }: {
   value: string | null | undefined
-  options: readonly string[]
+  options: readonly RankedCuisine[]
   onChange: (cuisine: string | undefined) => void
 }) {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
-  const [typing, setTyping] = useState(false)
-  const [custom, setCustom] = useState('')
   const optionsId = useId()
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const groupRef = useRef<HTMLDivElement>(null)
-  const chosen = value?.trim() || undefined
-  const name = cuisineDisplayName(chosen, t('common.uncategorized'))
-
-  function pick(next: string | undefined) {
-    onChange(next)
-    setOpen(false)
-    setTyping(false)
-    setCustom('')
-  }
-
-  function submitCustom() {
-    const next = custom.trim()
-    if (next) pick(next)
-  }
-
-  // Closing from the trigger is a cancel: the next opening starts from the options, not the draft.
-  function toggle() {
-    if (open) {
-      setTyping(false)
-      setCustom('')
-    }
-    setOpen(!open)
-  }
-
-  // Leaving the field keeps what was typed, without closing: collapsing the options under a
-  // pointer on its way to "Add" would move the button before the click lands. Focus moving to
-  // the trigger (a cancel) or within the options (a pick, OK) is left to those controls.
-  function keepDraft(to: EventTarget | null) {
-    if (to === triggerRef.current) return
-    if (to instanceof Node && groupRef.current?.contains(to)) return
-    const next = custom.trim()
-    if (next) onChange(next)
-  }
+  const {
+    open,
+    expanded,
+    typing,
+    custom,
+    chosen,
+    chosenKey,
+    shown,
+    hiddenCount,
+    triggerRef,
+    groupRef,
+    toggle,
+    pick,
+    submitCustom,
+    keepDraft,
+    setCustom,
+    startTyping,
+    stopTyping,
+    toggleExpanded,
+  } = useCuisinePicker(value, options, onChange)
+  const name = cuisineLabel(chosen, t)
 
   return (
     <div>
@@ -119,28 +102,40 @@ export function CuisinePicker({
           aria-label={t('cuisinePicker.optionsAria')}
           className="mt-2.5 flex flex-wrap gap-1.5"
         >
-          {options.map((option) => {
-            const selected = option.toLowerCase() === chosen?.toLowerCase()
-            const tokens = cuisinePillTokens(option)
+          {shown.map((option) => {
+            const selected = option.key === chosenKey
+            const tokens = cuisinePillTokens(option.value)
             return (
               <ToggleChip
-                key={option}
+                key={option.key}
                 shape="pill"
                 active={selected}
                 tint={tokens}
-                onClick={() => pick(selected ? undefined : option)}
+                onClick={() => pick(selected ? undefined : option.value)}
                 className="max-w-full"
               >
                 <span aria-hidden="true" className="shrink-0">
-                  {emojiForCuisine(option)}
+                  {emojiForCuisine(option.value)}
                 </span>
-                <span className="min-w-0 truncate">{option}</span>
+                <span className="min-w-0 truncate">{option.label}</span>
                 {selected && (
                   <Check size={14} strokeWidth={2.6} aria-hidden="true" className="shrink-0" />
                 )}
               </ToggleChip>
             )
           })}
+          {hiddenCount > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              aria-expanded={expanded}
+              aria-controls={optionsId}
+              onClick={toggleExpanded}
+            >
+              {expanded ? t('filters.collapse') : t('filters.showMore', { count: hiddenCount })}
+            </Button>
+          )}
           {typing ? (
             <span className="flex w-full items-center gap-2">
               <input
@@ -155,7 +150,7 @@ export function CuisinePicker({
                   // Cancels the typing only: without stopping it, Escape would also close the modal.
                   if (e.key === 'Escape') {
                     e.stopPropagation()
-                    setTyping(false)
+                    stopTyping()
                   }
                 }}
                 aria-label={t('cuisinePicker.otherAria')}
@@ -169,7 +164,7 @@ export function CuisinePicker({
           ) : (
             <button
               type="button"
-              onClick={() => setTyping(true)}
+              onClick={startTyping}
               className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-brand-strong ring-[1.5px] ring-brand/40 transition ring-inset hover:bg-brand-soft"
             >
               <Plus size={14} strokeWidth={2.4} aria-hidden="true" />

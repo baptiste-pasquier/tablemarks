@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Link2, MapPin } from 'lucide-react'
 import { capturePaste, captureSearchPick, type CaptureResult } from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
 import { updateRestaurant } from '../../data/restaurants'
 import { useRestaurants } from '../useRestaurants'
-import { cuisineOptions } from '../facets/cuisines'
+import { useRankedCuisines } from '../facets/useRankedCuisines'
 import { CuisinePicker } from '../facets/CuisinePicker'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
@@ -41,7 +41,7 @@ export function AddPlace({
   const [candidates, setCandidates] = useState<GeoCandidate[] | null>(null)
   const [duplicate, setDuplicate] = useState<Restaurant | null>(null)
   const restaurants = useRestaurants()
-  const options = useMemo(() => cuisineOptions(restaurants), [restaurants])
+  const options = useRankedCuisines(restaurants, true)
 
   // Exhaustive over CaptureResult: the `never` assignment makes a future variant a type error
   // here instead of silently falling through to the search branch.

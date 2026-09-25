@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { FilterBar } from './FilterBar'
@@ -69,6 +69,12 @@ describe('FilterBar', () => {
     expect(screen.getByRole('button', { name: 'Uncategorized' })).toBeInTheDocument()
   })
 
+  it('counts a category that names nothing ("_") as uncategorized, so its place stays reachable', () => {
+    const places = [r({ id: 'a', cuisine: 'thai' }), r({ id: 'b', cuisine: '_' })]
+    render(<FilterBar restaurants={places} filter={emptyFilter()} onChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Uncategorized' })).toBeInTheDocument()
+  })
+
   it('marks the active selection as pressed and clears all filters', async () => {
     const onChange = vi.fn()
     const filter = { ...emptyFilter(), cuisines: new Set(['thai']) }
@@ -92,7 +98,7 @@ describe('FilterBar', () => {
 
   it('renders the cuisine and status/verdict groups under separate labels', () => {
     render(<FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} />)
-    expect(screen.getByText('Cuisine')).toBeInTheDocument()
+    expect(screen.getByText('Category')).toBeInTheDocument()
     expect(screen.getByText('Status & verdict')).toBeInTheDocument()
   })
 
@@ -154,9 +160,9 @@ describe('FilterBar', () => {
       'bg-gray-200',
       'text-gray-700',
     )
-    // A cuisine wears the color its markers wear on the map (Thai is hue 281 on the wheel).
+    // A cuisine wears the color its markers wear on the map (Thai is Asia's fourth member, hue 290 at half chroma).
     const thai = screen.getByRole('button', { name: /Thai/ })
-    expect(thai.getAttribute('style')).toContain('oklch(0.48 0.15 281)')
+    expect(thai.getAttribute('style')).toContain('oklch(0.48 0.075 290)')
     expect(thai).toHaveClass('text-white')
     expect(thai).not.toHaveClass('bg-brand')
 
@@ -269,7 +275,7 @@ describe('FilterBar', () => {
     render(
       <FilterBar restaurants={PLACES} filter={emptyFilter()} onChange={vi.fn()} layout="inline" />,
     )
-    const cuisineGroupRow = screen.getByText('Cuisine').parentElement as HTMLElement
+    const cuisineGroupRow = screen.getByText('Category').parentElement as HTMLElement
     const statusGroupRow = screen.getByText('Status & verdict').parentElement as HTMLElement
 
     expect(cuisineGroupRow).toHaveClass('flex', 'items-center', 'gap-3')
@@ -335,5 +341,40 @@ describe('FilterBar', () => {
     rerender(<FilterBar restaurants={restaurants} filter={emptyFilter()} onChange={vi.fn()} />)
     expect(screen.queryByRole('button', { name: 'Ethiopian' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '+1 more' })).toBeInTheDocument()
+  })
+
+  it('folds legacy and translated names into one chip toggling the curated key', async () => {
+    const onChange = vi.fn()
+    const places = [
+      r({ id: 'a', cuisine: 'French' }),
+      r({ id: 'b', cuisine: 'french' }),
+      r({ id: 'c', cuisine: 'Français' }),
+    ]
+    render(<FilterBar restaurants={places} filter={emptyFilter()} onChange={onChange} />)
+
+    expect(screen.getAllByRole('button', { name: 'French' })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Français' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'French' }))
+    expect([...onChange.mock.calls[0][0].cuisines]).toEqual(['french'])
+  })
+
+  it('relabels and re-sorts the chips when the language changes', async () => {
+    const places = [r({ id: 'a', cuisine: 'greek' }), r({ id: 'b', cuisine: 'ice_cream' })]
+    const { rerender } = render(
+      <FilterBar restaurants={places} filter={emptyFilter()} onChange={vi.fn()} />,
+    )
+    const greek = screen.getByRole('button', { name: 'Greek' })
+    const iceCream = screen.getByRole('button', { name: 'Ice cream' })
+    expect(greek.compareDocumentPosition(iceCream) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await act(async () => {
+      await mockI18n.changeLanguage('fr')
+    })
+    rerender(<FilterBar restaurants={places} filter={emptyFilter()} onChange={vi.fn()} />)
+
+    expect(screen.getByText('Catégorie')).toBeInTheDocument()
+    const glacier = screen.getByRole('button', { name: 'Glacier' })
+    const grec = screen.getByRole('button', { name: 'Grec' })
+    expect(glacier.compareDocumentPosition(grec) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })

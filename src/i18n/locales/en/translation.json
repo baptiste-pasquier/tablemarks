@@ -83,7 +83,7 @@
   "filters": {
     "title": "Filter",
     "clearAll": "Clear all",
-    "cuisineGroup": "Cuisine",
+    "cuisineGroup": "Category",
     "statusVerdictGroup": "Status & verdict",
     "collapse": "Collapse",
     "showMore": "+{{count}} more",
@@ -191,5 +191,31 @@
     "otherAria": "Other category",
     "otherPlaceholder": "Name…",
     "add": "OK"
+  },
+  "categories": {
+    "burger": "Burger",
+    "mexican": "Mexican",
+    "bakery": "Bakery",
+    "pastry": "Pastry",
+    "ice_cream": "Ice cream",
+    "coffee_shop": "Café",
+    "brunch": "Brunch",
+    "african": "African",
+    "vegetarian": "Vegetarian",
+    "italian": "Italian",
+    "pizza": "Pizza",
+    "greek": "Greek",
+    "lebanese": "Lebanese",
+    "spanish": "Spanish",
+    "kebab": "Kebab",
+    "french": "French",
+    "crepe": "Crêperie",
+    "japanese": "Japanese",
+    "chinese": "Chinese",
+    "korean": "Korean",
+    "thai": "Thai",
+    "vietnamese": "Vietnamese",
+    "indian": "Indian",
+    "bar": "Bar"
   }
 }

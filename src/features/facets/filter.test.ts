@@ -73,6 +73,20 @@ describe('matches', () => {
       }),
     ).toBe(false)
   })
+
+  it('matches a legacy or translated stored name against its curated filter key', () => {
+    const filter = { ...emptyFilter(), cuisines: new Set(['french', 'crepe']) }
+    expect(matches(r({ id: 'a', cuisine: 'French' }), filter)).toBe(true)
+    expect(matches(r({ id: 'b', cuisine: 'Français' }), filter)).toBe(true)
+    expect(matches(r({ id: 'c', cuisine: 'Crêperie' }), filter)).toBe(true)
+    expect(matches(r({ id: 'd', cuisine: 'Thai' }), filter)).toBe(false)
+  })
+
+  it('matches custom names that differ only by case or accents', () => {
+    const filter = { ...emptyFilter(), cuisines: new Set(['ethiopien']) }
+    expect(matches(r({ id: 'a', cuisine: 'Éthiopien' }), filter)).toBe(true)
+    expect(matches(r({ id: 'b', cuisine: 'ETHIOPIEN' }), filter)).toBe(true)
+  })
 })
 
 describe('withToggled / isEmptyFilter', () => {
