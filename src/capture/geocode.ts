@@ -1,8 +1,16 @@
+import type { OsmSnapshot } from '../types/models'
+
 export interface GeoCandidate {
   name: string
   lat: number
   lng: number
   address?: string
+  /** The OpenStreetMap object behind this result. Absent for a row without an OSM identity. */
+  osm?: OsmSnapshot
+  /** How Nominatim classes the object, `category=type` ("amenity=restaurant", "shop=leather"). */
+  osmClass?: string
+  /** The raw `cuisine` tag ("falafel;israeli"), read by `suggestCategory`. */
+  cuisineTag?: string
 }
 
 export interface GeocodeProvider {
