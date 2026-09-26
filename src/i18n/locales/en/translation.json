@@ -181,6 +181,13 @@
       "other": "th"
     }
   },
+  "openState": {
+    "openUntil": "Open until {{time}}",
+    "openAllDay": "Open 24 hours",
+    "opensAt": "Opens at {{time}}",
+    "closedOpensAt": "Closed · opens at {{time}}",
+    "closedToday": "Closed today"
+  },
   "verdicts": {
     "go_back": "Go back",
     "worth_a_detour": "Worth a detour",

@@ -102,6 +102,13 @@ Every cuisine color is an `oklch()` value, so the palette needs a browser that p
 (Baseline since mid-2023). An older engine drops the declaration and renders the badge
 unstyled rather than mis-tinted.
 
+## Open state
+
+The open/closed line on cards, previews and the detail (`features/places/OpenStateText.tsx`)
+uses Tailwind's palette, not a brand token: `emerald-700` text on an `emerald-500` dot for open,
+`amber-700` / `amber-500` for opening within two hours, `gray-600` / `gray-400` otherwise. The
+dot is decorative; the words carry the state.
+
 ## Shape
 
 | Token               | Value                                                             |
