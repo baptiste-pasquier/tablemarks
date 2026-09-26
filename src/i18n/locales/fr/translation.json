@@ -46,7 +46,17 @@
     "shortLinkTryFullUrl": "Ou collez le lien Google Maps complet depuis la barre d'adresse de votre navigateur — le lien long qui contient les coordonnées.",
     "alreadySaved": "est déjà enregistré.",
     "openIt": "Ouvrir",
-    "whichOne": "Lequel ?"
+    "whichOne": "Lequel ?",
+    "search": "Rechercher",
+    "suggestedByOsm": "Suggérée par OpenStreetMap",
+    "otherResults_one": "{{count}} autre résultat",
+    "otherResults_other": "{{count}} autres résultats",
+    "noEateryMatches": "Aucun restaurant, café ou bar trouvé sous ce nom. Ajoute la ville, ou colle le lien Google Maps.",
+    "foundOnOsm": "Trouvé sur OpenStreetMap",
+    "notThisOne": "Ce n'est pas lui",
+    "noOsmData": "Pas d'infos OpenStreetMap",
+    "osmUnavailable": "OpenStreetMap indisponible — à compléter plus tard depuis la fiche",
+    "resolvedLater": "Position résolue plus tard"
   },
   "decide": {
     "title": "Où manger ?",
