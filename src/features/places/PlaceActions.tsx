@@ -30,9 +30,12 @@ export function PlaceActions({ restaurant }: { restaurant: Restaurant }) {
       ? googleMapsSearchUrl(destination)
       : undefined
   const goToHref = destination ? googleMapsDirectionsUrl(destination) : undefined
-  const phone = restaurant.osm?.phone
+  // OSM separates several values with `;` (never `,`, which some phone formats use); keep the
+  // first, defensively, in case a snapshot stored before that split existed still has more than
+  // one.
+  const phone = restaurant.osm?.phone?.split(';')[0]?.trim()
   // Only an http(s) website becomes a link, like `mapsUrl`: a tag is free text.
-  const rawWebsite = restaurant.osm?.website
+  const rawWebsite = restaurant.osm?.website?.split(';')[0]?.trim()
   const website = isHttpUrl(rawWebsite) ? rawWebsite : undefined
   if (!mapsHref && !goToHref && !phone && !website) return null
   return (

@@ -70,6 +70,14 @@ describe('candidateFrom', () => {
     expect(c.osm).not.toHaveProperty('street')
   })
 
+  it('keeps only the first of several `;`-separated phone or website values', () => {
+    const c = candidateFrom(
+      { ...SEPTIME, extratags: { phone: 'a;b', website: 'https://a.fr;https://b.fr' } },
+      CHECKED,
+    )
+    expect(c.osm).toMatchObject({ phone: 'a', website: 'https://a.fr' })
+  })
+
   it('has no snapshot and no class for a row without an OSM identity', () => {
     const c = candidateFrom({ display_name: 'Chez Marcel, Paris', lat: '1', lon: '2' }, CHECKED)
     expect(c).toEqual({ name: 'Chez Marcel', lat: 1, lng: 2, address: 'Chez Marcel, Paris' })

@@ -41,6 +41,11 @@ function compact<T extends object>(o: T): T {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T
 }
 
+/** OSM separates multiple values with `;` (never `,`, which some phone formats use); keep the first. */
+function firstValue(value: string | undefined): string | undefined {
+  return value?.split(';')[0].trim()
+}
+
 function snapshotFrom(row: NominatimRow, checkedAt: string): OsmSnapshot | undefined {
   const type = asOsmType(row.osm_type)
   if (!type || row.osm_id === undefined) return undefined
@@ -57,8 +62,8 @@ function snapshotFrom(row: NominatimRow, checkedAt: string): OsmSnapshot | undef
     suburb: a.suburb,
     quarter: a.city_block ?? a.quarter ?? a.neighbourhood,
     openingHours: tags.opening_hours,
-    phone: tags.phone ?? tags['contact:phone'],
-    website: tags.website ?? tags['contact:website'],
+    phone: firstValue(tags.phone ?? tags['contact:phone']),
+    website: firstValue(tags.website ?? tags['contact:website']),
   })
 }
 
