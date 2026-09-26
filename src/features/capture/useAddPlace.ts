@@ -65,6 +65,9 @@ export function useAddPlace(onAdded: () => void) {
   }
 
   function select(candidate: GeoCandidate) {
+    // A result card stays clickable while "Add" commits the current selection; picking another one
+    // then must not steal the in-flight commit's place.
+    if (busy) return
     setSelected(candidate)
     setDraft(draftFromCandidate(candidate))
     setDuplicate(null)

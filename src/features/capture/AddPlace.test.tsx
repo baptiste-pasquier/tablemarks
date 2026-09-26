@@ -17,6 +17,13 @@ vi.mock('../../sync/pocketbase', async (importOriginal) => {
   return { ...actual, resolveShortLink: vi.fn() }
 })
 
+// Partial mock: real by default (`vi.fn(actual.createRestaurant)` delegates), so only the one test
+// that holds the commit on a deferred promise needs to override it for a single call.
+vi.mock('../../data/restaurants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../data/restaurants')>()
+  return { ...actual, createRestaurant: vi.fn(actual.createRestaurant) }
+})
+
 const FULL_URL = 'https://www.google.com/maps/place/Chez+Marcel/@48.8566,2.3522,15z'
 const SHORT_URL = 'https://maps.app.goo.gl/abc'
 
@@ -476,6 +483,43 @@ describe('AddPlace', () => {
 
       expect(await screen.findByText(/OpenStreetMap unavailable/)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Category: Uncategorized' })).toBeInTheDocument()
+    })
+
+    it('ignores a result click while a place is being added', async () => {
+      const OTHER: GeoCandidate = { ...FALAFEL, name: 'Le Fallafel 17e', osm: { ...OSM, id: 3 } }
+      provide({ search: [FALAFEL, OTHER] })
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(createRestaurant).mockImplementationOnce(async (input) => {
+        await gate
+        const { createRestaurant: real } =
+          await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
+        return real(input)
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      // Busy: a click on the other card must be a no-op — the first place is still the one saved.
+      await user.click(screen.getByRole('button', { name: /^Le Fallafel 17e/ }))
+      expect(screen.getByRole('button', { name: /^L’As du Fallafel/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(screen.getByRole('button', { name: /^Le Fallafel 17e/ })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      )
+
+      release()
+      await waitFor(async () =>
+        expect((await allRestaurants()).map((r) => r.name)).toEqual(['L’As du Fallafel']),
+      )
     })
 
     it('previews a provisional record when the short link resolver is unreachable', async () => {
