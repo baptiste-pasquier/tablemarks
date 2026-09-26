@@ -170,6 +170,10 @@
     "emptyTitle": "Aucun lieu pour l'instant",
     "emptyBody": "Enregistrez une adresse que vous aimez ou que vous voulez essayer — collez un lien Google Maps ou recherchez un nom."
   },
+  "place": {
+    "arrondissement": "{{city}} {{number}}{{suffix}}",
+    "ordinalSuffix": { "zero": "e", "one": "er", "two": "e", "few": "e", "many": "e", "other": "e" }
+  },
   "verdicts": {
     "go_back": "J'y retourne",
     "worth_a_detour": "Vaut le détour",

@@ -170,6 +170,17 @@
     "emptyTitle": "No places yet",
     "emptyBody": "Save a spot you love or one you want to try — paste a Google Maps link or search a name."
   },
+  "place": {
+    "arrondissement": "{{city}} {{number}}{{suffix}}",
+    "ordinalSuffix": {
+      "zero": "th",
+      "one": "st",
+      "two": "nd",
+      "few": "rd",
+      "many": "th",
+      "other": "th"
+    }
+  },
   "verdicts": {
     "go_back": "Go back",
     "worth_a_detour": "Worth a detour",
