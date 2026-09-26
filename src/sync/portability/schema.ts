@@ -117,9 +117,9 @@ function asRestaurant(x: unknown): Restaurant | null {
     return null
   if (!isLocalDayOrNull(r.latestVisitDate)) return null
   if (typeof r.visitCount !== 'number') return null
-  // Absent is fine; present must be a well-formed snapshot, or the file is refused like any
-  // other malformed field.
-  const osm = r.osm === undefined ? undefined : readOsmSnapshot(r.osm)
+  // Absent or null both read as no snapshot; present must be a well-formed snapshot, or the file
+  // is refused like any other malformed field.
+  const osm = r.osm == null ? undefined : readOsmSnapshot(r.osm)
   if (osm === null) return null
   return {
     id: r.id,

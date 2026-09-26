@@ -361,6 +361,13 @@ describe('parseImport', () => {
     })
   })
 
+  it('reads a null osm as absent', () => {
+    const res = parseImport(withOsm(null))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.records.restaurants[0].osm).toBeUndefined()
+  })
+
   it('rejects a restaurant whose OSM snapshot is malformed', () => {
     expect(parseImport(withOsm({ type: 'node', id: 1.5, checkedAt: 'x' })).ok).toBe(false)
     expect(parseImport(withOsm({ type: 'node', id: 1, checkedAt: '2026-01-01', city: 3 })).ok).toBe(
