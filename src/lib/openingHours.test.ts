@@ -82,6 +82,8 @@ describe('parseOpeningHours', () => {
     'week 1-20 Mo-Fr 12:00-14:00',
     'Jan-Mar Mo-Fr 12:00-14:00',
     'Mo 25:00-26:00',
+    'Mo-PH 10:00-12:00',
+    'PH-Mo 10:00-12:00',
   ])('refuses %j', (raw) => {
     expect(parseOpeningHours(raw)).toBeNull()
   })
@@ -126,5 +128,9 @@ describe('openStateOf and formatClock', () => {
     expect(formatClock(H('09:05'))).toBe('09:05')
     expect(formatClock(1440)).toBe('00:00')
     expect(formatClock(1440 + 90)).toBe('01:30')
+  })
+
+  it('returns at once for a weekday range that ends on PH, instead of looping forever', () => {
+    expect(openStateOf('Mo-PH 10:00-12:00', at(0, '12:00'))).toBeNull()
   })
 })

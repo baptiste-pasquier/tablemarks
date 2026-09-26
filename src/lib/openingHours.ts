@@ -38,14 +38,17 @@ const RULE = new RegExp(`^(?:(${DAY}(?:-${DAY})?(?:,${DAY}(?:-${DAY})?)*)\\s+)?(
 const ADDITIONAL_RULE = new RegExp(`(?<=\\d|off|closed)\\s*,\\s*(?=${DAY}\\b)`)
 const TIME = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/
 
-function parseDays(selector: string): number[] {
+function parseDays(selector: string): number[] | null {
   const days = new Set<number>()
   for (const part of selector.split(',')) {
     const [from, to] = part.split('-')
-    // Public holidays are not modelled: a `PH` selector names no weekday.
-    if (from === 'PH') continue
+    // A bare `PH` selector names no weekday and is skipped; PH as either end of a range makes the
+    // whole value unreadable (no next-day wrap would ever reach it — see the design journal entry).
+    if (from === 'PH' && to === undefined) continue
+    if (from === 'PH' || to === 'PH') return null
     const start = DAY_CODES.indexOf(from as DayCode)
     const end = to === undefined ? start : DAY_CODES.indexOf(to as DayCode)
+    if (start === -1 || end === -1) return null
     for (let d = start; ; d = (d + 1) % 7) {
       days.add(d)
       if (d === end) break
@@ -76,7 +79,9 @@ function parseRule(rule: string): { days: number[]; spans: Span[] } | null {
   if (!m) return null
   const spans = parseTimes(m[2].trim())
   if (!spans) return null
-  return { days: m[1] === undefined ? ALL_DAYS : parseDays(m[1]), spans }
+  const days = m[1] === undefined ? ALL_DAYS : parseDays(m[1])
+  if (!days) return null
+  return { days, spans }
 }
 
 /** Merge overlapping or touching spans, keeping the earliest start and latest end. */
