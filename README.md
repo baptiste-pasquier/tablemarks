@@ -32,7 +32,8 @@ This starts the app with **no backend**, the same as the demo. To enable Google 
 
 ## Usage
 
-- **Add a place:** click _+ Add a place_, paste a Google Maps link or type a name, and save.
+- **Add a place:** click _+ Add a place_, paste a Google Maps link or type a name, and press _Search_. Pick the right result (or check the link's preview), adjust the category OpenStreetMap suggests if needed, and press _Add_.
+- **Place details:** a place matched to OpenStreetMap shows its area, whether it is open now, its weekly hours, and Call / Website buttons. _Complete from OpenStreetMap_ matches an older place; _Refresh_ and _Correct_ keep it current.
 - **Log a visit:** open a place and tap _I'm here now_, then pick a verdict.
 - **Delete a place:** open it, tap _Delete this place_ at the bottom, and confirm — its visits go with it.
 - **Sign in (optional):** use _Sign in with Google_ to back up and sync; signing out keeps your local data.

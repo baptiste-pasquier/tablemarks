@@ -20,6 +20,17 @@ A single timestamped record of going to a Restaurant, carrying a date (a Local d
 
 A Restaurant saved from a short Google Maps link whose coordinates could not be resolved yet (offline, or a transient failure). It has no map pin until a later resolve pass fills its coordinates and clears the provisional flag.
 
+### OSM snapshot
+
+The read-only copy of the OpenStreetMap object a Restaurant was matched to — identity, address
+parts, opening hours, phone, website — with the date it was fetched. Replaced whole on refresh,
+never edited; OSM is where it is corrected.
+
+### Eatery
+
+An OpenStreetMap object of a kind this app saves: a restaurant, fast food, café, bar, pub, ice
+cream, food court, bakery or pastry shop. Search results that are not eateries fold away.
+
 ## Rating and status
 
 ### Verdict
@@ -51,6 +62,11 @@ A Restaurant's single optional category, labelled "Category" in the interface: a
 OpenStreetMap key and shown in the reader's language; a free-typed one is stored as typed. Each
 category maps to one color, shared by its map marker and its filter chip, and curated categories
 of one family share a hue; a Restaurant with no category is "uncategorized."
+
+### Short zone
+
+Where a place is, in the fewest words that tell two apart: "Paris 11e", "Lyon 1er", else the city.
+Derived from the OSM snapshot, never stored.
 
 ## Time
 
