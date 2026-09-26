@@ -3,7 +3,7 @@ import { isOsmDismissed, dismissOsm } from './osmDismissals'
 import { suggestCategory } from '../facets/osmCategory'
 import { lookupOsm, matchNear, type GeoCandidate } from '../../capture/geocode'
 import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
-import type { Restaurant } from '../../types/models'
+import { hasResolvedCoordinates, type Restaurant } from '../../types/models'
 
 export type EnrichState =
   | { kind: 'idle' }
@@ -21,8 +21,7 @@ export type EnrichState =
 export function useOsmEnrichment(restaurant: Restaurant) {
   const [state, setState] = useState<EnrichState>({ kind: 'idle' })
   const [dismissed, setDismissed] = useState(() => isOsmDismissed(restaurant.id))
-  const { lat, lng } = restaurant
-  const canComplete = !restaurant.osm && lat !== null && lng !== null && !dismissed
+  const canComplete = !restaurant.osm && hasResolvedCoordinates(restaurant) && !dismissed
 
   async function write(patch: RestaurantPatch) {
     try {
@@ -34,22 +33,27 @@ export function useOsmEnrichment(restaurant: Restaurant) {
   }
 
   async function complete() {
-    if (lat === null || lng === null) return
+    if (!hasResolvedCoordinates(restaurant)) return
     setState({ kind: 'busy' })
     try {
-      const candidate = await matchNear(restaurant.name, lat, lng)
+      const candidate = await matchNear(restaurant.name, restaurant.lat, restaurant.lng)
       setState(candidate ? { kind: 'proposal', candidate } : { kind: 'not-found' })
     } catch {
       setState({ kind: 'failed' })
     }
   }
 
+  // Busy is set before the write starts (not just inside `write`), so a second click while the
+  // request is in flight can't fire: the proposal card (Confirm/Reject) only renders in the
+  // 'proposal' state, and this synchronously replaces it before any await.
   async function confirm() {
     if (state.kind !== 'proposal' || !state.candidate.osm) return
-    const patch: RestaurantPatch = { osm: state.candidate.osm }
+    const { candidate } = state
+    const patch: RestaurantPatch = { osm: candidate.osm }
     // Only an uncategorized place takes OSM's category: the category is the user's.
-    const suggestion = suggestCategory(state.candidate)
+    const suggestion = suggestCategory(candidate)
     if (!restaurant.cuisine && suggestion) patch.cuisine = suggestion
+    setState({ kind: 'busy' })
     await write(patch)
   }
 

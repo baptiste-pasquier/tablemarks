@@ -672,5 +672,71 @@ describe('RestaurantDetail', () => {
       await openPlace({ lat: null, lng: null })
       expect(screen.queryByRole('button', { name: /complete from openstreetmap/i })).toBeNull()
     })
+
+    it('offers nothing for a place still pending coordinate resolution, even with lat/lng set', async () => {
+      provide([MATCH])
+      await openPlace({ pending: true })
+      expect(screen.queryByRole('button', { name: /complete from openstreetmap/i })).toBeNull()
+    })
+
+    it('writes once when Confirm is clicked twice before the write settles', async () => {
+      provide([MATCH])
+      const r = await openPlace()
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+      await screen.findByText('52 Rue Saint-Maur', { exact: false })
+
+      // Earlier tests in this file also call the shared `updateRestaurant` spy: clear its history
+      // so this test's assertion is about this confirm only, not the whole file's call count.
+      vi.mocked(updateRestaurant).mockClear()
+      let resolveWrite!: (value: Awaited<ReturnType<typeof updateRestaurant>>) => void
+      vi.mocked(updateRestaurant).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveWrite = resolve
+          }),
+      )
+      const confirmButton = screen.getByRole('button', { name: 'Yes, complete' })
+      await user.click(confirmButton)
+      await user.click(confirmButton)
+
+      expect(updateRestaurant).toHaveBeenCalledTimes(1)
+      await act(async () => resolveWrite(r))
+    })
+
+    it('shows the save-failed alert when Confirm fails to write', async () => {
+      provide([MATCH])
+      await openPlace()
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+      await screen.findByText('52 Rue Saint-Maur', { exact: false })
+      vi.mocked(updateRestaurant).mockRejectedValueOnce(new Error('down'))
+
+      await user.click(screen.getByRole('button', { name: 'Yes, complete' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
+    })
+
+    it('shows the save-failed alert when Refresh fails to write', async () => {
+      const fresh = { ...MATCH, osm: { ...MATCH.osm!, checkedAt: '2026-09-27T10:00:00.000Z' } }
+      provide([], fresh)
+      await openPlace({ osm: MATCH.osm })
+      const user = userEvent.setup()
+      vi.mocked(updateRestaurant).mockRejectedValueOnce(new Error('down'))
+
+      await user.click(screen.getByRole('button', { name: 'Refresh' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
+    })
+
+    it('says OSM is not answering when the lookup throws on Refresh', async () => {
+      provide([], new Error('down'))
+      await openPlace({ osm: MATCH.osm })
+      const user = userEvent.setup()
+
+      await user.click(screen.getByRole('button', { name: 'Refresh' }))
+
+      expect(await screen.findByText(/not answering/i)).toBeInTheDocument()
+    })
   })
 })
