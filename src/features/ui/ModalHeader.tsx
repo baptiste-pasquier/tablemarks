@@ -20,10 +20,12 @@ const VARIANT_STYLES: Record<ModalHeaderVariant, { wrapper: string; title: strin
  */
 export function ModalHeader({
   title,
+  subtitle,
   onClose,
   variant = 'default',
 }: {
   title: string
+  subtitle?: string
   onClose: () => void
   variant?: ModalHeaderVariant
 }) {
@@ -32,7 +34,10 @@ export function ModalHeader({
 
   return (
     <div className={styles.wrapper}>
-      <h2 className={styles.title}>{title}</h2>
+      <div className="min-w-0">
+        <h2 className={styles.title}>{title}</h2>
+        {subtitle && <p className="mt-0.5 text-[13px] font-semibold text-gray-600">{subtitle}</p>}
+      </div>
       <Button
         variant="icon-dismiss"
         tone="neutral"

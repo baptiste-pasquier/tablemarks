@@ -189,7 +189,14 @@
       "few": "rd",
       "many": "th",
       "other": "th"
-    }
+    },
+    "call": "Call",
+    "website": "Website",
+    "showWeek": "Show the week’s hours",
+    "closedDay": "Closed",
+    "osmSource": "OpenStreetMap · {{date}}",
+    "refresh": "Refresh",
+    "correct": "Correct"
   },
   "openState": {
     "openUntil": "Open until {{time}}",

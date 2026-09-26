@@ -485,4 +485,75 @@ describe('RestaurantDetail', () => {
     expect(onClose).not.toHaveBeenCalled()
     await act(async () => finish())
   })
+
+  describe('with an OpenStreetMap snapshot', () => {
+    const osm = {
+      type: 'node' as const,
+      id: 3602657896,
+      checkedAt: '2026-09-19T10:00:00.000Z',
+      street: '32 Rue Saint-Maur',
+      city: 'Paris',
+      postcode: '75011',
+      quarter: 'Quartier de la Roquette',
+      openingHours: 'Mo-Fr 19:30-22:30, Tu-Fr 12:00-14:00',
+      phone: '+33 1 55 28 51 82',
+      website: 'https://leservan.com/',
+    }
+
+    async function open() {
+      const r = await createRestaurant({
+        name: 'Le Servan',
+        lat: 48.86,
+        lng: 2.38,
+        address:
+          '32, Rue Saint-Maur, Quartier de la Roquette, Paris 11e Arrondissement, Paris, France',
+        osm,
+      })
+      render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+      await screen.findByText('Le Servan')
+    }
+
+    it('shows the zone under the name and the street instead of the full address', async () => {
+      await open()
+      expect(screen.getByText('Paris 11th · Quartier de la Roquette')).toBeInTheDocument()
+      expect(screen.getByText('32 Rue Saint-Maur')).toBeInTheDocument()
+      expect(screen.queryByText(/Arrondissement, Paris, France/)).toBeNull()
+    })
+
+    it('offers call and website actions', async () => {
+      await open()
+      expect(screen.getByRole('link', { name: /call/i })).toHaveAttribute(
+        'href',
+        'tel:+33155285182',
+      )
+      expect(screen.getByRole('link', { name: /website/i })).toHaveAttribute(
+        'href',
+        'https://leservan.com/',
+      )
+    })
+
+    it('unfolds the week, and links the OSM object to correct it', async () => {
+      await open()
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /show the week/i }))
+      expect(screen.getByText('Mon')).toBeInTheDocument()
+      expect(screen.getAllByText('Closed').length).toBeGreaterThanOrEqual(2) // Sat, Sun
+      expect(screen.getByRole('link', { name: 'Correct' })).toHaveAttribute(
+        'href',
+        'https://www.openstreetmap.org/node/3602657896',
+      )
+    })
+
+    it('shows unreadable hours as written', async () => {
+      const r = await createRestaurant({
+        name: 'X',
+        lat: 1,
+        lng: 1,
+        osm: { ...osm, openingHours: 'Mo-Fr 08:00-sunset' },
+      })
+      render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+      expect(await screen.findByText('Mo-Fr 08:00-sunset')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /show the week/i })).toBeNull()
+    })
+  })
 })

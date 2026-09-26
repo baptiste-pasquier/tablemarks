@@ -182,7 +182,21 @@
   },
   "place": {
     "arrondissement": "{{city}} {{number}}{{suffix}}",
-    "ordinalSuffix": { "zero": "e", "one": "er", "two": "e", "few": "e", "many": "e", "other": "e" }
+    "ordinalSuffix": {
+      "zero": "e",
+      "one": "er",
+      "two": "e",
+      "few": "e",
+      "many": "e",
+      "other": "e"
+    },
+    "call": "Appeler",
+    "website": "Site",
+    "showWeek": "Afficher les horaires de la semaine",
+    "closedDay": "Fermé",
+    "osmSource": "OpenStreetMap · {{date}}",
+    "refresh": "Actualiser",
+    "correct": "Corriger"
   },
   "openState": {
     "openUntil": "Ouvert jusqu'à {{time}}",

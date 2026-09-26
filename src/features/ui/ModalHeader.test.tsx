@@ -25,4 +25,16 @@ describe('ModalHeader', () => {
 
     expect(screen.getByRole('heading', { name: 'Chez Marcel' })).toHaveClass('text-lg')
   })
+
+  it('renders an optional subtitle under the title', () => {
+    render(
+      <ModalHeader
+        title="Le Servan"
+        subtitle="Paris 11th · Quartier de la Roquette"
+        onClose={() => {}}
+        variant="detail"
+      />,
+    )
+    expect(screen.getByText('Paris 11th · Quartier de la Roquette')).toBeInTheDocument()
+  })
 })
