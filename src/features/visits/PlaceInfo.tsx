@@ -3,9 +3,11 @@ import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { StatusBadge } from '../StatusBadge'
 import { CuisinePicker } from '../facets/CuisinePicker'
 import { OpeningHours } from '../places/OpeningHours'
+import { OsmEnrich } from '../places/OsmEnrich'
 import { OsmFooter } from '../places/OsmFooter'
 import { PlaceActions } from '../places/PlaceActions'
 import { compactAddress } from '../places/placeDisplay'
+import { useOsmEnrichment } from '../places/useOsmEnrichment'
 import { instantToLocalDay } from '../../lib/dates'
 import type { RankedCuisine } from '../facets/cuisineRanking'
 import type { Restaurant } from '../../types/models'
@@ -24,6 +26,7 @@ export function PlaceInfo({
 }) {
   const { t } = useTranslation()
   const address = compactAddress(restaurant)
+  const enrichment = useOsmEnrichment(restaurant)
   return (
     <div className="rounded-card bg-gray-50 p-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-600">
@@ -60,9 +63,21 @@ export function PlaceInfo({
         />
       </div>
 
+      {/* Not matched yet: the offer sits under the category, which it may fill. */}
+      {!restaurant.osm && <OsmEnrich restaurant={restaurant} enrichment={enrichment} />}
+
       {restaurant.osm?.openingHours && <OpeningHours raw={restaurant.osm.openingHours} />}
       <PlaceActions restaurant={restaurant} />
-      {restaurant.osm && <OsmFooter osm={restaurant.osm} />}
+      {restaurant.osm && (
+        <>
+          <OsmEnrich restaurant={restaurant} enrichment={enrichment} />
+          <OsmFooter
+            osm={restaurant.osm}
+            onRefresh={() => void enrichment.refresh()}
+            refreshing={enrichment.state.kind === 'busy'}
+          />
+        </>
+      )}
     </div>
   )
 }

@@ -196,7 +196,17 @@
     "closedDay": "Closed",
     "osmSource": "OpenStreetMap · {{date}}",
     "refresh": "Refresh",
-    "correct": "Correct"
+    "correct": "Correct",
+    "complete": "Complete from OpenStreetMap",
+    "completeHint": "hours, phone, website, area",
+    "confirmMatch": "Yes, complete",
+    "rejectMatch": "Not this one",
+    "matchDistance": "{{distance}} away",
+    "categoryKept": "Your category “{{category}}” is kept.",
+    "notFound": "Not found on OpenStreetMap",
+    "notFoundHint": "No place of this name within 75 m.",
+    "osmFailed": "OpenStreetMap is not answering, try again later.",
+    "osmGone": "This place is no longer on OpenStreetMap (maybe closed)."
   },
   "openState": {
     "openUntil": "Open until {{time}}",

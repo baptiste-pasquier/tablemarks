@@ -11,8 +11,10 @@ import {
   updateRestaurant,
 } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
+import { setGeocodeProvider, nominatim } from '../../capture/geocode'
 import { instantToLocalDay } from '../../lib/dates'
 import { VERDICTS, translateVerdict } from '../../types/models'
+import type { GeoCandidate } from '../../capture/geocode'
 
 // Partial mock: the real repository, with `updateRestaurant` spied so one test can make a save
 // fail, and `removeRestaurant` so one can hold a delete mid-write.
@@ -26,7 +28,11 @@ vi.mock('../../data/restaurants', async (importOriginal) => {
 })
 
 beforeEach(freshDB)
-afterEach(() => vi.unstubAllEnvs())
+afterEach(() => {
+  vi.unstubAllEnvs()
+  setGeocodeProvider(nominatim)
+  localStorage.clear()
+})
 
 function enabled(buttons: HTMLElement[]): HTMLElement {
   const found = buttons.find((b) => !(b as HTMLButtonElement).disabled)
@@ -554,6 +560,117 @@ describe('RestaurantDetail', () => {
       render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
       expect(await screen.findByText('Mo-Fr 08:00-sunset')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /show the week/i })).toBeNull()
+    })
+  })
+
+  describe('completing from OpenStreetMap', () => {
+    const MATCH: GeoCandidate = {
+      name: 'Double Dragon',
+      lat: 48.8634,
+      lng: 2.3746,
+      osmClass: 'amenity=restaurant',
+      cuisineTag: 'chinese',
+      osm: {
+        type: 'node',
+        id: 9,
+        checkedAt: '2026-09-26T10:00:00.000Z',
+        city: 'Paris',
+        postcode: '75011',
+        street: '52 Rue Saint-Maur',
+        phone: '+33 1 71 32 41 95',
+      },
+    }
+
+    function provide(near: GeoCandidate[] | Error, lookup: GeoCandidate | null | Error = null) {
+      setGeocodeProvider({
+        search: async () => {
+          if (near instanceof Error) throw near
+          return near
+        },
+        reverse: async () => undefined,
+        lookup: async () => {
+          if (lookup instanceof Error) throw lookup
+          return lookup
+        },
+      })
+    }
+
+    async function openPlace(over: Partial<Parameters<typeof createRestaurant>[0]> = {}) {
+      const r = await createRestaurant({
+        name: 'Double Dragon',
+        lat: 48.8634,
+        lng: 2.3746,
+        ...over,
+      })
+      render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+      await screen.findByText('Double Dragon')
+      return r
+    }
+
+    it('proposes the match and writes it, with its category, on confirm', async () => {
+      provide([MATCH])
+      const r = await openPlace()
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+      expect(await screen.findByText('52 Rue Saint-Maur', { exact: false })).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Yes, complete' }))
+      await waitFor(async () => expect((await getRestaurant(r.id))?.osm?.id).toBe(9))
+      expect((await getRestaurant(r.id))?.cuisine).toBe('chinese')
+    })
+
+    it('keeps a category already set', async () => {
+      provide([MATCH])
+      const r = await openPlace({ cuisine: 'thai' })
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+      expect(await screen.findByText(/your category “Thai” is kept/i)).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Yes, complete' }))
+      await waitFor(async () => expect((await getRestaurant(r.id))?.osm).toBeDefined())
+      expect((await getRestaurant(r.id))?.cuisine).toBe('thai')
+    })
+
+    it('hides the offer for good on "Not this one"', async () => {
+      provide([MATCH])
+      const r = await openPlace()
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+      await user.click(await screen.findByRole('button', { name: 'Not this one' }))
+      expect(screen.queryByRole('button', { name: /complete from openstreetmap/i })).toBeNull()
+      expect(JSON.parse(localStorage.getItem('tablemarks:osmDismissed')!)).toEqual([r.id])
+    })
+
+    it('says when nothing is found, and when OSM does not answer', async () => {
+      provide([])
+      await openPlace()
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+      expect(await screen.findByText('Not found on OpenStreetMap')).toBeInTheDocument()
+
+      provide(new Error('down'))
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+      expect(await screen.findByText(/not answering/i)).toBeInTheDocument()
+    })
+
+    it('refreshes a matched place, and says when the object is gone', async () => {
+      const fresh = { ...MATCH, osm: { ...MATCH.osm!, checkedAt: '2026-09-27T10:00:00.000Z' } }
+      provide([], fresh)
+      const r = await openPlace({ osm: MATCH.osm })
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: 'Refresh' }))
+      await waitFor(async () =>
+        expect((await getRestaurant(r.id))?.osm?.checkedAt).toBe('2026-09-27T10:00:00.000Z'),
+      )
+
+      provide([], null)
+      await user.click(screen.getByRole('button', { name: 'Refresh' }))
+      expect(await screen.findByText(/no longer on openstreetmap/i)).toBeInTheDocument()
+      expect((await getRestaurant(r.id))?.osm?.checkedAt).toBe('2026-09-27T10:00:00.000Z')
+    })
+
+    it('offers nothing for a place without coordinates', async () => {
+      provide([MATCH])
+      await openPlace({ lat: null, lng: null })
+      expect(screen.queryByRole('button', { name: /complete from openstreetmap/i })).toBeNull()
     })
   })
 })
