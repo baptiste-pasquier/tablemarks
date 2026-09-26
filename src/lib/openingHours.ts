@@ -79,6 +79,23 @@ function parseRule(rule: string): { days: number[]; spans: Span[] } | null {
   return { days: m[1] === undefined ? ALL_DAYS : parseDays(m[1]), spans }
 }
 
+/** Merge overlapping or touching spans, keeping the earliest start and latest end. */
+function mergeOverlappingSpans(spans: Span[]): Span[] {
+  if (spans.length === 0) return []
+  const merged: Span[] = []
+  for (const span of spans) {
+    const last = merged[merged.length - 1]
+    if (last && last.end >= span.start) {
+      // Overlapping or touching: extend the last span
+      last.end = Math.max(last.end, span.end)
+    } else {
+      // No overlap: add as a new span
+      merged.push({ ...span })
+    }
+  }
+  return merged
+}
+
 export function parseOpeningHours(raw: string): Week | null {
   const chunks = raw
     .split(';')
@@ -94,7 +111,12 @@ export function parseOpeningHours(raw: string): Week | null {
       for (const d of rule.days) week[d] = i === 0 ? [...rule.spans] : [...week[d], ...rule.spans]
     }
   }
-  for (const day of week) day.sort((a, b) => a.start - b.start)
+  for (const day of week) {
+    day.sort((a, b) => a.start - b.start)
+    const merged = mergeOverlappingSpans(day)
+    day.length = 0
+    day.push(...merged)
+  }
   return week
 }
 

@@ -56,6 +56,23 @@ describe('parseOpeningHours', () => {
     expect(week('Mo-Fr 12:00-14:00; PH off')[0]).toHaveLength(1)
   })
 
+  it('merges overlapping spans from additive rules on different days', () => {
+    const w = week('Mo-Su 08:00-20:00, Fr,Sa 08:00-23:00')
+    expect(w[4]).toEqual([{ start: H('08:00'), end: H('23:00') }])
+    expect(w[0]).toEqual([{ start: H('08:00'), end: H('20:00') }])
+  })
+
+  it('returns correct closing time for merged spans', () => {
+    expect(openStateAt(week('Mo-Su 08:00-20:00, Fr,Sa 08:00-23:00'), at(4, '10:00'))).toEqual({
+      kind: 'open',
+      closesAt: H('23:00'),
+    })
+  })
+
+  it('merges touching spans', () => {
+    expect(week('Mo 12:00-14:00,14:00-16:00')[0]).toEqual([{ start: H('12:00'), end: H('16:00') }])
+  })
+
   it.each([
     '',
     'Mo-Sa',
