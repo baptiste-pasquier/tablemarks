@@ -99,6 +99,7 @@ describe('AddPlace', () => {
 
     await user.type(screen.getByLabelText(/paste a google maps link/i), `${FULL_URL}{Enter}`)
     await screen.findByRole('button', { name: 'Add' })
+    expect(await allRestaurants()).toEqual([])
     await user.type(screen.getByLabelText(/paste a google maps link/i), '{Enter}')
 
     await waitFor(async () =>
@@ -381,6 +382,7 @@ describe('AddPlace', () => {
       await pasteAndSubmit(FULL_URL)
       expect(await screen.findByText(/Found on OpenStreetMap/)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Category: Lebanese' })).toBeInTheDocument()
+      expect(await allRestaurants()).toEqual([])
 
       await user.click(screen.getByRole('button', { name: 'Not this one' }))
       expect(screen.getByText('No OpenStreetMap data')).toBeInTheDocument()
@@ -403,6 +405,87 @@ describe('AddPlace', () => {
 
       expect(await screen.findByText(/already saved/i)).toBeInTheDocument()
       expect(await allRestaurants()).toHaveLength(1)
+    })
+
+    it('keeps the category picker hidden while results are listed but none is selected', async () => {
+      provide({ search: [FALAFEL] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit('As du Fallafel')
+      await screen.findByRole('button', { name: /^L’As du Fallafel/ })
+
+      expect(screen.queryByRole('button', { name: /^Category:/ })).toBeNull()
+    })
+
+    it('re-suggests the OSM category once the input changes and a new place is selected', async () => {
+      provide({ search: [FALAFEL] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('As du Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.click(screen.getByRole('button', { name: 'Category: Lebanese' }))
+      await user.click(screen.getByRole('button', { name: 'Other…' }))
+      await user.type(screen.getByLabelText('Other category'), 'Ramen{Enter}')
+      expect(screen.getByRole('button', { name: 'Category: Ramen' })).toBeInTheDocument()
+
+      await user.clear(screen.getByLabelText(/paste a google maps link/i))
+      await pasteAndSubmit('As du Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+
+      expect(screen.getByRole('button', { name: 'Category: Lebanese' })).toBeInTheDocument()
+      expect(screen.getByText('Suggested by OpenStreetMap')).toBeInTheDocument()
+    })
+
+    it('drops a stale search result once the input has changed', async () => {
+      let release: (found: GeoCandidate[]) => void = () => {}
+      const pending = new Promise<GeoCandidate[]>((resolve) => {
+        release = resolve
+      })
+      setGeocodeProvider({
+        search: async () => pending,
+        reverse: async () => '1 Rue de Rivoli, Paris',
+        lookup: async () => null,
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await user.type(screen.getByLabelText(/paste a google maps link/i), 'Fallafel')
+      await user.click(screen.getByRole('button', { name: 'Search' }))
+      await user.type(screen.getByLabelText(/paste a google maps link/i), 'x')
+
+      release([FALAFEL])
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(screen.queryByRole('button', { name: /^L’As du Fallafel/ })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
+    })
+
+    it('shows the OSM-unavailable variant when the OSM match lookup fails', async () => {
+      setGeocodeProvider({
+        search: async (_q, options) => {
+          if (options?.near) throw new Error('nominatim down')
+          return []
+        },
+        reverse: async () => '1 Rue de Rivoli, Paris',
+        lookup: async () => null,
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(FULL_URL)
+
+      expect(await screen.findByText(/OpenStreetMap unavailable/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Category: Uncategorized' })).toBeInTheDocument()
+    })
+
+    it('previews a provisional record when the short link resolver is unreachable', async () => {
+      vi.mocked(resolveShortLink).mockRejectedValue(new Error('network down'))
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(SHORT_URL)
+
+      expect(await screen.findByText('Position resolved later')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Category: Uncategorized' })).toBeInTheDocument()
     })
   })
 })

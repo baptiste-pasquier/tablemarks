@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   capturePaste,
   commitCapture,
@@ -36,19 +36,32 @@ export function useAddPlace(onAdded: () => void) {
   const [cuisine, setCuisineValue] = useState('')
   // Set once the user picks a category: from then on a suggestion never overwrites it.
   const [cuisineTouched, setCuisineTouched] = useState(false)
+  // Bumped on every input edit and at the start of every submit: a request whose id no longer
+  // matches this ref once its await settles is stale (superseded by an edit or a later submit),
+  // and its result — including an error, or `onAdded` — is dropped rather than written.
+  const requestId = useRef(0)
 
   function suggest(match: GeoCandidate | undefined) {
     if (!cuisineTouched) setCuisineValue(match ? (suggestCategory(match) ?? '') : '')
   }
 
   function setInput(value: string) {
+    // Invalidates any in-flight request (its result lands under text it no longer describes) and
+    // ends the wait from the user's point of view — the stale request's own `finally` will see it
+    // has been superseded and leave `busy` alone.
+    requestId.current += 1
     setInputValue(value)
+    setBusy(false)
     setCandidates(null)
     setSelected(null)
     setDraft(null)
     setDuplicate(null)
     setRefusal(null)
     setError(null)
+    // A manually chosen category belongs to the place identified for the text it was chosen
+    // under; new text starts over with whatever the next match suggests.
+    setCuisineValue('')
+    setCuisineTouched(false)
   }
 
   function select(candidate: GeoCandidate) {
@@ -69,18 +82,20 @@ export function useAddPlace(onAdded: () => void) {
     setCuisineValue(value ?? '')
   }
 
-  async function search(query: string) {
+  async function search(query: string, id: number) {
     try {
       const found = await searchPlaces(query)
+      if (requestId.current !== id) return
       setCandidates(found)
       if (found.length === 0) setError('noMatches')
     } catch {
+      if (requestId.current !== id) return
       setError('searchFailed')
     }
   }
 
   // Exhaustive over CaptureResult: the `never` assignment makes a future variant a type error.
-  async function handle(result: CaptureResult) {
+  async function handle(result: CaptureResult, id: number) {
     switch (result.status) {
       case 'preview':
         setDraft(result.draft)
@@ -90,7 +105,7 @@ export function useAddPlace(onAdded: () => void) {
         setDuplicate(result.match)
         return
       case 'needs-search':
-        await search(result.query)
+        await search(result.query, id)
         return
       case 'needs-backend':
         setRefusal(result.reason)
@@ -112,17 +127,31 @@ export function useAddPlace(onAdded: () => void) {
 
   async function submit() {
     if (busy || !input.trim()) return
+    const id = (requestId.current += 1)
+    // Read before the await: whether this request commits a draft or starts a search, for the
+    // catch below — and unaffected by whatever the input becomes while this request is in flight.
+    const hadDraft = draft !== null
     setBusy(true)
     setError(null)
     setDuplicate(null)
     setRefusal(null)
     try {
-      if (draft) finish(await commitCapture(draft, cuisine.trim() || undefined))
-      else await handle(await capturePaste(input))
+      if (draft) {
+        const result = await commitCapture(draft, cuisine.trim() || undefined)
+        if (requestId.current !== id) return
+        finish(result)
+      } else {
+        const result = await capturePaste(input)
+        if (requestId.current !== id) return
+        await handle(result, id)
+      }
     } catch {
-      setError('add')
+      if (requestId.current !== id) return
+      setError(hadDraft ? 'add' : 'searchFailed')
     } finally {
-      setBusy(false)
+      // A stale request must not clear `busy` for a newer one already in flight; `setInput`
+      // already cleared it for the case where no newer request took over.
+      if (requestId.current === id) setBusy(false)
     }
   }
 

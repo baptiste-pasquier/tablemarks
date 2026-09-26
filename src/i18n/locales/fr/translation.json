@@ -51,7 +51,7 @@
     "suggestedByOsm": "Suggérée par OpenStreetMap",
     "otherResults_one": "{{count}} autre résultat",
     "otherResults_other": "{{count}} autres résultats",
-    "noEateryMatches": "Aucun restaurant, café ou bar trouvé sous ce nom. Ajoute la ville, ou colle le lien Google Maps.",
+    "noEateryMatches": "Aucun restaurant, café ou bar trouvé sous ce nom. Ajoutez la ville, ou collez le lien Google Maps.",
     "foundOnOsm": "Trouvé sur OpenStreetMap",
     "notThisOne": "Ce n'est pas lui",
     "noOsmData": "Pas d'infos OpenStreetMap",

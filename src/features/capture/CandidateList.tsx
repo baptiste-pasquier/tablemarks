@@ -103,12 +103,13 @@ export function CandidateList({
   return (
     <div className="mt-4">
       <p className="text-[13px] font-semibold text-gray-700">{t('capture.whichOne')}</p>
-      {eateries.length === 0 && (
+      {eateries.length === 0 ? (
         <p className="mt-2 rounded-[14px] bg-brand-soft p-3 text-sm text-brand-strong">
           {t('capture.noEateryMatches')}
         </p>
+      ) : (
+        <ul className="mt-2 space-y-2">{eateries.map(card)}</ul>
       )}
-      <ul className="mt-2 space-y-2">{eateries.map(card)}</ul>
       {others.length > 0 && (
         <>
           <Button
