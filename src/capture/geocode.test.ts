@@ -124,6 +124,14 @@ describe('matchNear', () => {
     expect(await matchNear('Mokonuts', HERE.lat, HERE.lng)).not.toBeNull()
   })
 
+  it('matches a name across apostrophe styles, in either direction', async () => {
+    provide([candidate({ name: 'L’As du Fallafel' })])
+    expect(await matchNear("L'As du Fallafel", HERE.lat, HERE.lng)).not.toBeNull()
+
+    provide([candidate({ name: "L'As du Fallafel" })])
+    expect(await matchNear('L’As du Fallafel', HERE.lat, HERE.lng)).not.toBeNull()
+  })
+
   it.each([
     ['a non-eatery', { osmClass: 'shop=leather' }],
     ['a place past 75 m', { lat: HERE.lat + 0.001 }],

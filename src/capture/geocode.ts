@@ -54,6 +54,15 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return (await res.json()) as T
 }
 
+/**
+ * Comparison form for `matchNear` only: `foldText` plus every curly/other apostrophe style folded
+ * to a straight one, so "L'As du Fallafel" and "L’As du Fallafel" compare equal. Kept local rather
+ * than added to `foldText`, which other categories share and must not change.
+ */
+function foldName(name: string): string {
+  return foldText(name).replace(/[’ʼ‘]/g, "'").replace(/\s+/g, ' ').trim()
+}
+
 function viewbox({ lat, lng }: { lat: number; lng: number }): string {
   const d = NEAR_BOX_DEG
   return `${lng - d},${lat + d},${lng + d},${lat - d}`
@@ -128,13 +137,13 @@ export async function matchNear(
   lng: number,
   signal?: AbortSignal,
 ): Promise<GeoCandidate | null> {
-  const wanted = foldText(name)
+  const wanted = foldName(name)
   if (!wanted) return null
   const rows = await provider.search(name, { near: { lat, lng }, signal })
   let best: GeoCandidate | null = null
   let bestDistance = MATCH_RADIUS_M
   for (const c of rows) {
-    const got = foldText(c.name)
+    const got = foldName(c.name)
     if (!c.osm || !isEatery(c) || !got || !(got.includes(wanted) || wanted.includes(got))) continue
     const distance = haversineMeters(lat, lng, c.lat, c.lng)
     if (distance <= bestDistance) {
