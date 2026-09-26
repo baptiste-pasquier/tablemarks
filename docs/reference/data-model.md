@@ -94,6 +94,6 @@ The IndexedDB model and the PocketBase schema differ in three places; `src/sync/
 | `restaurantId` (on visits) | `restaurant` (relation) | PocketBase models the link as a relation.                                         |
 | —                          | `owner`                 | Set on push to the signed-in user; absent locally (no-account mode has no owner). |
 
-`osm` passes through unchanged as a `json` field on both sides.
+`osm` is a `json` field on both sides; the incoming value is validated by `readOsmSnapshot`, which drops unknown keys.
 
 Verdict strings coming back from PocketBase are runtime-validated against the known set before use, guarding against drift or manual edits. Full backend schema and collection rules are in [pocketbase/README.md](../../pocketbase/README.md).

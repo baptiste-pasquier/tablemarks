@@ -3,7 +3,7 @@
  * (singles, ranges wrapping through Sunday, comma lists), time spans (several a day, past
  * midnight), `off`/`closed`, `24/7`, and `PH` (accepted, not modelled). Anything else — weeks,
  * months, dates, `sunrise`, comments, `||` fallbacks, "closed" spans — makes the whole value
- * unreadable, and the UI shows it raw. This subset reads ~95% of the Paris values measured.
+ * unreadable, and the UI shows it raw. This subset reads 91% of the Paris values measured.
  */
 
 const DAY_CODES = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] as const

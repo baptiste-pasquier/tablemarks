@@ -23,6 +23,7 @@ describe('suggestCategory', () => {
     [{ cuisineTag: 'regional;international' }],
     [{ osmClass: 'amenity=restaurant' }],
     [{}],
+    [{ cuisineTag: 'constructor' }],
   ])('suggests nothing for %o', (input) => {
     expect(suggestCategory(input)).toBeUndefined()
   })

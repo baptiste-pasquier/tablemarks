@@ -91,7 +91,7 @@ async function preview(place: ResolvedPlace): Promise<CaptureResult> {
   return { status: 'preview', draft }
 }
 
-/** Capture from pasted text: full URL parses locally, short links resolve server-side (provisional if offline, refused with no backend), plain text routes to search. */
+/** Capture from pasted text: full URL parses locally, short links resolve server-side (a pending preview when offline, refused with no backend), plain text routes to search. */
 export async function capturePaste(input: string): Promise<CaptureResult> {
   const text = input.trim()
   const parsed = parseMapsUrl(text)

@@ -39,7 +39,7 @@ export function suggestCategory(c: {
     .filter(Boolean)
   const direct = values.find((value) => CATALOG_KEYS.has(value))
   if (direct) return direct as CuisineKey
-  const alias = values.find((value) => value in CUISINE_ALIASES)
+  const alias = values.find((value) => Object.hasOwn(CUISINE_ALIASES, value))
   if (alias) return CUISINE_ALIASES[alias]
   return c.osmClass ? CLASS_CATEGORIES[c.osmClass] : undefined
 }
