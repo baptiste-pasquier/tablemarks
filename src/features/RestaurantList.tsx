@@ -7,6 +7,10 @@ import { cuisineLabel } from './facets/cuisineCatalog'
 import { translateVisitsCount, type Restaurant } from '../types/models'
 import type { GeoPoint } from '../lib/geolocate'
 import { distanceLabelFor } from '../lib/geo'
+import { OpenStateText } from './places/OpenStateText'
+import { useNow } from './places/useNow'
+import { shortZone } from './places/placeDisplay'
+import { openStateOf } from '../lib/openingHours'
 
 export function RestaurantList({
   items,
@@ -19,7 +23,8 @@ export function RestaurantList({
   onHover?: (id: string | null) => void
   currentPosition?: GeoPoint | null
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const now = useNow()
 
   if (items.length === 0) {
     return (
@@ -40,6 +45,8 @@ export function RestaurantList({
       {items.map((r) => {
         const visited = badgeState(r).kind === 'visited'
         const distanceLabel = distanceLabelFor(currentPosition, r)
+        const zone = r.osm && shortZone(r.osm, t, i18n.language)
+        const openState = r.osm ? openStateOf(r.osm.openingHours, now) : null
         return (
           <li key={r.id}>
             <button
@@ -93,6 +100,22 @@ export function RestaurantList({
                       </span>
                     )}
                   </div>
+                  {/* Where and when: only for a place matched to OSM, so an unmatched card keeps
+                      its two lines rather than an empty third. */}
+                  {(zone || openState) && (
+                    <div
+                      data-line="place"
+                      className="mt-0.5 flex items-center gap-1.5 text-xs whitespace-nowrap text-gray-600"
+                    >
+                      {zone && <span className="min-w-0 truncate">{zone}</span>}
+                      {zone && openState && (
+                        <span aria-hidden="true" className="text-gray-400">
+                          ·
+                        </span>
+                      )}
+                      {openState && <OpenStateText state={openState} className="shrink-0" />}
+                    </div>
+                  )}
                 </div>
               </div>
             </button>

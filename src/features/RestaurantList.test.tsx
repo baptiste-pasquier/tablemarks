@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { RestaurantList } from './RestaurantList'
 import { mockI18n } from '../test/setup'
 import { VERDICTS, translateVerdict, type Restaurant } from '../types/models'
@@ -278,5 +278,48 @@ describe('RestaurantList', () => {
     expect(screen.getByText('Boulangerie')).toBeInTheDocument()
     expect(screen.getByText('Français')).toBeInTheDocument()
     expect(screen.getByText('Tex-Mex')).toBeInTheDocument()
+  })
+
+  describe('zone and open state', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date(2026, 8, 22, 18, 40)) // a Tuesday
+    })
+    afterEach(() => vi.useRealTimers())
+
+    const osm = {
+      type: 'node' as const,
+      id: 1,
+      checkedAt: '2026-09-19T10:00:00.000Z',
+      city: 'Paris',
+      postcode: '75011',
+    }
+
+    it('adds the short zone and the state for a matched place', () => {
+      render(
+        <RestaurantList
+          items={[
+            r({ id: 'a', name: 'Le Servan', osm: { ...osm, openingHours: 'Mo-Fr 19:30-22:30' } }),
+          ]}
+        />,
+      )
+      expect(screen.getByText('Paris 11th')).toBeInTheDocument()
+      expect(screen.getByText('Opens at 19:30')).toBeInTheDocument()
+    })
+
+    it('shows the zone alone when the hours are unknown or unreadable', () => {
+      render(
+        <RestaurantList
+          items={[r({ id: 'a', name: 'X', osm: { ...osm, openingHours: 'sunrise-sunset' } })]}
+        />,
+      )
+      expect(screen.getByText('Paris 11th')).toBeInTheDocument()
+      expect(screen.queryByText(/open|closed/i)).toBeNull()
+    })
+
+    it('keeps a two-line card for a place without OSM data', () => {
+      const { container } = render(<RestaurantList items={[r({ id: 'a', name: 'X' })]} />)
+      expect(container.querySelector('[data-line="place"]')).toBeNull()
+    })
   })
 })
