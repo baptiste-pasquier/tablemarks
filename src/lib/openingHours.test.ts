@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { formatClock, openStateAt, openStateOf, parseOpeningHours, type Week } from './openingHours'
+import {
+  ADDITIONAL_RULE_SOURCE,
+  formatClock,
+  openStateAt,
+  openStateOf,
+  parseOpeningHours,
+  type Week,
+} from './openingHours'
 
 /** 2026-09-21 is a Monday; `day` 0 = Monday. Local time, like the app. */
 function at(day: number, clock: string): Date {
@@ -136,10 +143,7 @@ describe('openStateOf and formatClock', () => {
 })
 
 describe('Safari lookbehind safety', () => {
-  it('has no lookbehind in the module source, unsupported by Safari 16.0–16.3', async () => {
-    const { readFileSync } = await import('node:fs')
-    const { join } = await import('node:path')
-    const source = readFileSync(join(__dirname, 'openingHours.ts'), 'utf-8')
-    expect(source).not.toContain('(?<')
+  it('has no lookbehind, unsupported by Safari 16.0–16.3', () => {
+    expect(ADDITIONAL_RULE_SOURCE).not.toContain('(?<')
   })
 })

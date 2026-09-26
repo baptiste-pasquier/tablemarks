@@ -39,6 +39,8 @@ const RULE = new RegExp(`^(?:(${DAY}(?:-${DAY})?(?:,${DAY}(?:-${DAY})?)*)\\s+)?(
 // No lookbehind (Safari 16.0–16.3 cannot parse it): the ending digit/off/closed is captured
 // instead, and `splitAdditionalRules` re-joins it onto the text before the split.
 const ADDITIONAL_RULE = new RegExp(`(\\d|off|closed)\\s*,\\s*(?=${DAY}\\b)`)
+/** Exposed only for a test asserting Safari 16.0–16.3 compatibility (no lookbehind). */
+export const ADDITIONAL_RULE_SOURCE = ADDITIONAL_RULE.source
 const TIME = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/
 
 /**
