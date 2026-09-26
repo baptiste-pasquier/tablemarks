@@ -35,8 +35,26 @@ const RULE = new RegExp(`^(?:(${DAY}(?:-${DAY})?(?:,${DAY}(?:-${DAY})?)*)\\s+)?(
 // A comma that ends one rule and starts the next ("Su-Th 11:00-24:00, Fr,Sa 11:00-02:00"): it
 // follows a time or off/closed and precedes a weekday. A comma inside a weekday list ("Mo,We")
 // follows a letter, and one inside a time list precedes a digit, so neither matches.
-const ADDITIONAL_RULE = new RegExp(`(?<=\\d|off|closed)\\s*,\\s*(?=${DAY}\\b)`)
+//
+// No lookbehind (Safari 16.0–16.3 cannot parse it): the ending digit/off/closed is captured
+// instead, and `splitAdditionalRules` re-joins it onto the text before the split.
+const ADDITIONAL_RULE = new RegExp(`(\\d|off|closed)\\s*,\\s*(?=${DAY}\\b)`)
 const TIME = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/
+
+/**
+ * Splits a chunk on the commas `ADDITIONAL_RULE` matches, without a lookbehind: `String.split`
+ * with a capturing separator interleaves each captured group into the result, so the piece before
+ * a split is missing exactly the digit/off/closed text the group captured — glue it back on.
+ */
+function splitAdditionalRules(chunk: string): string[] {
+  const pieces = chunk.split(ADDITIONAL_RULE)
+  const rules: string[] = []
+  for (let i = 0; i < pieces.length; i += 2) {
+    const captured = pieces[i + 1]
+    rules.push(captured === undefined ? pieces[i] : pieces[i] + captured)
+  }
+  return rules
+}
 
 function parseDays(selector: string): number[] | null {
   const days = new Set<number>()
@@ -109,7 +127,7 @@ export function parseOpeningHours(raw: string): Week | null {
   if (chunks.length === 0) return null
   const week: Week = Array.from({ length: 7 }, () => [])
   for (const chunk of chunks) {
-    for (const [i, text] of chunk.split(ADDITIONAL_RULE).entries()) {
+    for (const [i, text] of splitAdditionalRules(chunk).entries()) {
       const rule = parseRule(text.trim())
       if (!rule) return null
       // `;` starts a normal rule, which replaces its days; `,` an additional one, which adds.

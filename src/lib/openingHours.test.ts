@@ -134,3 +134,12 @@ describe('openStateOf and formatClock', () => {
     expect(openStateOf('Mo-PH 10:00-12:00', at(0, '12:00'))).toBeNull()
   })
 })
+
+describe('Safari lookbehind safety', () => {
+  it('has no lookbehind in the module source, unsupported by Safari 16.0–16.3', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const source = readFileSync(join(__dirname, 'openingHours.ts'), 'utf-8')
+    expect(source).not.toContain('(?<')
+  })
+})
