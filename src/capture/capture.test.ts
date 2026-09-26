@@ -1,7 +1,13 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { freshDB } from '../test/idb'
-import { setGeocodeProvider } from './geocode'
-import { capturePaste } from './capture'
+import { setGeocodeProvider, type GeoCandidate } from './geocode'
+import {
+  capturePaste,
+  commitCapture,
+  draftFromCandidate,
+  withoutMatch,
+  type PlaceDraft,
+} from './capture'
 import { allRestaurants } from '../data/restaurants'
 import { UnresolvableShortLink, resolveShortLink } from '../sync/pocketbase'
 import { setBackendPresence } from '../sync/backendStatus'
@@ -15,6 +21,12 @@ vi.mock('../sync/pocketbase', async (importOriginal) => {
 
 const FULL_URL = 'https://www.google.com/maps/place/Chez+Marcel/@48.8566,2.3522,15z'
 const SHORT_URL = 'https://maps.app.goo.gl/abc'
+const SERVAN_OSM = {
+  type: 'node' as const,
+  id: 1,
+  checkedAt: '2026-09-26T10:00:00.000Z',
+  city: 'Paris',
+}
 
 // Presence comes from the real store (KTD10: capture reads the synchronous store, never the
 // fetching module), so each test states the deployment it is describing rather than inheriting
@@ -23,44 +35,127 @@ function backendConfigured(): void {
   setBackendPresence({ status: 'configured', pocketbaseUrl: 'https://pb.example.test' })
 }
 
+function provider(near: GeoCandidate[] = []) {
+  setGeocodeProvider({
+    search: async (_q, options) => (options?.near ? near : []),
+    reverse: async () => '1 Rue de Rivoli, Paris',
+    lookup: async () => null,
+  })
+}
+
 beforeEach(async () => {
   await freshDB()
   vi.mocked(resolveShortLink).mockReset()
   backendConfigured()
-  setGeocodeProvider({
-    search: async () => [],
-    reverse: async () => '1 Rue de Rivoli, Paris',
-    lookup: async () => null,
-  })
+  provider()
 })
 
 describe('capturePaste', () => {
-  it('creates a pinned record from a full URL with reverse-geocoded address', async () => {
-    const res = await capturePaste(FULL_URL)
+  async function draftOf(input: string): Promise<PlaceDraft> {
+    const res = await capturePaste(input)
+    if (res.status !== 'preview') throw new Error(`expected a preview, got ${res.status}`)
+    return res.draft
+  }
+
+  it('previews a full URL without saving it', async () => {
+    const draft = await draftOf(FULL_URL)
+    expect(draft).toMatchObject({
+      name: 'Chez Marcel',
+      pending: false,
+      address: '1 Rue de Rivoli, Paris',
+    })
+    expect(draft.lat).toBeCloseTo(48.8566)
+    expect(draft.match).toBeUndefined()
+    expect(await allRestaurants()).toEqual([])
+  })
+
+  it('attaches the OSM object found near the link, and takes its address', async () => {
+    provider([
+      {
+        name: 'Chez Marcel',
+        lat: 48.8567,
+        lng: 2.3522,
+        osmClass: 'amenity=restaurant',
+        osm: SERVAN_OSM,
+        address: 'Chez Marcel, 3 Rue X, Paris',
+      },
+    ])
+    const draft = await draftOf(FULL_URL)
+    expect(draft.match?.osm).toEqual(SERVAN_OSM)
+    expect(draft.address).toBe('Chez Marcel, 3 Rue X, Paris')
+  })
+
+  it('says when the match could not be asked, and still previews', async () => {
+    setGeocodeProvider({
+      search: async () => {
+        throw new Error('down')
+      },
+      reverse: async () => undefined,
+      lookup: async () => null,
+    })
+    expect(await draftOf(FULL_URL)).toMatchObject({ matchFailed: true, match: undefined })
+  })
+
+  it('commits a preview with its category and snapshot', async () => {
+    provider([
+      {
+        name: 'Chez Marcel',
+        lat: 48.8567,
+        lng: 2.3522,
+        osmClass: 'amenity=restaurant',
+        osm: SERVAN_OSM,
+      },
+    ])
+    const res = await commitCapture(await draftOf(FULL_URL), 'french')
     expect(res.status).toBe('created')
     if (res.status !== 'created') return
-    expect(res.restaurant.name).toBe('Chez Marcel')
-    expect(res.restaurant.lat).toBeCloseTo(48.8566)
+    expect(res.restaurant).toMatchObject({
+      name: 'Chez Marcel',
+      cuisine: 'french',
+      osm: SERVAN_OSM,
+      pending: false,
+    })
+  })
+
+  it('reverse-geocodes on commit once the match is refused', async () => {
+    provider([
+      {
+        name: 'Chez Marcel',
+        lat: 48.8567,
+        lng: 2.3522,
+        osmClass: 'amenity=restaurant',
+        osm: SERVAN_OSM,
+        address: 'OSM address',
+      },
+    ])
+    const res = await commitCapture(withoutMatch(await draftOf(FULL_URL)))
+    if (res.status !== 'created') throw new Error(res.status)
+    expect(res.restaurant.osm).toBeUndefined()
     expect(res.restaurant.address).toBe('1 Rue de Rivoli, Paris')
-    expect(res.restaurant.pending).toBe(false)
   })
 
-  it('resolves a short link server-side when online', async () => {
+  it('resolves a short link server-side into a preview', async () => {
     vi.mocked(resolveShortLink).mockResolvedValue({ lat: 40, lng: -3, name: 'Madrid spot' })
-    const res = await capturePaste(SHORT_URL)
-    expect(res.status).toBe('created')
-    if (res.status !== 'created') return
-    expect(res.restaurant.name).toBe('Madrid spot')
-    expect(res.restaurant.lat).toBe(40)
+    expect(await draftOf(SHORT_URL)).toMatchObject({
+      name: 'Madrid spot',
+      lat: 40,
+      mapsUrl: SHORT_URL,
+    })
   })
 
-  it('saves a provisional record when a configured backend cannot resolve a short link (offline)', async () => {
+  it('previews then saves a provisional record when a configured backend cannot resolve a short link', async () => {
     vi.mocked(resolveShortLink).mockRejectedValue(new Error('offline'))
-    const res = await capturePaste(SHORT_URL)
-    expect(res.status).toBe('provisional')
-    if (res.status !== 'provisional') return
-    expect(res.restaurant.pending).toBe(true)
-    expect(res.restaurant.lat).toBeNull()
+    const draft = await draftOf(SHORT_URL)
+    expect(draft).toMatchObject({ pending: true, lat: null, name: SHORT_URL })
+    expect(await allRestaurants()).toEqual([])
+    const res = await commitCapture(draft, 'pizza')
+    if (res.status !== 'created') throw new Error(res.status)
+    expect(res.restaurant).toMatchObject({
+      pending: true,
+      lat: null,
+      cuisine: 'pizza',
+      mapsUrl: SHORT_URL,
+    })
   })
 
   it('refuses a link the resolver ruled on, instead of saving a record that never resolves', async () => {
@@ -93,11 +188,23 @@ describe('capturePaste', () => {
     expect(res).toEqual({ status: 'needs-search', query: 'Chez Marcel Paris' })
   })
 
-  it('flags a duplicate when the same place is captured twice', async () => {
-    await capturePaste(FULL_URL)
-    const res = await capturePaste(FULL_URL)
-    expect(res.status).toBe('duplicate')
+  it('flags a duplicate at preview when the same place was saved', async () => {
+    await commitCapture(await draftOf(FULL_URL))
+    expect((await capturePaste(FULL_URL)).status).toBe('duplicate')
     expect((await allRestaurants()).length).toBe(1)
+  })
+
+  it('flags a duplicate at commit for a search pick of an already-saved OSM object', async () => {
+    const candidate = {
+      name: 'Chez Marcel',
+      lat: 10,
+      lng: 10,
+      osmClass: 'amenity=restaurant',
+      osm: SERVAN_OSM,
+    }
+    await commitCapture(draftFromCandidate(candidate))
+    const again = await commitCapture(draftFromCandidate({ ...candidate, lat: 11 }))
+    expect(again.status).toBe('duplicate')
   })
 
   describe('with no backend in this deployment (R5)', () => {
@@ -114,10 +221,9 @@ describe('capturePaste', () => {
       expect(resolveShortLink).not.toHaveBeenCalled()
     })
 
-    it('still creates a place from a full URL with coordinates — it never needed the backend', async () => {
+    it('still previews a full URL with coordinates — it never needed the backend', async () => {
       const res = await capturePaste(FULL_URL)
-      expect(res.status).toBe('created')
-      expect((await allRestaurants()).length).toBe(1)
+      expect(res.status).toBe('preview')
     })
 
     it('still routes plain text to search', async () => {
@@ -141,9 +247,9 @@ describe('capturePaste', () => {
       expect(resolveShortLink).not.toHaveBeenCalled()
     })
 
-    it('still creates a place from a full URL with coordinates', async () => {
+    it('still previews a full URL with coordinates', async () => {
       const res = await capturePaste(FULL_URL)
-      expect(res.status).toBe('created')
+      expect(res.status).toBe('preview')
     })
 
     it('still routes plain text to search', async () => {

@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Link2, MapPin } from 'lucide-react'
-import { capturePaste, captureSearchPick, type CaptureResult } from '../../capture/capture'
+import {
+  capturePaste,
+  commitCapture,
+  draftFromCandidate,
+  type CaptureResult,
+  type CommitResult,
+} from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
-import { updateRestaurant } from '../../data/restaurants'
 import { useRestaurants } from '../useRestaurants'
 import { useRankedCuisines } from '../facets/useRankedCuisines'
 import { CuisinePicker } from '../facets/CuisinePicker'
@@ -47,15 +52,11 @@ export function AddPlace({
   // here instead of silently falling through to the search branch.
   async function handle(result: CaptureResult) {
     switch (result.status) {
-      case 'created':
-      case 'provisional': {
-        const c = cuisine.trim()
-        // The place is already saved; the cuisine is a best-effort follow-up write. A failure here
-        // must not surface as "couldn't add the place" or block closing — the place exists.
-        if (c) await updateRestaurant(result.restaurant.id, { cuisine: c }).catch(() => {})
-        onClose()
+      case 'preview':
+        // Interim: saved at once, as before this change. The preview step arrives with the
+        // reordered form.
+        finish(await commitCapture(result.draft, cuisine.trim() || undefined))
         return
-      }
       case 'duplicate':
         setDuplicate(result.match)
         return
@@ -73,6 +74,11 @@ export function AddPlace({
         throw new Error(`Unhandled capture result: ${JSON.stringify(unhandled)}`)
       }
     }
+  }
+
+  function finish(result: CommitResult) {
+    if (result.status === 'duplicate') setDuplicate(result.match)
+    else onClose()
   }
 
   async function runSearch(query: string) {
@@ -107,7 +113,7 @@ export function AddPlace({
   async function pick(candidate: GeoCandidate) {
     setBusy(true)
     try {
-      await handle(await captureSearchPick(candidate))
+      finish(await commitCapture(draftFromCandidate(candidate), cuisine.trim() || undefined))
     } catch {
       setError(t('capture.errorAdd'))
     } finally {

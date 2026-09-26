@@ -43,4 +43,10 @@ describe('findNearMatch', () => {
     const existing = [r({ id: 'a', lat: 48.8566, lng: 2.3522, deleted: true })]
     expect(findNearMatch({ lat: 48.8566, lng: 2.3522 }, existing)).toBeNull()
   })
+
+  it('matches the same OSM object even far from any saved position', () => {
+    const saved = r({ id: 'a', lat: 0, lng: 0, osm: { type: 'node', id: 7, checkedAt: 'x' } })
+    expect(findNearMatch({ lat: 45, lng: 4, osm: { type: 'node', id: 7 } }, [saved])?.id).toBe('a')
+    expect(findNearMatch({ lat: 45, lng: 4, osm: { type: 'way', id: 7 } }, [saved])).toBeNull()
+  })
 })
