@@ -8,7 +8,16 @@ import { openStateOf } from '../../lib/openingHours'
 import type { PlaceDraft } from '../../capture/capture'
 
 /** A pasted link, identified: what "Add" will save, with its OSM data and a way to refuse it. */
-export function DraftPreview({ draft, onReject }: { draft: PlaceDraft; onReject: () => void }) {
+export function DraftPreview({
+  draft,
+  onReject,
+  disabled,
+}: {
+  draft: PlaceDraft
+  onReject: () => void
+  /** While a commit is in flight: the running commit already holds the old draft (review #3). */
+  disabled?: boolean
+}) {
   const { t, i18n } = useTranslation()
   const now = useNow()
   const osm = draft.match?.osm
@@ -57,7 +66,7 @@ export function DraftPreview({ draft, onReject }: { draft: PlaceDraft; onReject:
           <p className="mt-2.5 flex flex-wrap items-center gap-1 text-[11.5px] text-gray-600">
             <MapIcon size={13} aria-hidden="true" />
             {t('capture.foundOnOsm')} ·
-            <Button variant="link" size="xs" onClick={onReject}>
+            <Button variant="link" size="xs" onClick={onReject} disabled={disabled}>
               {t('capture.notThisOne')}
             </Button>
           </p>

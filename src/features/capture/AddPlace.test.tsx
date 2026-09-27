@@ -561,5 +561,34 @@ describe('AddPlace', () => {
       await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
       expect((await allRestaurants()).map((r) => r.name)).toEqual(['L’As du Fallafel'])
     })
+
+    it('ignores "Not this one" while a place is being added, so the saved record keeps its match (review #3)', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(createRestaurant).mockImplementationOnce(async (input) => {
+        await gate
+        const { createRestaurant: real } =
+          await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
+        return real(input)
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit(FULL_URL)
+      await screen.findByText(/Found on OpenStreetMap/)
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      const rejectButton = screen.getByRole('button', { name: 'Not this one' })
+      expect(rejectButton).toBeDisabled()
+      await user.click(rejectButton)
+      expect(screen.getByText(/Found on OpenStreetMap/)).toBeInTheDocument()
+
+      release()
+      await waitFor(async () => expect(await allRestaurants()).toHaveLength(1))
+      expect((await allRestaurants())[0].osm).toEqual(OSM)
+    })
   })
 })

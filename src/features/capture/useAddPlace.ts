@@ -84,12 +84,16 @@ export function useAddPlace(onAdded: () => void) {
   }
 
   function rejectMatch() {
+    // The running commit already holds the draft with its match; rejecting it now would change
+    // what "Add" is saving without the commit knowing (review #3).
+    if (busy) return
     if (!draft) return
     setDraft(withoutMatch(draft))
     suggest(undefined)
   }
 
   function setCuisine(value: string | undefined) {
+    if (busy) return
     setCuisineTouched(true)
     setCuisineValue(value ?? '')
   }

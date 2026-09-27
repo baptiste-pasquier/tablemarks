@@ -73,7 +73,7 @@ export function AddPlace({
         />
       )}
       {form.draft && !form.selected && (
-        <DraftPreview draft={form.draft} onReject={form.rejectMatch} />
+        <DraftPreview draft={form.draft} onReject={form.rejectMatch} disabled={form.busy} />
       )}
 
       {/* The category is asked once the place is known, pre-filled with what OSM says. */}
