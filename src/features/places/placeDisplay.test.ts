@@ -60,13 +60,23 @@ describe('detailZone', () => {
 })
 
 describe('compactAddress, osmObjectUrl, websiteLabel', () => {
-  it('prefers the OSM street, else the stored address', () => {
+  it('prefers the OSM street with its postcode and city, else the stored address', () => {
+    const address = '32, Rue Saint-Maur, Paris…'
     expect(
       compactAddress({
-        address: '32, Rue Saint-Maur, Paris…',
-        osm: osm({ street: '32 Rue Saint-Maur' }),
+        address,
+        osm: osm({ street: '32 Rue Saint-Maur', postcode: '75011', city: 'Paris' }),
       }),
-    ).toBe('32 Rue Saint-Maur')
+    ).toBe('32 Rue Saint-Maur, 75011 Paris')
+    expect(
+      compactAddress({ address, osm: osm({ street: '32 Rue Saint-Maur', city: 'Paris' }) }),
+    ).toBe('32 Rue Saint-Maur, Paris')
+    expect(compactAddress({ address, osm: osm({ street: '32 Rue Saint-Maur' }) })).toBe(
+      '32 Rue Saint-Maur',
+    )
+    expect(compactAddress({ address, osm: osm({ postcode: '75011', city: 'Paris' }) })).toBe(
+      address,
+    )
     expect(compactAddress({ address: '1 Rue de Paris' })).toBe('1 Rue de Paris')
   })
 

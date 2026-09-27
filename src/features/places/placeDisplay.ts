@@ -35,9 +35,11 @@ export function detailZone(osm: OsmSnapshot, t: TFunction, language: string): st
   return area && area !== osm.city && area !== zone ? `${zone} · ${area}` : zone
 }
 
-/** "32 Rue Saint-Maur" once matched to OSM; the stored address otherwise, unchanged. */
+/** "32 Rue Saint-Maur, 75011 Paris" once matched to OSM; the stored address otherwise, unchanged. */
 export function compactAddress(r: Pick<Restaurant, 'address' | 'osm'>): string | undefined {
-  return r.osm?.street ?? r.address
+  if (!r.osm?.street) return r.address
+  const locality = [r.osm.postcode, r.osm.city].filter(Boolean).join(' ')
+  return locality ? `${r.osm.street}, ${locality}` : r.osm.street
 }
 
 /** Where "Correct" sends the user: the object's page on openstreetmap.org. */

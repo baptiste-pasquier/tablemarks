@@ -519,10 +519,10 @@ describe('RestaurantDetail', () => {
       await screen.findByText('Le Servan')
     }
 
-    it('shows the zone under the name and the street instead of the full address', async () => {
+    it('shows the zone under the name and a compact address instead of the full one', async () => {
       await open()
       expect(screen.getByText('Paris 11th · Quartier de la Roquette')).toBeInTheDocument()
-      expect(screen.getByText('32 Rue Saint-Maur')).toBeInTheDocument()
+      expect(screen.getByText('32 Rue Saint-Maur, 75011 Paris')).toBeInTheDocument()
       expect(screen.queryByText(/Arrondissement, Paris, France/)).toBeNull()
     })
 
