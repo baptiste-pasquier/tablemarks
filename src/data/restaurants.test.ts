@@ -138,4 +138,13 @@ describe('restaurant repository', () => {
     expect(after?.updated).toBe(r.updated) // record itself untouched
     expect(after?.name).toBe('Original')
   })
+
+  it('stores an OSM snapshot on create and replaces it on update', async () => {
+    const osm = { type: 'node' as const, id: 1, checkedAt: '2026-09-19T10:00:00.000Z' }
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1, osm })
+    expect((await getRestaurant(r.id))?.osm).toEqual(osm)
+    const next = { ...osm, checkedAt: '2026-09-26T10:00:00.000Z', phone: '+33 1 00 00 00 00' }
+    await updateRestaurant(r.id, { osm: next })
+    expect((await getRestaurant(r.id))?.osm).toEqual(next)
+  })
 })

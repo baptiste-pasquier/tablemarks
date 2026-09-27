@@ -46,7 +46,18 @@
     "shortLinkTryFullUrl": "Or paste the full Google Maps link from your browser address bar — the long one with coordinates in it.",
     "alreadySaved": "is already saved.",
     "openIt": "Open it",
-    "whichOne": "Which one?"
+    "whichOne": "Which one?",
+    "search": "Search",
+    "suggestedByOsm": "Suggested by OpenStreetMap",
+    "otherResults_one": "{{count}} other result",
+    "otherResults_other": "{{count}} other results",
+    "noEateryMatches": "No restaurant, café or bar found under this name. Try adding the city, or paste the Google Maps link.",
+    "foundOnOsm": "Found on OpenStreetMap",
+    "foundOnOsmAs": "Found on OpenStreetMap as “{{name}}”",
+    "notThisOne": "Not this one",
+    "noOsmData": "No OpenStreetMap data",
+    "osmUnavailable": "OpenStreetMap unavailable — complete it later from the place",
+    "resolvedLater": "Position resolved later"
   },
   "decide": {
     "title": "Where to eat?",
@@ -169,6 +180,42 @@
   "restaurantList": {
     "emptyTitle": "No places yet",
     "emptyBody": "Save a spot you love or one you want to try — paste a Google Maps link or search a name."
+  },
+  "place": {
+    "arrondissement": "{{city}} {{number}}{{suffix}}",
+    "ordinalSuffix": {
+      "zero": "th",
+      "one": "st",
+      "two": "nd",
+      "few": "rd",
+      "many": "th",
+      "other": "th"
+    },
+    "call": "Call",
+    "website": "Website",
+    "showWeek": "Show the week’s hours",
+    "closedDay": "Closed",
+    "osmSource": "OpenStreetMap · {{date}}",
+    "refresh": "Refresh",
+    "correct": "Correct",
+    "complete": "Complete from OpenStreetMap",
+    "completeHint": "hours, phone, website, area",
+    "confirmMatch": "Yes, complete",
+    "rejectMatch": "Not this one",
+    "matchDistance": "{{distance}} away",
+    "categoryKept": "Your category “{{category}}” is kept.",
+    "notFound": "Not found on OpenStreetMap",
+    "notFoundHint": "No place of this name within 75 m.",
+    "osmFailed": "OpenStreetMap is not answering, try again later.",
+    "osmGone": "This place is no longer on OpenStreetMap (maybe closed).",
+    "osmTaken": "Already linked to “{{name}}”."
+  },
+  "openState": {
+    "openUntil": "Open until {{time}}",
+    "openAllDay": "Open 24 hours",
+    "opensAt": "Opens at {{time}}",
+    "closedOpensAt": "Closed · opens at {{time}}",
+    "closedToday": "Closed today"
   },
   "verdicts": {
     "go_back": "Go back",

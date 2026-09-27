@@ -8,6 +8,8 @@ import { allRestaurants, createRestaurant } from '../../data/restaurants'
 import { setBackendPresence } from '../../sync/backendStatus'
 import { mockI18n } from '../../test/setup'
 import { UnresolvableShortLink, resolveShortLink } from '../../sync/pocketbase'
+import { isOsmDismissed } from '../places/osmDismissals'
+import type { GeoCandidate } from '../../capture/geocode'
 
 // Partial mock: the real module apart from the network call, so `pb` and the error class the
 // component's branch tests with `instanceof` are the genuine ones.
@@ -16,36 +18,88 @@ vi.mock('../../sync/pocketbase', async (importOriginal) => {
   return { ...actual, resolveShortLink: vi.fn() }
 })
 
+// Partial mock: real by default (`vi.fn(actual.createRestaurant)` / `vi.fn(actual.allRestaurants)`
+// delegates), so only the odd test that holds a call on a deferred promise needs to override it.
+vi.mock('../../data/restaurants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../data/restaurants')>()
+  return {
+    ...actual,
+    createRestaurant: vi.fn(actual.createRestaurant),
+    allRestaurants: vi.fn(actual.allRestaurants),
+  }
+})
+
 const FULL_URL = 'https://www.google.com/maps/place/Chez+Marcel/@48.8566,2.3522,15z'
 const SHORT_URL = 'https://maps.app.goo.gl/abc'
+
+const OSM = {
+  type: 'node' as const,
+  id: 1,
+  checkedAt: '2026-09-26T10:00:00.000Z',
+  city: 'Paris',
+  postcode: '75004',
+  street: '34 Rue des Rosiers',
+}
+
+const FALAFEL: GeoCandidate = {
+  name: 'L’As du Fallafel',
+  lat: 48.857,
+  lng: 2.359,
+  osmClass: 'amenity=restaurant',
+  cuisineTag: 'falafel;israeli',
+  osm: OSM,
+}
+
+const LEATHER: GeoCandidate = {
+  name: 'Chez Aline',
+  lat: 48.86,
+  lng: 2.38,
+  osmClass: 'shop=leather',
+  osm: { ...OSM, id: 2, postcode: '75011' },
+}
+
+function provide({ search = [], near = [] }: { search?: GeoCandidate[]; near?: GeoCandidate[] }) {
+  setGeocodeProvider({
+    search: async (_q, options) => (options?.near ? near : search),
+    reverse: async () => '1 Rue de Rivoli, Paris',
+    lookup: async () => null,
+  })
+}
 
 beforeEach(async () => {
   await freshDB()
   vi.mocked(resolveShortLink).mockReset()
   setBackendPresence({ status: 'configured', pocketbaseUrl: 'https://pb.example.test' })
-  setGeocodeProvider({ search: async () => [], reverse: async () => '1 Rue de Rivoli, Paris' })
+  setGeocodeProvider({
+    search: async () => [],
+    reverse: async () => '1 Rue de Rivoli, Paris',
+    lookup: async () => null,
+  })
 })
 
 async function pasteAndSubmit(text: string): Promise<void> {
   const user = userEvent.setup()
   await user.type(screen.getByLabelText(/paste a google maps link/i), text)
-  await user.click(screen.getByRole('button', { name: 'Add' }))
+  await user.click(screen.getByRole('button', { name: 'Search' }))
+}
+
+async function pasteAndAdd(text: string): Promise<void> {
+  await pasteAndSubmit(text)
+  await userEvent.setup().click(await screen.findByRole('button', { name: 'Add' }))
 }
 
 describe('AddPlace', () => {
   it('renders the submit button through the shared Button primary variant', () => {
     render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
 
-    expect(screen.getByRole('button', { name: 'Add' })).toHaveClass('py-2.5', 'bg-brand')
+    expect(screen.getByRole('button', { name: 'Search' })).toHaveClass('py-2.5', 'bg-brand')
   })
 
   it('creates a place from a pasted full URL and closes', async () => {
     const onClose = vi.fn()
     render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
-    const user = userEvent.setup()
 
-    await user.type(screen.getByLabelText(/paste a google maps link/i), FULL_URL)
-    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await pasteAndAdd(FULL_URL)
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel')
@@ -56,6 +110,9 @@ describe('AddPlace', () => {
     const user = userEvent.setup()
 
     await user.type(screen.getByLabelText(/paste a google maps link/i), `${FULL_URL}{Enter}`)
+    await screen.findByRole('button', { name: 'Add' })
+    expect(await allRestaurants()).toEqual([])
+    await user.type(screen.getByLabelText(/paste a google maps link/i), '{Enter}')
 
     await waitFor(async () =>
       expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel'),
@@ -66,8 +123,8 @@ describe('AddPlace', () => {
     render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
     const user = userEvent.setup()
 
-    await user.type(screen.getByLabelText(/paste a google maps link/i), FULL_URL)
-    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+    await pasteAndSubmit(FULL_URL)
+    await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
     await user.click(screen.getByRole('button', { name: 'Other…' }))
     await user.type(screen.getByLabelText('Other category'), 'Ramen{Enter}') // non-curated
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -82,8 +139,8 @@ describe('AddPlace', () => {
     render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
     const user = userEvent.setup()
 
-    await user.type(screen.getByLabelText(/paste a google maps link/i), FULL_URL)
-    await user.click(screen.getByRole('button', { name: 'Category: Uncategorized' }))
+    await pasteAndSubmit(FULL_URL)
+    await user.click(await screen.findByRole('button', { name: 'Category: Uncategorized' }))
     await user.click(screen.getByRole('button', { name: 'Other…' }))
     await user.type(screen.getByLabelText('Other category'), 'Ramen')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -108,10 +165,8 @@ describe('AddPlace', () => {
   it('offers the existing place on a near-match duplicate', async () => {
     await createRestaurant({ name: 'Existing', lat: 48.8566, lng: 2.3522 })
     render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
-    const user = userEvent.setup()
 
-    await user.type(screen.getByLabelText(/paste a google maps link/i), FULL_URL)
-    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await pasteAndSubmit(FULL_URL)
 
     expect(await screen.findByText(/already saved/i)).toBeInTheDocument()
     expect((await allRestaurants()).length).toBe(1)
@@ -161,7 +216,7 @@ describe('AddPlace', () => {
       const user = userEvent.setup()
 
       await user.type(screen.getByLabelText(/collez un lien google maps/i), SHORT_URL)
-      await user.click(screen.getByRole('button', { name: 'Ajouter' }))
+      await user.click(screen.getByRole('button', { name: 'Rechercher' }))
 
       const note = await screen.findByRole('note')
       expect(note).toHaveTextContent(/ne peuvent être ouverts que par un serveur/i)
@@ -173,7 +228,7 @@ describe('AddPlace', () => {
       const onClose = vi.fn()
       render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
 
-      await pasteAndSubmit(FULL_URL)
+      await pasteAndAdd(FULL_URL)
 
       await waitFor(() => expect(onClose).toHaveBeenCalled())
       expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel')
@@ -226,9 +281,28 @@ describe('AddPlace', () => {
     })
   })
 
+  describe('a pasted link that fails before any draft (review #5)', () => {
+    it('reports a failed add, not a failed search', async () => {
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      // Let the modal's own `useRestaurants` load settle before arming the one-shot rejection
+      // below, so it lands on the preview's own call rather than that unrelated one.
+      await waitFor(() => expect(allRestaurants).toHaveBeenCalled())
+      vi.mocked(allRestaurants).mockRejectedValueOnce(new Error('idb down'))
+
+      await pasteAndSubmit(FULL_URL)
+
+      expect(await screen.findByText(/could not add that place/i)).toBeInTheDocument()
+      expect(screen.queryByText(/search failed/i)).toBeNull()
+    })
+  })
+
   describe('search failures', () => {
     it('tells an empty result set apart from a failed search, and offers the full-URL fallback', async () => {
-      setGeocodeProvider({ search: async () => [], reverse: async () => undefined })
+      setGeocodeProvider({
+        search: async () => [],
+        reverse: async () => undefined,
+        lookup: async () => null,
+      })
       const { unmount } = render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
       await pasteAndSubmit('Chez Marcel Paris')
       const empty = await screen.findByText(/no matching places found/i)
@@ -240,12 +314,353 @@ describe('AddPlace', () => {
           throw new Error('provider down')
         },
         reverse: async () => undefined,
+        lookup: async () => null,
       })
       render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
       await pasteAndSubmit('Chez Marcel Paris')
       const failed = await screen.findByText(/search failed/i)
       expect(failed).toHaveTextContent(/full google maps link/i)
       expect(screen.queryByText(/no matching places found/i)).toBeNull()
+    })
+  })
+
+  describe('search, select, category, add', () => {
+    it('shows no category picker before a place is identified', () => {
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      expect(screen.queryByRole('button', { name: /^Category:/ })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Search' })).toBeDisabled()
+    })
+
+    it('selects a result, pre-fills its category, and adds it with its snapshot', async () => {
+      provide({ search: [FALAFEL] })
+      const onClose = vi.fn()
+      render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('As du Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+
+      expect(screen.getByRole('button', { name: /^L’As du Fallafel/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(screen.getByRole('button', { name: 'Category: Lebanese' })).toBeInTheDocument()
+      expect(screen.getByText('Suggested by OpenStreetMap')).toBeInTheDocument()
+      expect(await allRestaurants()).toEqual([])
+
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+      await waitFor(() => expect(onClose).toHaveBeenCalled())
+      expect((await allRestaurants())[0]).toMatchObject({ cuisine: 'lebanese', osm: OSM })
+    })
+
+    it('keeps a category the user chose when another result is selected', async () => {
+      provide({
+        search: [
+          FALAFEL,
+          { ...FALAFEL, name: 'Le Fallafel 17e', osm: { ...OSM, id: 3 }, cuisineTag: 'kebab' },
+        ],
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.click(screen.getByRole('button', { name: 'Category: Lebanese' }))
+      await user.click(screen.getByRole('button', { name: 'Other…' }))
+      await user.type(screen.getByLabelText('Other category'), 'Ramen{Enter}')
+      await user.click(screen.getByRole('button', { name: /^Le Fallafel 17e/ }))
+
+      expect(screen.getByRole('button', { name: 'Category: Ramen' })).toBeInTheDocument()
+      expect(screen.queryByText('Suggested by OpenStreetMap')).toBeNull()
+    })
+
+    it('goes back to Search when the text changes after a selection', async () => {
+      provide({ search: [FALAFEL] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('As du Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.type(screen.getByLabelText(/paste a google maps link/i), 'x')
+
+      expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Add' })).toBeNull()
+      expect(screen.queryByRole('button', { name: /^L’As du Fallafel/ })).toBeNull()
+    })
+
+    it('folds results that are not eateries, and says when there is no eatery at all', async () => {
+      provide({ search: [LEATHER] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('Chez Aline')
+      expect(await screen.findByText(/no restaurant, café or bar/i)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Chez Aline/ })).toBeNull()
+
+      await user.click(screen.getByRole('button', { name: '1 other result' }))
+      expect(screen.getByRole('button', { name: /Chez Aline/ })).toBeInTheDocument()
+    })
+
+    it('previews a pasted link with its OSM match, and drops it on "Not this one"', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit(FULL_URL)
+      expect(await screen.findByText(/Found on OpenStreetMap/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Category: Lebanese' })).toBeInTheDocument()
+      expect(await allRestaurants()).toEqual([])
+
+      await user.click(screen.getByRole('button', { name: 'Not this one' }))
+      expect(screen.getByText('No OpenStreetMap data')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Category: Uncategorized' })).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+      await waitFor(async () => expect(await allRestaurants()).toHaveLength(1))
+      expect((await allRestaurants())[0].osm).toBeUndefined()
+    })
+
+    it('names the OSM match in the preview when it differs from the pasted link, plain text when equal (review #8b)', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Paul Bistrot', lat: 48.8566, lng: 2.3522 }] })
+      const { unmount } = render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit('https://www.google.com/maps/place/Paul/@48.8566,2.3522,15z')
+
+      expect(
+        await screen.findByText(/Found on OpenStreetMap as “Chez Paul Bistrot”/),
+      ).toBeInTheDocument()
+      unmount()
+
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(FULL_URL)
+
+      expect(await screen.findByText(/Found on OpenStreetMap ·/)).toBeInTheDocument()
+      expect(screen.queryByText(/Found on OpenStreetMap as/)).toBeNull()
+    })
+
+    it('reports a duplicate found at commit for a picked result', async () => {
+      await createRestaurant({ name: 'Existing', lat: FALAFEL.lat, lng: FALAFEL.lng })
+      provide({ search: [FALAFEL] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('As du Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      expect(await screen.findByText(/already saved/i)).toBeInTheDocument()
+      expect(await allRestaurants()).toHaveLength(1)
+    })
+
+    it('keeps the category picker hidden while results are listed but none is selected', async () => {
+      provide({ search: [FALAFEL] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit('As du Fallafel')
+      await screen.findByRole('button', { name: /^L’As du Fallafel/ })
+
+      expect(screen.queryByRole('button', { name: /^Category:/ })).toBeNull()
+    })
+
+    it('re-suggests the OSM category once the input changes and a new place is selected', async () => {
+      provide({ search: [FALAFEL] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('As du Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.click(screen.getByRole('button', { name: 'Category: Lebanese' }))
+      await user.click(screen.getByRole('button', { name: 'Other…' }))
+      await user.type(screen.getByLabelText('Other category'), 'Ramen{Enter}')
+      expect(screen.getByRole('button', { name: 'Category: Ramen' })).toBeInTheDocument()
+
+      await user.clear(screen.getByLabelText(/paste a google maps link/i))
+      await pasteAndSubmit('As du Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+
+      expect(screen.getByRole('button', { name: 'Category: Lebanese' })).toBeInTheDocument()
+      expect(screen.getByText('Suggested by OpenStreetMap')).toBeInTheDocument()
+    })
+
+    it('drops a stale search result once the input has changed', async () => {
+      let release: (found: GeoCandidate[]) => void = () => {}
+      const pending = new Promise<GeoCandidate[]>((resolve) => {
+        release = resolve
+      })
+      setGeocodeProvider({
+        search: async () => pending,
+        reverse: async () => '1 Rue de Rivoli, Paris',
+        lookup: async () => null,
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await user.type(screen.getByLabelText(/paste a google maps link/i), 'Fallafel')
+      await user.click(screen.getByRole('button', { name: 'Search' }))
+      await user.type(screen.getByLabelText(/paste a google maps link/i), 'x')
+
+      release([FALAFEL])
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(screen.queryByRole('button', { name: /^L’As du Fallafel/ })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
+    })
+
+    it('shows the OSM-unavailable variant when the OSM match lookup fails', async () => {
+      setGeocodeProvider({
+        search: async (_q, options) => {
+          if (options?.near) throw new Error('nominatim down')
+          return []
+        },
+        reverse: async () => '1 Rue de Rivoli, Paris',
+        lookup: async () => null,
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(FULL_URL)
+
+      expect(await screen.findByText(/OpenStreetMap unavailable/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Category: Uncategorized' })).toBeInTheDocument()
+    })
+
+    it('ignores a result click while a place is being added', async () => {
+      const OTHER: GeoCandidate = { ...FALAFEL, name: 'Le Fallafel 17e', osm: { ...OSM, id: 3 } }
+      provide({ search: [FALAFEL, OTHER] })
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(createRestaurant).mockImplementationOnce(async (input) => {
+        await gate
+        const { createRestaurant: real } =
+          await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
+        return real(input)
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      // Busy: a click on the other card must be a no-op — the first place is still the one saved.
+      await user.click(screen.getByRole('button', { name: /^Le Fallafel 17e/ }))
+      expect(screen.getByRole('button', { name: /^L’As du Fallafel/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(screen.getByRole('button', { name: /^Le Fallafel 17e/ })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      )
+
+      release()
+      await waitFor(async () =>
+        expect((await allRestaurants()).map((r) => r.name)).toEqual(['L’As du Fallafel']),
+      )
+    })
+
+    it('previews a provisional record when the short link resolver is unreachable', async () => {
+      vi.mocked(resolveShortLink).mockRejectedValue(new Error('network down'))
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(SHORT_URL)
+
+      expect(await screen.findByText('Position resolved later')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Category: Uncategorized' })).toBeInTheDocument()
+    })
+
+    it('keeps the text fixed while a place is being added, so onAdded still fires (review #1)', async () => {
+      provide({ search: [FALAFEL] })
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(createRestaurant).mockImplementationOnce(async (input) => {
+        await gate
+        const { createRestaurant: real } =
+          await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
+        return real(input)
+      })
+      const onClose = vi.fn()
+      render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      const input = screen.getByLabelText(/paste a google maps link/i)
+      expect(input).toHaveAttribute('readonly')
+      await user.type(input, 'x')
+      expect(input).toHaveValue('Fallafel')
+
+      release()
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+      expect((await allRestaurants()).map((r) => r.name)).toEqual(['L’As du Fallafel'])
+    })
+
+    it('ignores "Not this one" while a place is being added, so the saved record keeps its match (review #3)', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(createRestaurant).mockImplementationOnce(async (input) => {
+        await gate
+        const { createRestaurant: real } =
+          await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
+        return real(input)
+      })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit(FULL_URL)
+      await screen.findByText(/Found on OpenStreetMap/)
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      const rejectButton = screen.getByRole('button', { name: 'Not this one' })
+      expect(rejectButton).toBeDisabled()
+      await user.click(rejectButton)
+      expect(screen.getByText(/Found on OpenStreetMap/)).toBeInTheDocument()
+
+      release()
+      await waitFor(async () => expect(await allRestaurants()).toHaveLength(1))
+      expect((await allRestaurants())[0].osm).toEqual(OSM)
+    })
+  })
+
+  describe('capture-time rejection remembered by the detail (review #4)', () => {
+    beforeEach(() => localStorage.clear())
+
+    it('dismisses the match when the user rejected it before adding', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit(FULL_URL)
+      await user.click(await screen.findByRole('button', { name: 'Not this one' }))
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      await waitFor(async () => expect(await allRestaurants()).toHaveLength(1))
+      const saved = (await allRestaurants())[0]
+      expect(isOsmDismissed(saved.id)).toBe(true)
+    })
+
+    it('does not dismiss a match the user kept', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit(FULL_URL)
+      await screen.findByText(/Found on OpenStreetMap/)
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      await waitFor(async () => expect(await allRestaurants()).toHaveLength(1))
+      const saved = (await allRestaurants())[0]
+      expect(isOsmDismissed(saved.id)).toBe(false)
     })
   })
 })

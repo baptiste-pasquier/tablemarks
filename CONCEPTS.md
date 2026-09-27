@@ -20,6 +20,17 @@ A single timestamped record of going to a Restaurant, carrying a date (a Local d
 
 A Restaurant saved from a short Google Maps link whose coordinates could not be resolved yet (offline, or a transient failure). It has no map pin until a later resolve pass fills its coordinates and clears the provisional flag.
 
+### OSM snapshot
+
+The read-only copy of the OpenStreetMap object a Restaurant was matched to — identity, address
+parts, opening hours, phone, website — with the date it was fetched. Replaced whole on refresh,
+never edited; OSM is where it is corrected.
+
+### Eatery
+
+An OpenStreetMap object of a kind this app saves: a restaurant, fast food, café, bar, pub, ice
+cream, food court, bakery or pastry shop. Search results that are not eateries fold away.
+
 ## Rating and status
 
 ### Verdict
@@ -52,6 +63,11 @@ OpenStreetMap key and shown in the reader's language; a free-typed one is stored
 category maps to one color, shared by its map marker and its filter chip, and curated categories
 of one family share a hue; a Restaurant with no category is "uncategorized."
 
+### Short zone
+
+Where a place is, in the fewest words that tell two apart: "Paris 11e", "Lyon 1er", else the city.
+Derived from the OSM snapshot, never stored.
+
 ## Time
 
 ### Instant
@@ -60,7 +76,7 @@ A moment in time recorded as a UTC timestamp — canonical and timezone-independ
 
 ### Local day
 
-A calendar day with no time-of-day, interpreted relative to the viewer's device timezone rather than UTC — used for user-facing dates such as a Visit's date. An Instant and a Local day are not directly comparable: converting one to the other's frame first is required, or the comparison is wrong for a viewer outside UTC.
+A calendar day with no time-of-day, interpreted relative to the viewer's device timezone rather than UTC — used for user-facing dates such as a Visit's date. An Instant and a Local day are not directly comparable: converting one to the other's frame first is required, or the comparison is wrong for a viewer outside UTC. Every date is shown as `DD/MM/YYYY`, in every language (`formatDisplayDate` in `src/lib/dates.ts`); it is stored as `YYYY-MM-DD`.
 
 ## Sync
 

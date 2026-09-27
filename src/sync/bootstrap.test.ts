@@ -140,7 +140,11 @@ beforeEach(async () => {
   pb.authStore.clear()
   setSyncState('synced')
   pb.baseURL = ''
-  setGeocodeProvider({ search: async () => [], reverse: async () => 'somewhere' })
+  setGeocodeProvider({
+    search: async () => [],
+    reverse: async () => 'somewhere',
+    lookup: async () => null,
+  })
 })
 
 afterEach(() => {

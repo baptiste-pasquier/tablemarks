@@ -36,7 +36,11 @@ beforeEach(async () => {
   await freshDB()
   authListeners.clear()
   vi.mocked(resolveShortLink).mockReset()
-  setGeocodeProvider({ search: async () => [], reverse: async () => '1 Rue de Rivoli, Paris' })
+  setGeocodeProvider({
+    search: async () => [],
+    reverse: async () => '1 Rue de Rivoli, Paris',
+    lookup: async () => null,
+  })
 })
 
 describe('resolvePendingRestaurants', () => {

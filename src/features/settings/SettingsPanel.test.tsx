@@ -46,9 +46,11 @@ describe('SettingsPanel', () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(<SettingsPanel onClose={onClose} />)
-    // PortabilityPanel nests its own close button too, so target the Settings heading's.
+    // PortabilityPanel nests its own close button too, so target the Settings heading's. The
+    // heading sits in ModalHeader's own title wrapper (for an optional subtitle); its close
+    // button is a sibling of that wrapper, one level up.
     const settingsHeading = screen.getByRole('heading', { name: 'Settings' })
-    const closeButton = settingsHeading.parentElement?.querySelector('button')
+    const closeButton = settingsHeading.parentElement?.parentElement?.querySelector('button')
     expect(closeButton).toBeTruthy()
     await user.click(closeButton as HTMLButtonElement)
     expect(onClose).toHaveBeenCalled()

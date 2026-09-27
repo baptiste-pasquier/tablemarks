@@ -4,6 +4,7 @@ import { VerdictButtons } from './VerdictButtons'
 import { createVisit, removeVisit } from '../../data/visits'
 import { Button } from '../ui/Button'
 import { VerdictBadge } from '../StatusBadge'
+import { formatDisplayDate } from '../../lib/dates'
 import type { Verdict, Visit } from '../../types/models'
 
 /**
@@ -48,13 +49,15 @@ export function VisitHistory({ restaurantId, visits }: { restaurantId: string; v
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <VerdictBadge verdict={v.verdict} />
-                    <span className="font-medium text-gray-700">{v.date}</span>
+                    <span className="font-medium text-gray-700">{formatDisplayDate(v.date)}</span>
                   </span>
                   <Button
                     variant="icon-dismiss"
                     tone="destructive"
                     onClick={() => void removeVisit(v.id)}
-                    aria-label={t('visitDetail.deleteVisitAria', { date: v.date })}
+                    aria-label={t('visitDetail.deleteVisitAria', {
+                      date: formatDisplayDate(v.date),
+                    })}
                   >
                     ✕
                   </Button>

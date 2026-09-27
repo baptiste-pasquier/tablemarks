@@ -42,6 +42,66 @@ export interface SyncFields {
   syncedUpdated?: string
 }
 
+/** The kind of OpenStreetMap object a snapshot came from. */
+export type OsmType = 'node' | 'way' | 'relation'
+
+export const OSM_TYPES: readonly OsmType[] = ['node', 'way', 'relation']
+
+/**
+ * A read-only snapshot of one OpenStreetMap object, replaced whole on refresh and never edited in
+ * the app. Raw parts only: the short zone, the compact address and the open state are derived at
+ * render (`features/places/placeDisplay.ts`, `lib/openingHours.ts`), never stored.
+ */
+export interface OsmSnapshot {
+  type: OsmType
+  id: number
+  /** ISO instant the snapshot was fetched. */
+  checkedAt: string
+  /** `house_number` + `road` ("80 Rue de Charonne"). */
+  street?: string
+  postcode?: string
+  /** `city` ?? `town` ?? `village` ?? `municipality`. */
+  city?: string
+  suburb?: string
+  /** `city_block` ?? `quarter` ?? `neighbourhood`: shown on the detail only. */
+  quarter?: string
+  /** The raw `opening_hours` tag. */
+  openingHours?: string
+  phone?: string
+  website?: string
+}
+
+const OSM_TEXT_KEYS = [
+  'street',
+  'postcode',
+  'city',
+  'suburb',
+  'quarter',
+  'openingHours',
+  'phone',
+  'website',
+] as const
+
+/**
+ * The one reader of a snapshot that crossed a boundary (a PocketBase row, an import file): a
+ * clean copy holding only the known keys, or null when the shape is wrong.
+ */
+export function readOsmSnapshot(x: unknown): OsmSnapshot | null {
+  if (typeof x !== 'object' || x === null) return null
+  const o = x as Record<string, unknown>
+  if (!(OSM_TYPES as readonly unknown[]).includes(o.type)) return null
+  if (typeof o.id !== 'number' || !Number.isSafeInteger(o.id) || o.id <= 0) return null
+  if (typeof o.checkedAt !== 'string' || Number.isNaN(Date.parse(o.checkedAt))) return null
+  const snapshot: OsmSnapshot = { type: o.type as OsmType, id: o.id, checkedAt: o.checkedAt }
+  for (const key of OSM_TEXT_KEYS) {
+    const value = o[key]
+    if (value === undefined) continue
+    if (typeof value !== 'string') return null
+    snapshot[key] = value
+  }
+  return snapshot
+}
+
 export interface Restaurant extends SyncFields {
   name: string
   /** null until coordinates resolve (provisional records). */
@@ -57,6 +117,8 @@ export interface Restaurant extends SyncFields {
    * before this field existed — never backfilled or approximated (R3).
    */
   added?: string
+  /** The OpenStreetMap object this place is matched to, as last fetched. Absent until matched. */
+  osm?: OsmSnapshot
   /** Provisional record awaiting coordinate resolution (short link / offline). */
   pending: boolean
   /** Denormalized rollup, recomputed locally from visits — not the sync source of truth. */

@@ -1,29 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Calendar, MapPin, Navigation } from 'lucide-react'
 import { useRestaurantDetail } from './useRestaurantDetail'
 import { DeleteRestaurant } from './DeleteRestaurant'
+import { PlaceInfo } from './PlaceInfo'
 import { VerdictButtons } from './VerdictButtons'
 import { VisitHistory } from './VisitHistory'
 import { useRestaurants } from '../useRestaurants'
-import { createVisit } from '../../data/visits'
-import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
 import { useRankedCuisines } from '../facets/useRankedCuisines'
-import { CuisinePicker } from '../facets/CuisinePicker'
+import { detailZone } from '../places/placeDisplay'
 import { Modal } from '../ui/Modal'
 import { ModalHeader } from '../ui/ModalHeader'
 import { Button } from '../ui/Button'
-import { StatusBadge } from '../StatusBadge'
-import type { Verdict } from '../../types/models'
-import type { GeoPoint } from '../../lib/geolocate'
+import { createVisit } from '../../data/visits'
+import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
 import { distanceLabelFor } from '../../lib/geo'
-import { instantToLocalDay } from '../../lib/dates'
-import {
-  isHttpUrl,
-  resolveDestination,
-  googleMapsSearchUrl,
-  googleMapsDirectionsUrl,
-} from '../../lib/mapsLinks'
+import type { GeoPoint } from '../../lib/geolocate'
+import type { Verdict } from '../../types/models'
 
 export function RestaurantDetail({
   restaurantId,
@@ -40,7 +32,7 @@ export function RestaurantDetail({
   onDeleted: () => void
   currentPosition?: GeoPoint | null
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { restaurant, visits } = useRestaurantDetail(restaurantId)
   // `getRestaurant` returns tombstones too; a deleted place must not stay open to log visits on.
   const deleted = restaurant?.deleted ?? false
@@ -82,14 +74,6 @@ export function RestaurantDetail({
 
   const distanceLabel = distanceLabelFor(currentPosition, restaurant)
 
-  const destination = resolveDestination(restaurant)
-  const googleMapsHref = isHttpUrl(restaurant.mapsUrl)
-    ? restaurant.mapsUrl
-    : destination
-      ? googleMapsSearchUrl(destination)
-      : undefined
-  const goToHref = destination ? googleMapsDirectionsUrl(destination) : undefined
-
   // A rejected write (storage full, the row deleted or synced away meanwhile) reaches the user; the
   // store listener goes on showing the real state either way.
   function save(changes: RestaurantPatch) {
@@ -120,7 +104,12 @@ export function RestaurantDetail({
 
   return (
     <Modal onClose={close} panelClassName="max-h-[90vh] overflow-y-auto">
-      <ModalHeader title={restaurant.name} onClose={close} variant="detail" />
+      <ModalHeader
+        title={restaurant.name}
+        subtitle={restaurant.osm && detailZone(restaurant.osm, t, i18n.language)}
+        onClose={close}
+        variant="detail"
+      />
 
       {/* Above everything, since the category and the notes, far apart, both save through it. */}
       {saveFailed && (
@@ -129,73 +118,13 @@ export function RestaurantDetail({
         </p>
       )}
 
-      {/* Info block (R4): identity + location detail grouped into one visually distinct container. */}
-      <div className="rounded-card bg-gray-50 p-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-          <StatusBadge restaurant={restaurant} />
-          {restaurant.address && (
-            <span className="flex items-center gap-1">
-              <MapPin size={14} aria-hidden="true" />
-              {restaurant.address}
-            </span>
-          )}
-        </div>
-
-        {(distanceLabel || restaurant.added) && (
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-600">
-            {distanceLabel && (
-              <span className="flex items-center gap-1">
-                <Navigation size={14} aria-hidden="true" />
-                {distanceLabel}
-              </span>
-            )}
-            {restaurant.added && (
-              <span className="flex items-center gap-1">
-                <Calendar size={14} aria-hidden="true" />
-                {t('visitDetail.addedOn', { date: instantToLocalDay(restaurant.added) })}
-              </span>
-            )}
-          </div>
-        )}
-
-        <div className="mt-3">
-          <CuisinePicker
-            value={restaurant.cuisine}
-            options={options}
-            onChange={(cuisine) => {
-              if (cuisine === (restaurant.cuisine?.trim() || undefined)) return
-              save({ cuisine })
-            }}
-          />
-        </div>
-
-        {(googleMapsHref || goToHref) && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {googleMapsHref && (
-              <a
-                href={googleMapsHref}
-                target="_blank"
-                rel="noreferrer"
-                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
-              >
-                <MapPin size={14} aria-hidden="true" />
-                {t('visitDetail.googleMaps')}
-              </a>
-            )}
-            {goToHref && (
-              <a
-                href={goToHref}
-                target="_blank"
-                rel="noreferrer"
-                className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
-              >
-                <Navigation size={14} aria-hidden="true" />
-                {t('visitDetail.goTo')}
-              </a>
-            )}
-          </div>
-        )}
-      </div>
+      <PlaceInfo
+        key={restaurant.id}
+        restaurant={restaurant}
+        distanceLabel={distanceLabel}
+        options={options}
+        onCuisineChange={(cuisine) => save({ cuisine })}
+      />
 
       {/* Notes (R5): always visible, directly below the info block. */}
       <div className="mt-3">

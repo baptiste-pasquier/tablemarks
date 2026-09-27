@@ -43,7 +43,7 @@ Both collections are per-user (every record relates to an `owner`; collection ru
 
 Why, with the measurements: [`docs/journal/solutions/database-issues/pocketbase-update-rules-do-not-see-the-request-body.md`](../docs/journal/solutions/database-issues/pocketbase-update-rules-do-not-see-the-request-body.md).
 
-**restaurants** — `name`, `lat`, `lng`, `address`, `mapsUrl`, `cuisine`, `note`, `added`, `pending`, `latestVerdict`, `latestVisitDate`, `visitCount`, `syncedAt`, `deleted`.
+**restaurants** — `name`, `lat`, `lng`, `address`, `mapsUrl`, `cuisine`, `note`, `added`, `pending`, `osm`, `latestVerdict`, `latestVisitDate`, `visitCount`, `syncedAt`, `deleted`.
 
 **visits** — `restaurant` (relation), `date`, `verdict`, `note`, `syncedAt`, `deleted`; indexed on `restaurant`.
 

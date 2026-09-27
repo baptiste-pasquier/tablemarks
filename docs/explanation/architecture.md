@@ -83,10 +83,23 @@ The reconcile logic (`src/sync/reconcile.ts`) is pure and heavily unit-tested; t
 
 Raw sync writes use store-change only, so a pulled record refreshes the UI without re-triggering a push.
 
+## OpenStreetMap snapshots
+
+A place can carry a read-only snapshot of the OpenStreetMap object it is (`osm` on the record):
+its identity, address parts, `opening_hours`, phone and website. OSM stays the source of truth
+for those fields — the app never edits them; it writes a snapshot at capture or on "Complete",
+replaces it whole on "Refresh", and sends "Correct" to openstreetmap.org. Only the category can
+come from it, and only for a place that has none. Matching a point to OSM (a pasted link, an old
+place) is a bounded Nominatim search: the nearest eatery within 75 m whose name matches, always
+confirmed by the user. Everything shown from a snapshot — the short zone, the compact address,
+the open state — is derived at render, and the hours are read by a small in-house parser
+(`src/lib/openingHours.ts`) rather than the 118 KB `opening_hours` package; a value it cannot
+read is shown as written.
+
 ## Offline
 
 The data layer works offline by construction. The app is an installable PWA: the shell and assets are precached, and map tiles viewed online are progressively cached (bounded, re-served offline) while never-browsed areas render blank. A new app version surfaces an explicit reload prompt rather than reloading silently. All data remains usable offline regardless.
 
 ## Scope built so far
 
-The storage/sync core, Google auth, paste-a-URL capture (with geocoding fallback and short-link resolution), the visit-log/verdict UI, the decision mode, faceted cuisine filtering, data export/import, the installable PWA with offline tiles, the header account menu's sync-status indicator, and the two deployment targets described above.
+The storage/sync core, Google auth, paste-a-URL capture (with geocoding fallback and short-link resolution), the visit-log/verdict UI, the decision mode, faceted cuisine filtering, data export/import, the installable PWA with offline tiles, the header account menu's sync-status indicator, OpenStreetMap enrichment (search results, link preview, hours, zone), and the two deployment targets described above.

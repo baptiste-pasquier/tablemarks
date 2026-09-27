@@ -1,5 +1,11 @@
 import { isLocalDay, normalizeInstant } from '../../lib/dates'
-import { VERDICTS, type Restaurant, type Verdict, type Visit } from '../../types/models'
+import {
+  readOsmSnapshot,
+  VERDICTS,
+  type Restaurant,
+  type Verdict,
+  type Visit,
+} from '../../types/models'
 
 /** Current export file-format version. Distinct from the IndexedDB database version. */
 export const EXPORT_SCHEMA_VERSION = 1
@@ -111,6 +117,10 @@ function asRestaurant(x: unknown): Restaurant | null {
     return null
   if (!isLocalDayOrNull(r.latestVisitDate)) return null
   if (typeof r.visitCount !== 'number') return null
+  // Absent or null both read as no snapshot; present must be a well-formed snapshot, or the file
+  // is refused like any other malformed field.
+  const osm = r.osm == null ? undefined : readOsmSnapshot(r.osm)
+  if (osm === null) return null
   return {
     id: r.id,
     name: r.name,
@@ -121,6 +131,7 @@ function asRestaurant(x: unknown): Restaurant | null {
     cuisine: r.cuisine as string | undefined,
     note: r.note as string | undefined,
     added: r.added ? normalizeInstant(r.added as string) : (r.added as string | undefined),
+    osm,
     pending: r.pending,
     // `== null` catches both null and an absent (undefined) field — a visit-less place must
     // stay uncategorized, not get a fabricated default verdict.

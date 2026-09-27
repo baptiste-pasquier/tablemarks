@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next'
+import { foldText } from '../../lib/foldText'
 import { resources } from '../../i18n/resources'
 
 export type CuisineFamily =
@@ -63,20 +64,9 @@ export type ResolvedCuisine =
   | { kind: 'curated'; key: CuisineKey; entry: CatalogEntry }
   | { kind: 'custom'; key: string; label: string }
 
-/**
- * The comparison form of a typed name: no Latin accents, underscores as spaces, single spaces,
- * trimmed, lowercase — so "Coffee shop" meets the key `coffee_shop`. A mark is stripped only
- * from a Latin letter: in other scripts it changes the word (パン is bread, ハン is not; й is not
- * и), so those are recomposed intact.
- */
+/** The comparison form of a typed name (`foldText`), so "Coffee shop" meets the key `coffee_shop`. */
 export function normalizeCuisineText(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/(\p{Script=Latin})\p{M}+/gu, '$1')
-    .normalize('NFC')
-    .replace(/[\s_]+/g, ' ')
-    .trim()
-    .toLowerCase()
+  return foldText(text)
 }
 
 // Every key and every label in every language, so a value picked or typed in either language,
