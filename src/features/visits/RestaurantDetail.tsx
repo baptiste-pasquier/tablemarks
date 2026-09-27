@@ -103,7 +103,7 @@ export function RestaurantDetail({
   }
 
   return (
-    <Modal onClose={close} panelClassName="max-h-[90vh] overflow-y-auto">
+    <Modal onClose={close} label={restaurant.name} panelClassName="max-h-[90vh] overflow-y-auto">
       <ModalHeader
         title={restaurant.name}
         subtitle={restaurant.osm && detailZone(restaurant.osm, t, i18n.language)}

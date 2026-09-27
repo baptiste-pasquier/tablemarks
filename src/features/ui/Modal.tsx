@@ -23,12 +23,20 @@ import { getFocusables, trapTabFocus } from './focusTrap'
 export function Modal({
   onClose,
   children,
+  label,
   zIndexClassName = 'z-[var(--z-modal)]',
   panelClassName = '',
   initialFocus = 'auto',
 }: {
   onClose: () => void
   children: ReactNode
+  /** The dialog's accessible name (aria-label): every caller's own visible title, so a
+   *  screen-reader user hears which dialog opened rather than just "dialog". Required, not
+   *  optional, so a new call site can't ship a nameless one (axe rule aria-dialog-name). Not
+   *  aria-labelledby: Settings renders two ModalHeaders (Settings + PortabilityPanel) and the
+   *  mobile filters sheet has no header at all, so an id-linking scheme would be ambiguous or
+   *  absent. */
+  label: string
   zIndexClassName?: string
   panelClassName?: string
   initialFocus?: 'auto' | 'panel'
@@ -79,6 +87,7 @@ export function Modal({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
+        aria-label={label}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={`w-full rounded-t-card bg-white p-5 shadow-xl outline-none md:max-w-md md:rounded-card ${panelClassName}`}
