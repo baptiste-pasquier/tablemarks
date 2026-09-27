@@ -5,7 +5,7 @@ import { Button } from '../ui/Button'
 import { cuisineAvatarBackground, cuisinePillTokens, emojiForCuisine } from '../facets/cuisines'
 import { cuisineLabel } from '../facets/cuisineCatalog'
 import { suggestCategory } from '../facets/osmCategory'
-import { shortZone } from '../places/placeDisplay'
+import { zoneAndStreet } from '../places/placeDisplay'
 import { isEatery } from '../../capture/osmTags'
 import { cn } from '../../lib/cn'
 import type { GeoCandidate } from '../../capture/geocode'
@@ -21,8 +21,9 @@ function CandidateCard({
 }) {
   const { t, i18n } = useTranslation()
   const category = suggestCategory(candidate)
-  const zone = candidate.osm && shortZone(candidate.osm, t, i18n.language)
-  const details = candidate.osm ? [zone, candidate.osm.street].filter(Boolean) : [candidate.address]
+  const details = [
+    candidate.osm ? zoneAndStreet(candidate.osm, t, i18n.language) : candidate.address,
+  ].filter(Boolean)
   return (
     <button
       type="button"

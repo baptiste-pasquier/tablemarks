@@ -3,7 +3,7 @@ import { Clock, Globe, Map as MapIcon, MapPin, Phone } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { OpenStateText } from '../places/OpenStateText'
 import { useNow } from '../places/useNow'
-import { shortZone, websiteLabel } from '../places/placeDisplay'
+import { websiteLabel, zoneAndStreet } from '../places/placeDisplay'
 import { openStateOf } from '../../lib/openingHours'
 import type { PlaceDraft } from '../../capture/capture'
 
@@ -23,8 +23,7 @@ export function DraftPreview({
   const osm = draft.match?.osm
   let subtitle: string
   if (draft.pending) subtitle = t('capture.resolvedLater')
-  else if (osm)
-    subtitle = [shortZone(osm, t, i18n.language), osm.street].filter(Boolean).join(' · ')
+  else if (osm) subtitle = zoneAndStreet(osm, t, i18n.language)
   else subtitle = draft.matchFailed ? t('capture.osmUnavailable') : t('capture.noOsmData')
   const state = osm && openStateOf(osm.openingHours, now)
   return (

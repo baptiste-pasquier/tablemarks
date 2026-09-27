@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { compactAddress, detailZone, osmObjectUrl, shortZone, websiteLabel } from './placeDisplay'
+import {
+  compactAddress,
+  detailZone,
+  osmObjectUrl,
+  shortZone,
+  websiteLabel,
+  zoneAndStreet,
+} from './placeDisplay'
 import { mockI18n } from '../../test/setup'
 import type { OsmSnapshot } from '../../types/models'
 
@@ -56,6 +63,26 @@ describe('detailZone', () => {
 
   it('does not repeat the city', () => {
     expect(detailZone(osm({ city: 'Lyon', suburb: 'Lyon' }), t, 'en')).toBe('Lyon')
+  })
+})
+
+describe('zoneAndStreet', () => {
+  it('joins the zone and the street', () => {
+    expect(
+      zoneAndStreet(osm({ city: 'Paris', postcode: '75011', street: '34 Rue de Rivoli' }), t, 'en'),
+    ).toBe('Paris 11th · 34 Rue de Rivoli')
+  })
+
+  it('is the zone alone without a street', () => {
+    expect(zoneAndStreet(osm({ city: 'Paris', postcode: '75011' }), t, 'en')).toBe('Paris 11th')
+  })
+
+  it('is the street alone without a zone', () => {
+    expect(zoneAndStreet(osm({ street: '34 Rue de Rivoli' }), t, 'en')).toBe('34 Rue de Rivoli')
+  })
+
+  it('is empty with neither', () => {
+    expect(zoneAndStreet(osm({}), t, 'en')).toBe('')
   })
 })
 

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { SearchX, Sparkles } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { shortZone } from './placeDisplay'
+import { zoneAndStreet } from './placeDisplay'
 import { cuisineLabel } from '../facets/cuisineCatalog'
 import { formatDistance, haversineMeters } from '../../lib/geo'
 import type { useOsmEnrichment } from './useOsmEnrichment'
@@ -33,9 +33,7 @@ export function OsmEnrich({
             haversineMeters(restaurant.lat, restaurant.lng, candidate.lat, candidate.lng),
           )
         : null
-    const where = osm
-      ? [shortZone(osm, t, i18n.language), osm.street].filter(Boolean).join(' · ')
-      : ''
+    const where = osm ? zoneAndStreet(osm, t, i18n.language) : ''
     return (
       <div className="mt-3 rounded-[14px] bg-white p-3 shadow-card">
         <p className="text-sm">

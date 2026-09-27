@@ -27,6 +27,11 @@ export function shortZone(osm: OsmSnapshot, t: TFunction, language: string): str
   return t('place.arrondissement', { city: osm.city, number: n, suffix })
 }
 
+/** The "zone · street" line a list preview shows: the short zone and the OSM street, joined. */
+export function zoneAndStreet(osm: OsmSnapshot, t: TFunction, language: string): string {
+  return [shortZone(osm, t, language), osm.street].filter(Boolean).join(' · ')
+}
+
 /** The detail's subtitle: the short zone, then the quarter (arrondissement) or the suburb. */
 export function detailZone(osm: OsmSnapshot, t: TFunction, language: string): string | undefined {
   const zone = shortZone(osm, t, language)
