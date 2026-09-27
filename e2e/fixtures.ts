@@ -1,6 +1,13 @@
 // The one `test` every spec imports. Its `network` fixture is automatic: no spec can opt out of
 // the guard, and no spec has to remember it.
-import { test as base, expect, type BrowserContext, type Page, type Route } from '@playwright/test'
+import {
+  test as base,
+  expect,
+  type BrowserContext,
+  type Page,
+  type Route,
+  type WebSocketRoute,
+} from '@playwright/test'
 import { nominatimReply } from './osm'
 
 /** What the guard saw: external requests it answered, and the ones nothing mocks. */
@@ -62,6 +69,19 @@ export async function installNetworkGuard(context: BrowserContext): Promise<Netw
     }
     log.violations.push(url.href)
     return route.abort('blockedbyclient')
+  })
+  // `context.route` above never sees a WebSocket upgrade (it only intercepts HTTP requests), so
+  // without this a `new WebSocket('wss://…')` to an unmocked host would slip past the guard
+  // entirely. The app's own origin is let through to the real server; anything else is recorded
+  // exactly like an unmocked fetch, and — since we never call `connectToServer()` — Playwright
+  // mocks it instead of dialing out, so it fails closed rather than reaching the real host.
+  await context.routeWebSocket(/.*/, (ws: WebSocketRoute) => {
+    const url = new URL(ws.url())
+    if (isLocal(url)) {
+      ws.connectToServer()
+      return
+    }
+    log.violations.push(url.href)
   })
   return log
 }

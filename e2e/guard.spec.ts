@@ -34,6 +34,21 @@ test.describe('network guard', () => {
     network.violations.length = 0
   })
 
+  test('records a WebSocket to an unmocked host as a violation', async ({ page, network }) => {
+    await page.goto('./')
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          const ws = new WebSocket('wss://example.com/ws')
+          ws.addEventListener('open', () => resolve())
+          ws.addEventListener('error', () => resolve())
+        }),
+    )
+    expect(network.violations).toEqual(['wss://example.com/ws'])
+    // Emptied so this test's own teardown — which fails on any violation — passes.
+    network.violations.length = 0
+  })
+
   test('the app loads with every external request mocked', async ({ page, network }) => {
     await page.goto('./')
     await expect(page.getByRole('heading', { name: 'Tablemarks' })).toBeVisible()
