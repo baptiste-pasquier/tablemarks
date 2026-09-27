@@ -4,6 +4,7 @@ import { Button } from '../ui/Button'
 import { OpenStateText } from '../places/OpenStateText'
 import { useNow } from '../places/useNow'
 import { websiteLabel, zoneAndStreet } from '../places/placeDisplay'
+import { foldText } from '../../lib/foldText'
 import { openStateOf } from '../../lib/openingHours'
 import type { PlaceDraft } from '../../capture/capture'
 
@@ -26,6 +27,13 @@ export function DraftPreview({
   else if (osm) subtitle = zoneAndStreet(osm, t, i18n.language)
   else subtitle = draft.matchFailed ? t('capture.osmUnavailable') : t('capture.noOsmData')
   const state = osm && openStateOf(osm.openingHours, now)
+  // The Maps name is the title; OSM's own name is worth calling out only when it actually differs
+  // (review #8b) — otherwise "found as itself" is just noise.
+  const matchName = draft.match?.name
+  const foundLabel =
+    matchName && foldText(matchName) !== foldText(draft.name)
+      ? t('capture.foundOnOsmAs', { name: matchName })
+      : t('capture.foundOnOsm')
   return (
     <div className="mt-4 rounded-card bg-gray-50 p-3">
       <div className="flex items-center gap-2.5">
@@ -64,7 +72,7 @@ export function DraftPreview({
           </ul>
           <p className="mt-2.5 flex flex-wrap items-center gap-1 text-[11.5px] text-gray-600">
             <MapIcon size={13} aria-hidden="true" />
-            {t('capture.foundOnOsm')} ·
+            {foundLabel} ·
             <Button variant="link" size="xs" onClick={onReject} disabled={disabled}>
               {t('capture.notThisOne')}
             </Button>

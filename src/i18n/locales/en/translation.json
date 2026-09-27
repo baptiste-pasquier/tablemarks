@@ -53,6 +53,7 @@
     "otherResults_other": "{{count}} other results",
     "noEateryMatches": "No restaurant, café or bar found under this name. Try adding the city, or paste the Google Maps link.",
     "foundOnOsm": "Found on OpenStreetMap",
+    "foundOnOsmAs": "Found on OpenStreetMap as “{{name}}”",
     "notThisOne": "Not this one",
     "noOsmData": "No OpenStreetMap data",
     "osmUnavailable": "OpenStreetMap unavailable — complete it later from the place",

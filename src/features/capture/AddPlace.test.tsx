@@ -420,6 +420,26 @@ describe('AddPlace', () => {
       expect((await allRestaurants())[0].osm).toBeUndefined()
     })
 
+    it('names the OSM match in the preview when it differs from the pasted link, plain text when equal (review #8b)', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Paul Bistrot', lat: 48.8566, lng: 2.3522 }] })
+      const { unmount } = render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit('https://www.google.com/maps/place/Paul/@48.8566,2.3522,15z')
+
+      expect(
+        await screen.findByText(/Found on OpenStreetMap as “Chez Paul Bistrot”/),
+      ).toBeInTheDocument()
+      unmount()
+
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+
+      await pasteAndSubmit(FULL_URL)
+
+      expect(await screen.findByText(/Found on OpenStreetMap ·/)).toBeInTheDocument()
+      expect(screen.queryByText(/Found on OpenStreetMap as/)).toBeNull()
+    })
+
     it('reports a duplicate found at commit for a picked result', async () => {
       await createRestaurant({ name: 'Existing', lat: FALAFEL.lat, lng: FALAFEL.lng })
       provide({ search: [FALAFEL] })
