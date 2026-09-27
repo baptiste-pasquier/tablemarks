@@ -57,6 +57,9 @@ export function AddPlace({
             // Not while an input method is composing: that Enter confirms the characters.
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) void form.submit()
           }}
+          // While a commit is in flight, the running request already closed over the draft it is
+          // saving — a fresh edit here would only invalidate it, not stop it (review #1).
+          readOnly={form.committing}
           className="min-w-0 flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500"
           placeholder={t('capture.pastePlaceholder')}
         />

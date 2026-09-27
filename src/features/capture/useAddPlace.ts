@@ -36,6 +36,11 @@ export function useAddPlace(onAdded: () => void) {
   const [cuisine, setCuisineValue] = useState('')
   // Set once the user picks a category: from then on a suggestion never overwrites it.
   const [cuisineTouched, setCuisineTouched] = useState(false)
+  // True only while `submit` commits an existing draft (as opposed to a search): the text must
+  // hold still, because the running commit already closed over the draft it is saving — an edit
+  // here would invalidate the request without stopping it, and the created place would then have
+  // no `onAdded` to show for it (review #1).
+  const [committing, setCommitting] = useState(false)
   // Bumped on every input edit and at the start of every submit: a request whose id no longer
   // matches this ref once its await settles is stale (superseded by an edit or a later submit),
   // and its result — including an error, or `onAdded` — is dropped rather than written.
@@ -46,6 +51,10 @@ export function useAddPlace(onAdded: () => void) {
   }
 
   function setInput(value: string) {
+    // While a commit is in flight, the running `commitCapture` already closed over the draft it is
+    // saving: changing the text here would only invalidate the request without stopping it, and
+    // the created place would then have no `onAdded` to show for it (review #1).
+    if (committing) return
     // Invalidates any in-flight request (its result lands under text it no longer describes) and
     // ends the wait from the user's point of view — the stale request's own `finally` will see it
     // has been superseded and leave `busy` alone.
@@ -135,6 +144,7 @@ export function useAddPlace(onAdded: () => void) {
     // catch below — and unaffected by whatever the input becomes while this request is in flight.
     const hadDraft = draft !== null
     setBusy(true)
+    if (hadDraft) setCommitting(true)
     setError(null)
     setDuplicate(null)
     setRefusal(null)
@@ -155,6 +165,7 @@ export function useAddPlace(onAdded: () => void) {
       // A stale request must not clear `busy` for a newer one already in flight; `setInput`
       // already cleared it for the case where no newer request took over.
       if (requestId.current === id) setBusy(false)
+      if (hadDraft) setCommitting(false)
     }
   }
 
@@ -162,6 +173,8 @@ export function useAddPlace(onAdded: () => void) {
     input,
     setInput,
     busy,
+    /** A commit (as opposed to a search) is in flight: the text can no longer change (review #1). */
+    committing,
     error,
     refusal,
     duplicate,

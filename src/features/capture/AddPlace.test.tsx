@@ -531,5 +531,35 @@ describe('AddPlace', () => {
       expect(await screen.findByText('Position resolved later')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Category: Uncategorized' })).toBeInTheDocument()
     })
+
+    it('keeps the text fixed while a place is being added, so onAdded still fires (review #1)', async () => {
+      provide({ search: [FALAFEL] })
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(createRestaurant).mockImplementationOnce(async (input) => {
+        await gate
+        const { createRestaurant: real } =
+          await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
+        return real(input)
+      })
+      const onClose = vi.fn()
+      render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit('Fallafel')
+      await user.click(await screen.findByRole('button', { name: /^L’As du Fallafel/ }))
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      const input = screen.getByLabelText(/paste a google maps link/i)
+      expect(input).toHaveAttribute('readonly')
+      await user.type(input, 'x')
+      expect(input).toHaveValue('Fallafel')
+
+      release()
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+      expect((await allRestaurants()).map((r) => r.name)).toEqual(['L’As du Fallafel'])
+    })
   })
 })
