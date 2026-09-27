@@ -77,6 +77,8 @@ export function Modal({
     >
       <div
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={`w-full rounded-t-card bg-white p-5 shadow-xl outline-none md:max-w-md md:rounded-card ${panelClassName}`}

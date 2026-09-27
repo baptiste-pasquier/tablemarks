@@ -101,4 +101,11 @@ describe('Modal', () => {
     expect(opener).toHaveFocus()
     opener.remove()
   })
+
+  it('exposes its panel as a modal dialog', () => {
+    render(<Modal onClose={vi.fn()}>Content</Modal>)
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveTextContent('Content')
+  })
 })
