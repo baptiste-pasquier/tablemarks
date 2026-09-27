@@ -258,3 +258,31 @@ describe('capturePaste', () => {
     })
   })
 })
+
+describe('draftFromCandidate', () => {
+  const STREET: GeoCandidate = {
+    name: 'Rue de Rivoli',
+    lat: 48.8566,
+    lng: 2.3522,
+    osmClass: 'highway=residential',
+    osm: SERVAN_OSM,
+  }
+
+  const EATERY: GeoCandidate = {
+    name: 'Chez Marcel',
+    lat: 48.8566,
+    lng: 2.3522,
+    osmClass: 'amenity=restaurant',
+    osm: SERVAN_OSM,
+  }
+
+  // review #2: picking a street or address from "N other results" used to store the street's own
+  // OSM snapshot — "Correct"/"Refresh" then targeted the street, and "Complete" never came back.
+  it('drops the OSM snapshot of a non-eatery result', () => {
+    expect(draftFromCandidate(STREET).match).toBeUndefined()
+  })
+
+  it('keeps the OSM snapshot of an eatery result', () => {
+    expect(draftFromCandidate(EATERY).match).toEqual(EATERY)
+  })
+})

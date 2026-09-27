@@ -1,6 +1,7 @@
 import { parseMapsUrl } from './parseMapsUrl'
 import { matchNear, reverseGeocode, type GeoCandidate } from './geocode'
 import { findNearMatch } from './dedup'
+import { isEatery } from './osmTags'
 import { UnresolvableShortLink, resolveShortLink } from '../sync/pocketbase'
 import { getBackendStatus } from '../sync/backendStatus'
 import { allRestaurants, createRestaurant } from '../data/restaurants'
@@ -134,7 +135,11 @@ export async function capturePaste(input: string): Promise<CaptureResult> {
   return preview({ lat: parsed.lat, lng: parsed.lng, name: parsed.name, mapsUrl: text })
 }
 
-/** The draft for a picked search result: its OSM object comes along when it has one. */
+/**
+ * The draft for a picked search result: its OSM object comes along only when it is an eatery —
+ * picking a street or an address from "N other results" must not attach that object's snapshot
+ * (review #2).
+ */
 export function draftFromCandidate(candidate: GeoCandidate): PlaceDraft {
   return {
     name: candidate.name,
@@ -142,7 +147,7 @@ export function draftFromCandidate(candidate: GeoCandidate): PlaceDraft {
     lng: candidate.lng,
     address: candidate.address,
     pending: false,
-    match: candidate.osm ? candidate : undefined,
+    match: candidate.osm && isEatery(candidate) ? candidate : undefined,
   }
 }
 
