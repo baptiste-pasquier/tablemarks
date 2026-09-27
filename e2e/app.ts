@@ -7,6 +7,11 @@ function isMobile(page: Page): boolean {
   return (page.viewportSize()?.width ?? 1280) < 768
 }
 
+/** Escapes a string for safe interpolation into a `new RegExp(...)` source. */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 async function switchView(page: Page, view: 'List' | 'Map'): Promise<void> {
   if (!isMobile(page)) return
   await page.getByRole('navigation', { name: 'View' }).getByRole('button', { name: view }).click()
@@ -49,7 +54,7 @@ export async function submitQuery(page: Page, text: string): Promise<Locator> {
 export async function addBySearch(page: Page, name: string): Promise<void> {
   const dialog = await submitQuery(page, name)
   // A result card's name starts with the place's; the non-eatery row starts with "Passage".
-  await dialog.getByRole('button', { name: new RegExp(`^${name}`) }).click()
+  await dialog.getByRole('button', { name: new RegExp(`^${escapeRegExp(name)}`) }).click()
   await dialog.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(dialog).toBeHidden()
   await expect(placeCard(page, name)).toBeVisible()
