@@ -28,7 +28,7 @@ demo is deployed. A pull request that breaks a real journey must fail in CI inst
 | Seed data                 | Created through the UI (`addBySearch` helper), never injected into IndexedDB                              |
 | Selectors                 | `getByRole` / `getByLabel` only, locale frozen to `en-US`                                                 |
 | Determinism               | `timezoneId: 'Europe/Paris'`, fixed `geolocation` with the permission granted                             |
-| App changes               | None expected: map markers already expose `role="img"` with the place name (`src/features/map/MapView.tsx`) |
+| App changes               | One: `Modal` gains `role="dialog"` so specs can scope to it (see the plan); map markers already expose `role="img"` with the place name |
 
 ### Why the mocking fixture, not the alternatives
 
@@ -66,8 +66,8 @@ playwright.config.ts     testDir e2e, fullyParallel, forbidOnly + retries on CI,
 e2e/
   tsconfig.json          standalone (node + @playwright/test types), includes ../playwright.config.ts
   fixtures.ts            extended `test`: network guard + OSM, tile and font mocks
-  fixtures/*.json        Nominatim replies (name search, bounded search, reverse)
-  fixtures/tile.png      one neutral 256×256 tile
+  osm.ts                 the known places and Nominatim's reply for a URL (typed, not JSON);
+                         the tile is an inline 1×1 PNG in `fixtures.ts`
   app.ts                 helpers: openAddPlace, addBySearch, showMap/showList (no-op on desktop)
   add-by-search.spec.ts  add-by-link.spec.ts   visit-verdict.spec.ts
   persistence.spec.ts    portability.spec.ts   delete-place.spec.ts
@@ -88,7 +88,7 @@ context guarantees nothing.
 
 1. A catch-all route: a request to any host other than `localhost` is recorded as a violation
    and aborted.
-2. Named mocks registered on top (Playwright runs the last registered matching route first):
+2. One catch-all route that dispatches by host through `mockFor`:
 
 | Host / path                              | Reply                                                          |
 | ---------------------------------------- | -------------------------------------------------------------- |

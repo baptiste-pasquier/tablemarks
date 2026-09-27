@@ -41,3 +41,7 @@ pocketbase/pocketbase
 
 # Throwaway UI mockups (brainstorming)
 .mockups/
+
+# Playwright output (npm run test:e2e)
+playwright-report/
+test-results/

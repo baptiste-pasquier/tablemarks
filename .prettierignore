@@ -9,3 +9,7 @@ pocketbase/pb_data*
 # rewrites a record that is read as it was written. The maintained folders under `docs/`
 # are living documents and are formatted.
 docs/journal/
+
+# Playwright output: generated, never hand-edited.
+playwright-report/
+test-results/
