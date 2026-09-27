@@ -2,20 +2,43 @@ import { useState } from 'react'
 import { isOsmDismissed, dismissOsm } from './osmDismissals'
 import { suggestCategory } from '../facets/osmCategory'
 import { lookupOsm, matchNear, type GeoCandidate } from '../../capture/geocode'
-import { updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
-import { hasResolvedCoordinates, type Restaurant } from '../../types/models'
+import { allRestaurants, updateRestaurant, type RestaurantPatch } from '../../data/restaurants'
+import { hasResolvedCoordinates, type OsmSnapshot, type Restaurant } from '../../types/models'
 
 export type EnrichState =
   | { kind: 'idle' }
   | { kind: 'busy' }
   | { kind: 'proposal'; candidate: GeoCandidate }
   | { kind: 'not-found' }
+  /** Another restaurant already holds this OSM object; not proposed (review #9). */
+  | { kind: 'taken'; name: string }
   /** OSM could not be asked (network, Nominatim). */
   | { kind: 'failed' }
   /** Refresh found the object deleted from OSM; the old snapshot stays. */
   | { kind: 'gone' }
   /** The local write was rejected. */
   | { kind: 'save-failed' }
+
+/** The other restaurant, if any, whose stored `osm` is already this OpenStreetMap object. */
+async function osmHolder(
+  osm: Pick<OsmSnapshot, 'type' | 'id'>,
+  exceptId: string,
+): Promise<Restaurant | undefined> {
+  const existing = await allRestaurants()
+  return existing.find(
+    (r) => r.id !== exceptId && !r.deleted && r.osm?.type === osm.type && r.osm.id === osm.id,
+  )
+}
+
+/** What "Complete" found: nothing, a proposal, or a proposal another place already holds (review #9). */
+async function proposalState(
+  candidate: GeoCandidate | null,
+  restaurantId: string,
+): Promise<EnrichState> {
+  if (!candidate) return { kind: 'not-found' }
+  const holder = candidate.osm && (await osmHolder(candidate.osm, restaurantId))
+  return holder ? { kind: 'taken', name: holder.name } : { kind: 'proposal', candidate }
+}
 
 /** "Complete from OpenStreetMap" and "Refresh" for one place. Every outcome reaches the user. */
 export function useOsmEnrichment(restaurant: Restaurant) {
@@ -37,7 +60,7 @@ export function useOsmEnrichment(restaurant: Restaurant) {
     setState({ kind: 'busy' })
     try {
       const candidate = await matchNear(restaurant.name, restaurant.lat, restaurant.lng)
-      setState(candidate ? { kind: 'proposal', candidate } : { kind: 'not-found' })
+      setState(await proposalState(candidate, restaurant.id))
     } catch {
       setState({ kind: 'failed' })
     }

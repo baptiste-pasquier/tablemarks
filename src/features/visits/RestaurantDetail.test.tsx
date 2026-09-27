@@ -738,5 +738,32 @@ describe('RestaurantDetail', () => {
 
       expect(await screen.findByText(/not answering/i)).toBeInTheDocument()
     })
+
+    it('refuses a match another place already holds, and writes nothing (review #9)', async () => {
+      provide([MATCH])
+      await createRestaurant({ name: 'Existing Dragon', lat: 1, lng: 1, osm: MATCH.osm })
+      await openPlace()
+      const user = userEvent.setup()
+      vi.mocked(updateRestaurant).mockClear()
+
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+
+      expect(await screen.findByText('Already linked to “Existing Dragon”.')).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /complete from openstreetmap/i }),
+      ).toBeInTheDocument()
+      expect(updateRestaurant).not.toHaveBeenCalled()
+    })
+
+    it('proposes the match as usual when no other place holds it', async () => {
+      provide([MATCH])
+      await openPlace()
+      const user = userEvent.setup()
+
+      await user.click(screen.getByRole('button', { name: /complete from openstreetmap/i }))
+
+      expect(await screen.findByText('52 Rue Saint-Maur', { exact: false })).toBeInTheDocument()
+      expect(screen.queryByText(/already linked/i)).toBeNull()
+    })
   })
 })

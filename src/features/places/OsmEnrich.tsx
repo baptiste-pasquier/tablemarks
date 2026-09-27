@@ -85,6 +85,12 @@ export function OsmEnrich({
           </span>
         </p>
       )}
+      {state.kind === 'taken' && (
+        <p className="mt-3 flex items-start gap-2 rounded-[14px] border-[1.5px] border-gray-300 p-3 text-[13px] text-gray-600">
+          <SearchX size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
+          <span className="font-semibold">{t('place.osmTaken', { name: state.name })}</span>
+        </p>
+      )}
       {enrichment.canComplete && (
         <button
           type="button"

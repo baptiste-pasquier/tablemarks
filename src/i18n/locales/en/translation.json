@@ -207,7 +207,8 @@
     "notFound": "Not found on OpenStreetMap",
     "notFoundHint": "No place of this name within 75 m.",
     "osmFailed": "OpenStreetMap is not answering, try again later.",
-    "osmGone": "This place is no longer on OpenStreetMap (maybe closed)."
+    "osmGone": "This place is no longer on OpenStreetMap (maybe closed).",
+    "osmTaken": "Already linked to “{{name}}”."
   },
   "openState": {
     "openUntil": "Open until {{time}}",
