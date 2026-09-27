@@ -8,6 +8,7 @@ import { allRestaurants, createRestaurant } from '../../data/restaurants'
 import { setBackendPresence } from '../../sync/backendStatus'
 import { mockI18n } from '../../test/setup'
 import { UnresolvableShortLink, resolveShortLink } from '../../sync/pocketbase'
+import { isOsmDismissed } from '../places/osmDismissals'
 import type { GeoCandidate } from '../../capture/geocode'
 
 // Partial mock: the real module apart from the network call, so `pb` and the error class the
@@ -589,6 +590,38 @@ describe('AddPlace', () => {
       release()
       await waitFor(async () => expect(await allRestaurants()).toHaveLength(1))
       expect((await allRestaurants())[0].osm).toEqual(OSM)
+    })
+  })
+
+  describe('capture-time rejection remembered by the detail (review #4)', () => {
+    beforeEach(() => localStorage.clear())
+
+    it('dismisses the match when the user rejected it before adding', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit(FULL_URL)
+      await user.click(await screen.findByRole('button', { name: 'Not this one' }))
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      await waitFor(async () => expect(await allRestaurants()).toHaveLength(1))
+      const saved = (await allRestaurants())[0]
+      expect(isOsmDismissed(saved.id)).toBe(true)
+    })
+
+    it('does not dismiss a match the user kept', async () => {
+      provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const user = userEvent.setup()
+
+      await pasteAndSubmit(FULL_URL)
+      await screen.findByText(/Found on OpenStreetMap/)
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+
+      await waitFor(async () => expect(await allRestaurants()).toHaveLength(1))
+      const saved = (await allRestaurants())[0]
+      expect(isOsmDismissed(saved.id)).toBe(false)
     })
   })
 })

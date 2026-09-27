@@ -10,6 +10,7 @@ import {
 } from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
 import { suggestCategory } from '../facets/osmCategory'
+import { dismissOsm } from '../places/osmDismissals'
 import type { Restaurant } from '../../types/models'
 
 /** Why a pasted short link was refused. Each reason gets its own lead sentence. */
@@ -41,6 +42,9 @@ export function useAddPlace(onAdded: () => void) {
   // here would invalidate the request without stopping it, and the created place would then have
   // no `onAdded` to show for it (review #1).
   const [committing, setCommitting] = useState(false)
+  // The user rejected this draft's OSM match in the preview: carried through to the commit so the
+  // saved place's detail does not propose the same match again (review #4).
+  const [rejectedMatch, setRejectedMatch] = useState(false)
   // Bumped on every input edit and at the start of every submit: a request whose id no longer
   // matches this ref once its await settles is stale (superseded by an edit or a later submit),
   // and its result — including an error, or `onAdded` — is dropped rather than written.
@@ -67,6 +71,7 @@ export function useAddPlace(onAdded: () => void) {
     setDuplicate(null)
     setRefusal(null)
     setError(null)
+    setRejectedMatch(false)
     // A manually chosen category belongs to the place identified for the text it was chosen
     // under; new text starts over with whatever the next match suggests.
     setCuisineValue('')
@@ -80,6 +85,7 @@ export function useAddPlace(onAdded: () => void) {
     setSelected(candidate)
     setDraft(draftFromCandidate(candidate))
     setDuplicate(null)
+    setRejectedMatch(false)
     suggest(candidate)
   }
 
@@ -89,6 +95,7 @@ export function useAddPlace(onAdded: () => void) {
     if (busy) return
     if (!draft) return
     setDraft(withoutMatch(draft))
+    setRejectedMatch(true)
     suggest(undefined)
   }
 
@@ -137,8 +144,14 @@ export function useAddPlace(onAdded: () => void) {
   }
 
   function finish(result: CommitResult) {
-    if (result.status === 'duplicate') setDuplicate(result.match)
-    else onAdded()
+    if (result.status === 'duplicate') {
+      setDuplicate(result.match)
+      return
+    }
+    // The saved place must not offer the same OSM match again if the user already turned it down
+    // once, at capture time (review #4).
+    if (rejectedMatch) dismissOsm(result.restaurant.id)
+    onAdded()
   }
 
   async function submit() {
