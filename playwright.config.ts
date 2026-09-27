@@ -11,6 +11,8 @@ import { defineConfig, devices } from '@playwright/test'
 const PORT = 4174
 const BASE = '/tablemarks/'
 const MOBILE_ONLY = /mobile\.spec\.ts$/
+// Not `dist`: that is the real production build, and this suite's build must never overwrite it.
+const OUT_DIR = 'dist-e2e'
 
 export default defineConfig({
   testDir: './e2e',
@@ -38,9 +40,11 @@ export default defineConfig({
     { name: 'mobile-webkit', use: { ...devices['iPhone 15'] } },
   ],
   webServer: {
-    command: `npx vite build --mode demo --base=${BASE} && npx vite preview --base=${BASE} --port ${PORT} --strictPort`,
+    command: `npx vite build --mode demo --base=${BASE} --outDir ${OUT_DIR} && npx vite preview --base=${BASE} --outDir ${OUT_DIR} --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}${BASE}`,
-    reuseExistingServer: !process.env.CI,
+    // Always false: the build takes seconds, and reusing a leftover server on this port would
+    // silently serve a stale build instead of failing loudly (--strictPort) on a busy port.
+    reuseExistingServer: false,
     timeout: 180_000,
   },
 })

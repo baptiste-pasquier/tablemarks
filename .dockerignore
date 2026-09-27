@@ -12,6 +12,7 @@
 node_modules
 **/node_modules
 dist
+dist-e2e
 dist-ssr
 coverage
 *.tsbuildinfo

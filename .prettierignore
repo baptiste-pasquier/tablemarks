@@ -1,5 +1,6 @@
 # Build output and the lockfile: generated, never hand-edited.
 dist
+dist-e2e
 package-lock.json
 
 # PocketBase runtime data: a secret archive, and not ours to format.

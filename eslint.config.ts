@@ -15,7 +15,7 @@ export default defineConfig([
   // `pb_data` only ever matched a root-level directory and left `pocketbase/pb_data*/types.d.ts`
   // — 1386 errors' worth of generated definitions — in the lint. `**/` is what makes a nested
   // path match, and `.claude` keeps the agent worktrees (full checkouts of this repo) out.
-  globalIgnores(['dist', '**/pb_data*', '**/pb_migrations', '.claude']),
+  globalIgnores(['dist', 'dist-e2e', '**/pb_data*', '**/pb_migrations', '.claude']),
 
   {
     name: 'app/files-to-lint',
