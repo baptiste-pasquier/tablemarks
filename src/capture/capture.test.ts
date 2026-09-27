@@ -62,11 +62,31 @@ describe('capturePaste', () => {
     expect(draft).toMatchObject({
       name: 'Chez Marcel',
       pending: false,
-      address: '1 Rue de Rivoli, Paris',
     })
     expect(draft.lat).toBeCloseTo(48.8566)
     expect(draft.match).toBeUndefined()
     expect(await allRestaurants()).toEqual([])
+  })
+
+  // review #6: a named place with no OSM match no longer reverse-geocodes at preview — its
+  // address is not shown before "Add", and asking twice cost up to 10s + 10s of waiting.
+  it('does not reverse-geocode a named place with no OSM match at preview (perf, review #6)', async () => {
+    const reverse = vi.fn(async () => '1 Rue de Rivoli, Paris')
+    setGeocodeProvider({
+      search: async (_q, options) => (options?.near ? [] : []),
+      reverse,
+      lookup: async () => null,
+    })
+
+    const draft = await draftOf(FULL_URL)
+
+    expect(draft.address).toBeUndefined()
+    expect(reverse).not.toHaveBeenCalled()
+
+    const res = await commitCapture(draft)
+    if (res.status !== 'created') throw new Error(res.status)
+    expect(reverse).toHaveBeenCalledTimes(1)
+    expect(res.restaurant.address).toBe('1 Rue de Rivoli, Paris')
   })
 
   it('attaches the OSM object found near the link, and takes its address', async () => {

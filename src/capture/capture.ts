@@ -75,10 +75,15 @@ async function preview(place: ResolvedPlace): Promise<CaptureResult> {
     match?.osm && findNearMatch({ lat: place.lat, lng: place.lng, osm: match.osm }, existing)
   if (sameObject) return { status: 'duplicate', match: sameObject }
 
-  // OSM's address when matched; otherwise the reverse geocode the app always used.
+  // OSM's address when matched; a reverse geocode only when the place has no name of its own —
+  // the address then provides it. Otherwise it is left for `commitCapture`: showing it here cost a
+  // second Nominatim request back to back with the match lookup, for an address the preview never
+  // displays (review #6).
   const address = match
     ? match.address
-    : await reverseGeocode(place.lat, place.lng).catch(() => undefined)
+    : place.name
+      ? undefined
+      : await reverseGeocode(place.lat, place.lng).catch(() => undefined)
   const draft: PlaceDraft = {
     name: place.name ?? address?.split(',')[0] ?? 'New place',
     lat: place.lat,
