@@ -9,6 +9,7 @@ import {
   type PlaceDraft,
 } from '../../capture/capture'
 import { searchPlaces, type GeoCandidate } from '../../capture/geocode'
+import { parseMapsUrl } from '../../capture/parseMapsUrl'
 import { suggestCategory } from '../facets/osmCategory'
 import { dismissOsm } from '../places/osmDismissals'
 import type { Restaurant } from '../../types/models'
@@ -177,7 +178,11 @@ export function useAddPlace(onAdded: () => void) {
       }
     } catch {
       if (requestId.current !== id) return
-      setError(hadDraft ? 'add' : 'searchFailed')
+      // A pasted Google Maps link that fails before any draft existed is still a failed add, not
+      // a failed search — "paste the full Google Maps link" makes no sense to someone who already
+      // did (review #5).
+      const failedLink = !hadDraft && parseMapsUrl(input).kind !== 'none'
+      setError(hadDraft || failedLink ? 'add' : 'searchFailed')
     } finally {
       // A stale request must not clear `busy` for a newer one already in flight; `setInput`
       // already cleared it for the case where no newer request took over.

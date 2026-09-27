@@ -18,11 +18,15 @@ vi.mock('../../sync/pocketbase', async (importOriginal) => {
   return { ...actual, resolveShortLink: vi.fn() }
 })
 
-// Partial mock: real by default (`vi.fn(actual.createRestaurant)` delegates), so only the one test
-// that holds the commit on a deferred promise needs to override it for a single call.
+// Partial mock: real by default (`vi.fn(actual.createRestaurant)` / `vi.fn(actual.allRestaurants)`
+// delegates), so only the odd test that holds a call on a deferred promise needs to override it.
 vi.mock('../../data/restaurants', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../data/restaurants')>()
-  return { ...actual, createRestaurant: vi.fn(actual.createRestaurant) }
+  return {
+    ...actual,
+    createRestaurant: vi.fn(actual.createRestaurant),
+    allRestaurants: vi.fn(actual.allRestaurants),
+  }
 })
 
 const FULL_URL = 'https://www.google.com/maps/place/Chez+Marcel/@48.8566,2.3522,15z'
@@ -274,6 +278,21 @@ describe('AddPlace', () => {
       const note = await screen.findByRole('note')
       expect(note).toHaveTextContent(/type the place name/i)
       expect(note).toHaveTextContent(/full google maps link/i)
+    })
+  })
+
+  describe('a pasted link that fails before any draft (review #5)', () => {
+    it('reports a failed add, not a failed search', async () => {
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      // Let the modal's own `useRestaurants` load settle before arming the one-shot rejection
+      // below, so it lands on the preview's own call rather than that unrelated one.
+      await waitFor(() => expect(allRestaurants).toHaveBeenCalled())
+      vi.mocked(allRestaurants).mockRejectedValueOnce(new Error('idb down'))
+
+      await pasteAndSubmit(FULL_URL)
+
+      expect(await screen.findByText(/could not add that place/i)).toBeInTheDocument()
+      expect(screen.queryByText(/search failed/i)).toBeNull()
     })
   })
 
