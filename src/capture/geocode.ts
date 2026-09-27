@@ -63,6 +63,25 @@ function foldName(name: string): string {
   return foldText(name).replace(/[’ʼ‘]/g, "'").replace(/\s+/g, ' ').trim()
 }
 
+/** A folded name split into its words: anything that is not a letter or a digit is a boundary. */
+function tokens(folded: string): string[] {
+  return folded.split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+}
+
+/**
+ * Whole-word match, either direction: every word of one folded name appears as a whole word in
+ * the other ("Paul" meets "Chez Paul Bistrot", but "Bar" no longer meets "Barbès Café" — a prefix,
+ * not a word) (review #8a).
+ */
+function wholeWordMatch(a: string, b: string): boolean {
+  const tokensA = tokens(a)
+  const tokensB = tokens(b)
+  if (tokensA.length === 0 || tokensB.length === 0) return false
+  const setA = new Set(tokensA)
+  const setB = new Set(tokensB)
+  return tokensA.every((tok) => setB.has(tok)) || tokensB.every((tok) => setA.has(tok))
+}
+
 function viewbox({ lat, lng }: { lat: number; lng: number }): string {
   const d = NEAR_BOX_DEG
   return `${lng - d},${lat + d},${lng + d},${lat - d}`
@@ -127,9 +146,10 @@ export function lookupOsm(
 
 /**
  * The OpenStreetMap object a known position and name most likely are: the nearest eatery within
- * `MATCH_RADIUS_M` whose folded name contains the other ("Mokonuts" meets "Mokonuts Cafe and
- * Bakery"). Null when none qualifies. Throws when the request fails, so a caller can tell
- * "nothing there" from "could not ask".
+ * `MATCH_RADIUS_M` whose folded name shares every word with the other, in either direction
+ * ("Mokonuts" meets "Mokonuts Cafe and Bakery", "Servan" meets "Le Servan"). Null when none
+ * qualifies. Throws when the request fails, so a caller can tell "nothing there" from "could not
+ * ask".
  */
 export async function matchNear(
   name: string,
@@ -144,7 +164,7 @@ export async function matchNear(
   let bestDistance = MATCH_RADIUS_M
   for (const c of rows) {
     const got = foldName(c.name)
-    if (!c.osm || !isEatery(c) || !got || !(got.includes(wanted) || wanted.includes(got))) continue
+    if (!c.osm || !isEatery(c) || !got || !wholeWordMatch(wanted, got)) continue
     const distance = haversineMeters(lat, lng, c.lat, c.lng)
     if (distance <= bestDistance) {
       best = c

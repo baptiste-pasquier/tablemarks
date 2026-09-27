@@ -132,6 +132,37 @@ describe('matchNear', () => {
     expect(await matchNear('L’As du Fallafel', HERE.lat, HERE.lng)).not.toBeNull()
   })
 
+  // review #8a: substring containment let "Bar" match "Barbès Café" (a prefix, not a word).
+  it('does not match a name that is only a substring, not a whole word', async () => {
+    provide([candidate({ name: 'Barbès Café' })])
+    expect(await matchNear('Bar', HERE.lat, HERE.lng)).toBeNull()
+  })
+
+  it('matches equal names', async () => {
+    provide([candidate({ name: 'Le Servan' })])
+    expect(await matchNear('Le Servan', HERE.lat, HERE.lng)).not.toBeNull()
+  })
+
+  it('matches one word contained in the other, in either direction', async () => {
+    provide([candidate({ name: 'Le Servan' })])
+    expect(await matchNear('Servan', HERE.lat, HERE.lng)).not.toBeNull()
+
+    provide([candidate({ name: 'Servan' })])
+    expect(await matchNear('Le Servan', HERE.lat, HERE.lng)).not.toBeNull()
+  })
+
+  it('matches whole words across apostrophe styles', async () => {
+    provide([candidate({ name: 'L’As du Fallafel' })])
+    expect(await matchNear("L'As du Fallafel", HERE.lat, HERE.lng)).not.toBeNull()
+  })
+
+  // Still a whole-word match — the paste preview is what lets the user see and refuse it
+  // (review #8b) rather than this function guessing any harder.
+  it('matches a single shared word inside a longer candidate name', async () => {
+    provide([candidate({ name: 'Chez Paul Bistrot' })])
+    expect(await matchNear('Paul', HERE.lat, HERE.lng)).not.toBeNull()
+  })
+
   it.each([
     ['a non-eatery', { osmClass: 'shop=leather' }],
     ['a place past 75 m', { lat: HERE.lat + 0.001 }],
