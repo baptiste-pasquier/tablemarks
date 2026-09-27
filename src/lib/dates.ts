@@ -41,6 +41,15 @@ export function isLocalDay(value: string): boolean {
   return LOCAL_DAY_PATTERN.test(value)
 }
 
+/**
+ * The one display format for a date, in every language: `DD/MM/YYYY`. Takes a local day
+ * (`YYYY-MM-DD`) as is, or an instant, shown as the viewer's local day.
+ */
+export function formatDisplayDate(value: string): string {
+  const [year, month, day] = (isLocalDay(value) ? value : instantToLocalDay(value)).split('-')
+  return `${day}/${month}/${year}`
+}
+
 function formatLocalDay(d: Date): string {
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')

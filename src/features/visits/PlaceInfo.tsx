@@ -8,7 +8,7 @@ import { OsmFooter } from '../places/OsmFooter'
 import { PlaceActions } from '../places/PlaceActions'
 import { compactAddress } from '../places/placeDisplay'
 import { useOsmEnrichment } from '../places/useOsmEnrichment'
-import { instantToLocalDay } from '../../lib/dates'
+import { formatDisplayDate } from '../../lib/dates'
 import type { RankedCuisine } from '../facets/cuisineRanking'
 import type { Restaurant } from '../../types/models'
 
@@ -40,7 +40,7 @@ export function PlaceInfo({
         {restaurant.added && (
           <span className="flex items-center gap-1">
             <Calendar size={14} aria-hidden="true" />
-            {t('visitDetail.addedOn', { date: instantToLocalDay(restaurant.added) })}
+            {t('visitDetail.addedOn', { date: formatDisplayDate(restaurant.added) })}
           </span>
         )}
       </div>

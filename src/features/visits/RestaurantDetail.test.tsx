@@ -12,7 +12,7 @@ import {
 } from '../../data/restaurants'
 import { createVisit } from '../../data/visits'
 import { setGeocodeProvider, nominatim } from '../../capture/geocode'
-import { instantToLocalDay } from '../../lib/dates'
+import { formatDisplayDate } from '../../lib/dates'
 import { VERDICTS, translateVerdict } from '../../types/models'
 import type { GeoCandidate } from '../../capture/geocode'
 
@@ -41,6 +41,17 @@ function enabled(buttons: HTMLElement[]): HTMLElement {
 }
 
 describe('RestaurantDetail', () => {
+  it('shows the day a place was added as DD/MM/YYYY', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 26, 12, 0))
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
+    vi.useRealTimers()
+
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+
+    expect(await screen.findByText('Added 26/09/2026')).toBeInTheDocument()
+  })
+
   it('shows the latest verdict label and visit count for a multi-visit place', async () => {
     const r = await createRestaurant({ name: 'Chez Marcel', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2024-01-01', verdict: 'go_back' })
@@ -53,7 +64,7 @@ describe('RestaurantDetail', () => {
     // verdict), once in the per-visit badge for that same visit's row. (The collapsed "Add a
     // past visit" section also has a disabled "Once was enough" button, always in the DOM.)
     expect(screen.getAllByText('Once was enough')).toHaveLength(3)
-    expect(screen.getByText('2026-06-01')).toBeInTheDocument()
+    expect(screen.getByText('01/06/2026')).toBeInTheDocument()
   })
 
   it('flips a to-try place to visited with one-tap "I\'m here now"', async () => {
@@ -230,7 +241,7 @@ describe('RestaurantDetail', () => {
     // gray-400 and gray-500 measure under AA at this size (design-tokens.md): the floor is gray-600.
     const light = /\btext-gray-(300|400|500)\b/
     expect((await screen.findByText('(1)')).className).not.toMatch(light)
-    expect(screen.getByText('2026-06-01')).toHaveClass('text-gray-700')
+    expect(screen.getByText('01/06/2026')).toHaveClass('text-gray-700')
     const addPast = screen.getByText('Add a past visit')
     expect(addPast.className).not.toMatch(light)
     expect(addPast).toHaveClass('text-brand-strong')
@@ -254,8 +265,8 @@ describe('RestaurantDetail', () => {
 
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
-    const dates = (await screen.findAllByText(/^\d{4}-\d{2}-\d{2}$/)).map((el) => el.textContent)
-    expect(dates).toEqual(['2026-06-01', '2024-01-01'])
+    const dates = (await screen.findAllByText(/^\d{2}\/\d{2}\/\d{4}$/)).map((el) => el.textContent)
+    expect(dates).toEqual(['01/06/2026', '01/01/2024'])
   })
 
   it('returns a place to to-try when its last visit is deleted', async () => {
@@ -264,7 +275,7 @@ describe('RestaurantDetail', () => {
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
     const user = userEvent.setup()
 
-    await user.click(await screen.findByLabelText(/delete visit on 2025-01-01/i))
+    await user.click(await screen.findByLabelText(/delete visit on 01\/01\/2025/i))
 
     await waitFor(() => expect(screen.getByText('To try')).toBeInTheDocument())
     expect(screen.getByText(/no visits yet/i)).toBeInTheDocument()
@@ -394,8 +405,8 @@ describe('RestaurantDetail', () => {
 
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
-    expect(await screen.findByText(/2026-08-30/)).toBeInTheDocument()
-    expect(screen.queryByText(/2026-08-31/)).not.toBeInTheDocument()
+    expect(await screen.findByText(/30\/08\/2026/)).toBeInTheDocument()
+    expect(screen.queryByText(/31\/08\/2026/)).not.toBeInTheDocument()
   })
 
   it('renders no added-date line for a pre-existing restaurant with no recorded added field', async () => {
@@ -411,18 +422,20 @@ describe('RestaurantDetail', () => {
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     await screen.findByText('X')
-    expect(screen.queryByText(new RegExp(instantToLocalDay(r.added!)))).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(formatDisplayDate(r.added!), { exact: false }),
+    ).not.toBeInTheDocument()
   })
 
   it('renders no added-date line for a restaurant backfilled with an empty-string added value', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
-    const originalDatePart = instantToLocalDay(r.added!)
+    const originalDatePart = formatDisplayDate(r.added!)
     await mutateRestaurant(r.id, (existing) => (existing ? { ...existing, added: '' } : existing))
 
     render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
 
     await screen.findByText('X')
-    expect(screen.queryByText(new RegExp(originalDatePart))).not.toBeInTheDocument()
+    expect(screen.queryByText(originalDatePart, { exact: false })).not.toBeInTheDocument()
   })
 
   it('treats an invalid mapsUrl as absent, falling back to the synthesized search link', async () => {
@@ -524,6 +537,11 @@ describe('RestaurantDetail', () => {
       expect(screen.getByText('Paris 11th · Quartier de la Roquette')).toBeInTheDocument()
       expect(screen.getByText('32 Rue Saint-Maur, 75011 Paris')).toBeInTheDocument()
       expect(screen.queryByText(/Arrondissement, Paris, France/)).toBeNull()
+    })
+
+    it('dates the OSM snapshot as DD/MM/YYYY', async () => {
+      await open()
+      expect(screen.getByText('OpenStreetMap · 19/09/2026')).toBeInTheDocument()
     })
 
     it('offers call and website actions', async () => {

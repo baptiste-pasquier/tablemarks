@@ -6,6 +6,7 @@ import {
   instantToLocalDay,
   normalizeInstant,
   isLocalDay,
+  formatDisplayDate,
 } from './dates'
 
 // Deterministic timezone-dependent tests stub the `TZ` env var for the duration of the test — V8
@@ -84,5 +85,17 @@ describe('isLocalDay', () => {
     expect(isLocalDay('2026-08-30T10:00:00.000Z')).toBe(false)
     expect(isLocalDay('not-a-date')).toBe(false)
     expect(isLocalDay('')).toBe(false)
+  })
+})
+
+describe('formatDisplayDate', () => {
+  it('shows a local day as DD/MM/YYYY', () => {
+    expect(formatDisplayDate('2026-06-01')).toBe('01/06/2026')
+  })
+
+  it('shows an instant as its local day, DD/MM/YYYY', () => {
+    vi.stubEnv('TZ', 'America/Bogota')
+    // 03:00 UTC on 27 September is still 26 September in UTC-5.
+    expect(formatDisplayDate('2026-09-27T03:00:00.000Z')).toBe('26/09/2026')
   })
 })

@@ -76,7 +76,7 @@ A moment in time recorded as a UTC timestamp — canonical and timezone-independ
 
 ### Local day
 
-A calendar day with no time-of-day, interpreted relative to the viewer's device timezone rather than UTC — used for user-facing dates such as a Visit's date. An Instant and a Local day are not directly comparable: converting one to the other's frame first is required, or the comparison is wrong for a viewer outside UTC.
+A calendar day with no time-of-day, interpreted relative to the viewer's device timezone rather than UTC — used for user-facing dates such as a Visit's date. An Instant and a Local day are not directly comparable: converting one to the other's frame first is required, or the comparison is wrong for a viewer outside UTC. Every date is shown as `DD/MM/YYYY`, in every language (`formatDisplayDate` in `src/lib/dates.ts`); it is stored as `YYYY-MM-DD`.
 
 ## Sync
 
