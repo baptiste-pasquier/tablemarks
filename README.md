@@ -44,6 +44,7 @@ This starts the app with **no backend**, the same as the demo. To enable Google 
 | -------------------- | ----------------------------------- |
 | `npm run dev`        | Start the dev server                |
 | `npm test`           | Run the test suite                  |
+| `npm run test:e2e`   | Run the end-to-end journeys         |
 | `npm run build`      | Type-check and build for production |
 | `npm run type-check` | Type-check only                     |
 | `npm run lint`       | Lint and auto-fix                   |

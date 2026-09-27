@@ -43,6 +43,7 @@ export function DecidePanel({
     // relative gap.
     <Modal
       onClose={onClose}
+      label={t('decide.title')}
       zIndexClassName="z-[var(--z-modal-elevated)]"
       panelClassName="flex max-h-[88vh] flex-col"
     >

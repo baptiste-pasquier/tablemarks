@@ -7,7 +7,7 @@ function Harness({ onClose }: { onClose: () => void }) {
   return (
     <>
       <button type="button">Opener</button>
-      <Modal onClose={onClose}>
+      <Modal onClose={onClose} label="Harness dialog">
         <button type="button">First</button>
         <button type="button">Last</button>
       </Modal>
@@ -19,7 +19,11 @@ describe('Modal', () => {
   it('closes when the backdrop is clicked, but not when the panel content is clicked', async () => {
     const onClose = vi.fn()
     const user = userEvent.setup()
-    const { container } = render(<Modal onClose={onClose}>Content</Modal>)
+    const { container } = render(
+      <Modal onClose={onClose} label="Test dialog">
+        Content
+      </Modal>,
+    )
 
     await user.click(screen.getByText('Content'))
     expect(onClose).not.toHaveBeenCalled()
@@ -43,7 +47,7 @@ describe('Modal', () => {
     // `onClose={() => setAdding(false)}`. The mount effect must not key off it, or an unrelated
     // parent re-render (map pan, background sync) would tear it down and steal focus back in.
     const { rerender } = render(
-      <Modal onClose={() => {}}>
+      <Modal onClose={() => {}} label="Test dialog">
         <input aria-label="first" />
         <input aria-label="second" />
       </Modal>,
@@ -54,7 +58,7 @@ describe('Modal', () => {
     expect(second).toHaveFocus()
 
     rerender(
-      <Modal onClose={() => {}}>
+      <Modal onClose={() => {}} label="Test dialog">
         <input aria-label="first" />
         <input aria-label="second" />
       </Modal>,
@@ -91,7 +95,7 @@ describe('Modal', () => {
     opener.focus()
 
     const { unmount } = render(
-      <Modal onClose={vi.fn()}>
+      <Modal onClose={vi.fn()} label="Test dialog">
         <button type="button">Inside</button>
       </Modal>,
     )
@@ -100,5 +104,16 @@ describe('Modal', () => {
     unmount()
     expect(opener).toHaveFocus()
     opener.remove()
+  })
+
+  it('exposes its panel as a named modal dialog', () => {
+    render(
+      <Modal onClose={vi.fn()} label="Add a place">
+        Content
+      </Modal>,
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Add a place' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveTextContent('Content')
   })
 })

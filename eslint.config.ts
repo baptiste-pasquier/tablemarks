@@ -5,6 +5,7 @@
 import js from '@eslint/js'
 import { defineConfig, globalIgnores } from 'eslint/config'
 import pluginVitest from '@vitest/eslint-plugin'
+import pluginPlaywright from 'eslint-plugin-playwright'
 import pluginReactHooks from 'eslint-plugin-react-hooks'
 import pluginReactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
@@ -14,7 +15,7 @@ export default defineConfig([
   // `pb_data` only ever matched a root-level directory and left `pocketbase/pb_data*/types.d.ts`
   // — 1386 errors' worth of generated definitions — in the lint. `**/` is what makes a nested
   // path match, and `.claude` keeps the agent worktrees (full checkouts of this repo) out.
-  globalIgnores(['dist', '**/pb_data*', '**/pb_migrations', '.claude']),
+  globalIgnores(['dist', 'dist-e2e', '**/pb_data*', '**/pb_migrations', '.claude']),
 
   {
     name: 'app/files-to-lint',
@@ -37,7 +38,7 @@ export default defineConfig([
 
   {
     name: 'app/react',
-    files: ['**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}'],
     extends: [pluginReactHooks.configs.flat['recommended-latest'], pluginReactRefresh.configs.vite],
     rules: {
       // Warnings, not errors, for this first landing. Both rules are new in
@@ -55,5 +56,13 @@ export default defineConfig([
     ...pluginVitest.configs.recommended,
     name: 'app/tests',
     files: ['src/**/*.test.{ts,tsx}'],
+  },
+
+  // End-to-end specs and their helpers. `flat/recommended` also turns `no-empty-pattern` off, for
+  // the `async ({}, use) =>` shape Playwright fixtures take.
+  {
+    name: 'e2e/playwright',
+    files: ['e2e/**/*.ts'],
+    extends: [pluginPlaywright.configs['flat/recommended']],
   },
 ])

@@ -482,7 +482,11 @@ export default function App() {
       )}
 
       {settingsOpen && (
-        <Modal onClose={() => setSettingsOpen(false)} panelClassName="max-h-[90vh] overflow-y-auto">
+        <Modal
+          onClose={() => setSettingsOpen(false)}
+          label={t('settings.title')}
+          panelClassName="max-h-[90vh] overflow-y-auto"
+        >
           <SettingsPanel onClose={() => setSettingsOpen(false)} />
         </Modal>
       )}
@@ -505,6 +509,7 @@ export default function App() {
       {filtersOpen && (
         <Modal
           onClose={() => setFiltersOpen(false)}
+          label={t('filters.title')}
           panelClassName="flex max-h-[90vh] flex-col overflow-hidden"
           initialFocus="panel"
         >

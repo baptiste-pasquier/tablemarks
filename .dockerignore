@@ -12,6 +12,7 @@
 node_modules
 **/node_modules
 dist
+dist-e2e
 dist-ssr
 coverage
 *.tsbuildinfo
@@ -38,6 +39,9 @@ coverage
 docs
 scripts
 *.md
+e2e
+playwright-report
+test-results
 
 # ---------------------------------------------------------------------------
 # PocketBase: runtime state and the downloaded binary are host-side artifacts.
