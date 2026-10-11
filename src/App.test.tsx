@@ -112,6 +112,8 @@ beforeEach(async () => {
     avatarUrl: null,
     signIn: vi.fn(),
     signOut: vi.fn(),
+    endSession: vi.fn(),
+    eraseLocalData: vi.fn(),
   })
   mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
   // Module-global store, shared across this file's tests — reset so an unreachable case set by
@@ -155,6 +157,8 @@ describe('App shell', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     const user = userEvent.setup()
     render(<App />)
@@ -184,6 +188,8 @@ describe('App shell', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: signOutMock,
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     const user = userEvent.setup()
     const { rerender } = render(<App />)
@@ -202,6 +208,8 @@ describe('App shell', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     rerender(<App />)
 
@@ -219,6 +227,8 @@ describe('App shell', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: signOutMock,
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     const user = userEvent.setup()
     const { rerender } = render(<App />)
@@ -233,6 +243,8 @@ describe('App shell', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     rerender(<App />)
 
@@ -1154,6 +1166,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: signInMock,
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
     const user = userEvent.setup()
@@ -1174,6 +1188,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: signInMock,
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(UNAVAILABLE)
     render(<App />)
@@ -1222,6 +1238,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
     render(<App />)
@@ -1240,6 +1258,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: signOutMock,
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(ABSENT)
     await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
@@ -1256,6 +1276,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     rerender(<App />)
 
@@ -1275,6 +1297,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
     setSyncState('problem', 'server-unreachable')
@@ -1297,6 +1321,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: signOutMock,
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(ABSENT)
     const { rerender } = render(<App />)
@@ -1309,6 +1335,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     rerender(<App />)
 
