@@ -26,7 +26,20 @@ export function emitLocalChange(): void {
   for (const fn of storeListeners) fn()
 }
 
-/** Fired after a sync-pulled write — refreshes the UI without re-triggering a push. */
-export function emitStoreChange(): void {
+/**
+ * Store changes also reach the app's other tabs, so an erase there refreshes the view here. An
+ * incoming message only notifies this tab's store listeners: it never triggers a push and is
+ * never posted again.
+ */
+const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tablemarks') : null
+channel?.addEventListener('message', notifyStoreListeners)
+
+function notifyStoreListeners(): void {
   for (const fn of storeListeners) fn()
+}
+
+/** Fired after a sync-pulled write or an erase — refreshes the UI, here and in other tabs. */
+export function emitStoreChange(): void {
+  notifyStoreListeners()
+  channel?.postMessage('store-change')
 }

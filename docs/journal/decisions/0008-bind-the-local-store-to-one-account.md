@@ -66,6 +66,7 @@ The design spec bound an ownerless store with places silently at startup. This d
 * Bad: signing out loses changes that could not be sent; the user is warned first and can cancel.
 * Bad: both bounded waits can expire, and a failed erase leaves the data on the device until the user retries.
 * Bad: a user whose session ended at startup on an ownerless store created after the upgrade must sign in again to be asked.
+* Out of scope: tabs are not serialized, so two tabs can run a sign-in and a sign-out at once. A tab only stops its sync when its session changes, and an erase refreshes the other tabs.
 * Out of scope: a pre-existing ownerless store adopted by the wrong account still wedges once, as before. The service worker's tile cache and the `localStorage` preferences are not erased.
 
 ### Confirmation
