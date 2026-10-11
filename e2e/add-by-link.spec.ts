@@ -22,7 +22,9 @@ test('a short maps.app.goo.gl link is refused without a backend, and nothing is 
 }) => {
   const dialog = await submitQuery(page, 'https://maps.app.goo.gl/abc123')
   await expect(dialog.getByRole('note')).toContainText('this app runs without one')
-  expect(network.mocked.filter((u) => u.startsWith('https://nominatim.'))).toEqual([])
   await closeDialog(page)
   await expect(page.getByText('No places yet')).toBeVisible()
+  // Checked last, so a request fired after the refusal is caught too: Nominatim is mocked, so the
+  // guard's teardown would never count it as a violation.
+  expect(network.mocked.filter((u) => u.startsWith('https://nominatim.'))).toEqual([])
 })

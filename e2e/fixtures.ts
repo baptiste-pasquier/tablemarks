@@ -30,8 +30,12 @@ const TILE_PNG = Buffer.from(
   'base64',
 )
 
-export function isLocal(url: URL): boolean {
-  return LOCAL_HOSTS.has(url.hostname)
+/**
+ * The app under test: its own port, whatever loopback spelling the browser uses. Another local
+ * service (a PocketBase on 8090, a dev server) is as external as any remote host.
+ */
+export function isApp(url: URL, app: URL): boolean {
+  return LOCAL_HOSTS.has(url.hostname) && url.port === app.port
 }
 
 /** The canned reply for an external URL, or null when nothing mocks it. */
@@ -53,15 +57,20 @@ export function mockFor(url: URL): Fulfill | null {
 }
 
 /**
- * One catch-all route per context: local passes, a mocked host is answered, anything else is
+ * One catch-all route per context: the app passes, a mocked host is answered, anything else is
  * recorded and aborted. Recorded, not just aborted — the app swallows some failures
  * (`reverseGeocode(...).catch(() => undefined)`), so an abort alone would go unnoticed.
  */
-export async function installNetworkGuard(context: BrowserContext): Promise<NetworkLog> {
+export async function installNetworkGuard(
+  context: BrowserContext,
+  baseURL: string | undefined,
+): Promise<NetworkLog> {
+  if (!baseURL) throw new Error('The network guard needs `use.baseURL` to know the app’s origin')
+  const app = new URL(baseURL)
   const log: NetworkLog = { mocked: [], violations: [] }
   await context.route('**/*', async (route) => {
     const url = new URL(route.request().url())
-    if (isLocal(url)) return route.continue()
+    if (isApp(url, app)) return route.continue()
     const mock = mockFor(url)
     if (mock) {
       log.mocked.push(url.href)
@@ -73,23 +82,24 @@ export async function installNetworkGuard(context: BrowserContext): Promise<Netw
   // `context.route` above never sees a WebSocket upgrade (it only intercepts HTTP requests), so
   // without this a `new WebSocket('wss://…')` to an unmocked host would slip past the guard
   // entirely. The app's own origin is let through to the real server; anything else is recorded
-  // exactly like an unmocked fetch, and — since we never call `connectToServer()` — Playwright
-  // mocks it instead of dialing out, so it fails closed rather than reaching the real host.
-  await context.routeWebSocket(/.*/, (ws: WebSocketRoute) => {
+  // exactly like an unmocked fetch. Without `connectToServer()` Playwright mocks the socket as
+  // open, so it is closed at once: the page sees a refused connection, as `abort` gives HTTP.
+  await context.routeWebSocket(/.*/, async (ws: WebSocketRoute) => {
     const url = new URL(ws.url())
-    if (isLocal(url)) {
+    if (isApp(url, app)) {
       ws.connectToServer()
       return
     }
     log.violations.push(url.href)
+    await ws.close({ code: 1008, reason: 'Blocked by the E2E network guard' })
   })
   return log
 }
 
 export const test = base.extend<{ network: NetworkLog; freshPage: Page }>({
   network: [
-    async ({ context }, use) => {
-      const log = await installNetworkGuard(context)
+    async ({ context, baseURL }, use) => {
+      const log = await installNetworkGuard(context, baseURL)
       await use(log)
       expect(log.violations, 'requests to unmocked external hosts').toEqual([])
     },
@@ -99,9 +109,9 @@ export const test = base.extend<{ network: NetworkLog; freshPage: Page }>({
   // `browser.newContext()` takes the project's `use` options — device, locale, baseURL,
   // geolocation — so this page differs from `page` only by its storage. Same guard, same teardown
   // check: a guard that could be forgotten on a second context would guarantee nothing.
-  freshPage: async ({ browser }, use) => {
+  freshPage: async ({ browser, baseURL }, use) => {
     const context = await browser.newContext()
-    const log = await installNetworkGuard(context)
+    const log = await installNetworkGuard(context, baseURL)
     await use(await context.newPage())
     await context.close()
     expect(log.violations, 'requests to unmocked external hosts (fresh context)').toEqual([])
