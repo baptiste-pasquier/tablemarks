@@ -33,7 +33,11 @@
       "cancel": "Annuler",
       "sending": "Envoi de vos modifications…",
       "wipeFailed": "Déconnecté, mais les données de cet appareil n'ont pas pu être effacées.",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "signInFailedTitle": "Échec de la connexion",
+      "signInFailed": "La connexion n'a pas abouti. Veuillez réessayer.",
+      "signOutFailedTitle": "Échec de la déconnexion",
+      "signOutFailed": "La déconnexion n'a pas abouti. Vous êtes toujours connecté."
     }
   },
   "shell": {

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { SignOutIncomplete } from '../../auth/signOutIncomplete'
 import { useAuth } from '../../auth/useAuth'
 import type { AccountAnswer, AccountQuestion } from '../../auth/signInDecision'
 import type { AccountPromptProps, AccountPromptState } from './AccountPromptDialog'
@@ -46,10 +47,8 @@ export function useAccountActions(): AccountActions {
 
   const signIn = useCallback(() => {
     // Not behind `exclusive`: the PocketBase SDK never settles a closed OAuth popup, which would
-    // lock Sign in until a reload.
-    // A failed sign-in has no dialog: the session is already ended and the form of the
-    // sign-in button is unchanged (parity with the old `void signIn()`).
-    authSignIn(makeAsk(() => null)).catch(() => undefined)
+    // lock Sign in until a reload. A failure has already ended the session; it only informs.
+    authSignIn(makeAsk(() => null)).catch(() => setState({ kind: 'sign-in-failed' }))
   }, [authSignIn, makeAsk])
 
   const signOut = useCallback(() => {
@@ -64,7 +63,14 @@ export function useAccountActions(): AccountActions {
             requestAnimationFrame(() => document.getElementById('shell-signin-button')?.focus())
           }
         },
-        () => setState({ kind: 'wipe-failed' }),
+        // Only a sign-out that closed the session has an erase left to retry; any other failure
+        // left the user signed in.
+        (err: unknown) =>
+          setState(
+            err instanceof SignOutIncomplete && err.sessionCleared
+              ? { kind: 'wipe-failed' }
+              : { kind: 'sign-out-failed' },
+          ),
       )
     })
   }, [authSignOut, makeAsk, exclusive])

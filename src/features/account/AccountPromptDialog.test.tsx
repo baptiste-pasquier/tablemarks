@@ -98,4 +98,32 @@ describe('AccountPromptDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
+
+  it.each([
+    {
+      kind: 'sign-in-failed' as const,
+      title: 'Sign-in failed',
+      message: 'Sign-in did not complete. Please try again.',
+    },
+    {
+      kind: 'sign-out-failed' as const,
+      title: 'Sign-out failed',
+      message: 'Sign-out did not complete. You are still signed in.',
+    },
+  ])('$kind shows a short title, the alert once, and Close', async ({ kind, title, message }) => {
+    const { onDismiss, onRetryWipe } = setup({ kind })
+    expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(message)
+    expect(screen.getAllByText(message)).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+
+    const close = screen.getAllByRole('button', { name: 'Close' }).at(-1)!
+    expect(close).toHaveFocus()
+    await userEvent.click(close)
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+    await userEvent.keyboard('{Escape}')
+    expect(onDismiss).toHaveBeenCalledTimes(2)
+    expect(onRetryWipe).not.toHaveBeenCalled()
+  })
 })

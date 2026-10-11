@@ -33,7 +33,11 @@
       "cancel": "Cancel",
       "sending": "Sending your changes…",
       "wipeFailed": "Signed out, but this device's data could not be erased.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "signInFailedTitle": "Sign-in failed",
+      "signInFailed": "Sign-in did not complete. Please try again.",
+      "signOutFailedTitle": "Sign-out failed",
+      "signOutFailed": "Sign-out did not complete. You are still signed in."
     }
   },
   "shell": {

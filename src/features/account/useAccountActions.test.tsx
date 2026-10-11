@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { SignOutIncomplete } from '../../auth/signOutIncomplete'
 import { useAuth } from '../../auth/useAuth'
 import type { AccountAnswer, AskAccountQuestion } from '../../auth/signInDecision'
 import { AccountPromptDialog } from './AccountPromptDialog'
@@ -23,6 +24,11 @@ function Harness() {
       {prompt && <AccountPromptDialog {...prompt} />}
     </>
   )
+}
+
+/** A sign-out that closed the session but could not erase the store. */
+function wipeFailed(): SignOutIncomplete {
+  return new SignOutIncomplete(true, new Error('wipe'))
 }
 
 function deferred<T>() {
@@ -108,7 +114,7 @@ describe('useAccountActions', () => {
   })
 
   it('a failed wipe shows the alert and Try again calls eraseLocalData', async () => {
-    signOut.mockRejectedValue(new Error('wipe'))
+    signOut.mockRejectedValue(wipeFailed())
     eraseLocalData.mockResolvedValue(undefined)
     const user = userEvent.setup()
     render(<Harness />)
@@ -120,7 +126,7 @@ describe('useAccountActions', () => {
   })
 
   it('keeps the alert when the retry fails too', async () => {
-    signOut.mockRejectedValue(new Error('wipe'))
+    signOut.mockRejectedValue(wipeFailed())
     eraseLocalData.mockRejectedValue(new Error('still'))
     const user = userEvent.setup()
     render(<Harness />)
@@ -130,14 +136,35 @@ describe('useAccountActions', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument()
   })
 
-  it('a rejected sign-in shows no dialog', async () => {
+  it('a rejected sign-in says so, and Close dismisses it', async () => {
     signIn.mockRejectedValue(new Error('oauth'))
     const user = userEvent.setup()
     render(<Harness />)
     await user.click(screen.getByText('start sign in'))
-    await waitFor(() => expect(signIn).toHaveBeenCalled())
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Sign-in did not complete. Please try again.',
+    )
+    await user.click(screen.getAllByRole('button', { name: 'Close' }).at(-1)!)
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('a sign-out that fails before closing the session says the user is still signed in', async () => {
+    signOut.mockRejectedValue(new SignOutIncomplete(false, new Error('dialog unmounted')))
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(screen.getByText('start sign out'))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Sign-out did not complete. You are still signed in.',
+    )
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+  })
+
+  it('an unexpected sign-out failure is not reported as a failed erase', async () => {
+    signOut.mockRejectedValue(new Error('unknown'))
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(screen.getByText('start sign out'))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign-out did not complete.')
   })
 
   describe('one account action at a time', () => {
@@ -191,7 +218,7 @@ describe('useAccountActions', () => {
     })
 
     it('accepts a new action once the previous one rejected', async () => {
-      signOut.mockRejectedValueOnce(new Error('wipe')).mockResolvedValue('cancelled')
+      signOut.mockRejectedValueOnce(wipeFailed()).mockResolvedValue('cancelled')
       const user = userEvent.setup()
       render(<Harness />)
       await user.click(screen.getByText('start sign out'))

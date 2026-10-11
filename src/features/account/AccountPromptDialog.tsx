@@ -9,6 +9,10 @@ export type AccountPromptState =
   | { kind: 'question'; question: AccountQuestion }
   | { kind: 'sending' }
   | { kind: 'wipe-failed' }
+  | { kind: AlertKind }
+
+/** A failure the dialog can only report. */
+type AlertKind = 'sign-in-failed' | 'sign-out-failed'
 
 export interface AccountPromptProps {
   state: AccountPromptState
@@ -37,6 +41,24 @@ const CANCEL: PromptAction = {
   labelKey: 'account.prompt.cancel',
   variant: 'secondary',
   focused: true,
+}
+
+/** The short title names the dialog; the sentence is said once, in the alert. */
+const ALERTS: Record<
+  AlertKind,
+  {
+    titleKey: 'account.prompt.signInFailedTitle' | 'account.prompt.signOutFailedTitle'
+    messageKey: 'account.prompt.signInFailed' | 'account.prompt.signOutFailed'
+  }
+> = {
+  'sign-in-failed': {
+    titleKey: 'account.prompt.signInFailedTitle',
+    messageKey: 'account.prompt.signInFailed',
+  },
+  'sign-out-failed': {
+    titleKey: 'account.prompt.signOutFailedTitle',
+    messageKey: 'account.prompt.signOutFailed',
+  },
 }
 
 const ACTIONS: Record<AccountQuestion['kind'], PromptAction[]> = {
@@ -112,6 +134,8 @@ export function AccountPromptDialog({
     )
   }
 
+  if (state.kind !== 'question') return <FailureAlert kind={state.kind} onDismiss={onDismiss} />
+
   const { title, body } = questionCopy(state.question)
   const cancel = () => onAnswer('cancel')
   return (
@@ -129,6 +153,27 @@ export function AccountPromptDialog({
             {t(action.labelKey)}
           </Button>
         ))}
+      </div>
+    </Modal>
+  )
+}
+
+/** An alert with nothing to retry from the dialog: it informs, and Close (focused) dismisses it. */
+function FailureAlert({ kind, onDismiss }: { kind: AlertKind; onDismiss: () => void }) {
+  const { t } = useTranslation()
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const { titleKey, messageKey } = ALERTS[kind]
+  const title = t(titleKey)
+  return (
+    <Modal onClose={onDismiss} label={title} initialFocus={closeRef}>
+      <ModalHeader title={title} onClose={onDismiss} />
+      <p role="alert" className="text-sm text-gray-700">
+        {t(messageKey)}
+      </p>
+      <div className="mt-4 flex justify-end">
+        <Button variant="primary" ref={closeRef} onClick={onDismiss}>
+          {t('common.close')}
+        </Button>
       </div>
     </Modal>
   )
