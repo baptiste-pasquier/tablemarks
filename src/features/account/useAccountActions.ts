@@ -22,6 +22,8 @@ export function useAccountActions(): AccountActions {
   const makeAsk = useCallback(
     (next: (answer: AccountAnswer) => AccountPromptState | null) => (question: AccountQuestion) =>
       new Promise<AccountAnswer>((resolve) => {
+        // A second flow must never orphan the first one's promise: cancel it before replacing it.
+        pendingAnswer.current?.('cancel')
         pendingAnswer.current = (answer) => {
           setState(next(answer))
           resolve(answer)
@@ -31,8 +33,8 @@ export function useAccountActions(): AccountActions {
     [],
   )
 
-  // One account action at a time: a second `ask` would overwrite the first one's pending answer
-  // and leave that auth promise unresolved forever. A call made while one is in flight is a no-op.
+  // Sign-out and the wipe retry run one at a time (both are bounded by auth's waits): a call made
+  // while one is in flight is a no-op.
   const inFlight = useRef(false)
   const exclusive = useCallback((start: () => Promise<void>) => {
     if (inFlight.current) return
@@ -43,10 +45,12 @@ export function useAccountActions(): AccountActions {
   }, [])
 
   const signIn = useCallback(() => {
+    // Not behind `exclusive`: the PocketBase SDK never settles a closed OAuth popup, which would
+    // lock Sign in until a reload.
     // A failed sign-in has no dialog: the session is already ended and the form of the
     // sign-in button is unchanged (parity with the old `void signIn()`).
-    exclusive(() => authSignIn(makeAsk(() => null)).catch(() => undefined))
-  }, [authSignIn, makeAsk, exclusive])
+    authSignIn(makeAsk(() => null)).catch(() => undefined)
+  }, [authSignIn, makeAsk])
 
   const signOut = useCallback(() => {
     exclusive(() => {

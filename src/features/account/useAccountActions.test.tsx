@@ -141,13 +141,34 @@ describe('useAccountActions', () => {
   })
 
   describe('one account action at a time', () => {
-    it('ignores a second signIn while the first is in flight', async () => {
-      signIn.mockReturnValue(deferred<void>().promise)
+    it('signIn still works while a previous sign-in never settles', async () => {
+      signIn.mockReturnValueOnce(deferred<void>().promise).mockResolvedValue(undefined)
       const user = userEvent.setup()
       render(<Harness />)
       await user.click(screen.getByText('start sign in'))
       await user.click(screen.getByText('start sign in'))
-      expect(signIn).toHaveBeenCalledTimes(1)
+      expect(signIn).toHaveBeenCalledTimes(2)
+    })
+
+    it('a second question answers the first one with cancel', async () => {
+      const asks: Promise<AccountAnswer>[] = []
+      signIn
+        .mockImplementationOnce(async (ask) => {
+          asks.push(ask({ kind: 'adopt', count: 1 }))
+          await asks[0]
+        })
+        .mockImplementationOnce(async (ask) => {
+          asks.push(ask({ kind: 'replace', pendingCount: 3 }))
+          await asks[1]
+        })
+      const user = userEvent.setup()
+      render(<Harness />)
+      await user.click(screen.getByText('start sign in'))
+      await screen.findByRole('button', { name: 'Add to my account' })
+      await user.click(screen.getByText('start sign in'))
+      await expect(asks[0]).resolves.toBe('cancel')
+      expect(await screen.findByRole('dialog')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Add to my account' })).not.toBeInTheDocument()
     })
 
     it('ignores a second signOut while the first is in flight', async () => {
