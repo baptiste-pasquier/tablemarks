@@ -139,4 +139,45 @@ describe('useAccountActions', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  describe('one account action at a time', () => {
+    it('ignores a second signIn while the first is in flight', async () => {
+      signIn.mockReturnValue(deferred<void>().promise)
+      const user = userEvent.setup()
+      render(<Harness />)
+      await user.click(screen.getByText('start sign in'))
+      await user.click(screen.getByText('start sign in'))
+      expect(signIn).toHaveBeenCalledTimes(1)
+    })
+
+    it('ignores a second signOut while the first is in flight', async () => {
+      signOut.mockReturnValue(deferred<'signed-out' | 'cancelled'>().promise)
+      const user = userEvent.setup()
+      render(<Harness />)
+      await user.click(screen.getByText('start sign out'))
+      await user.click(screen.getByText('start sign out'))
+      expect(signOut).toHaveBeenCalledTimes(1)
+    })
+
+    it('accepts a new action once the previous one resolved', async () => {
+      signIn.mockResolvedValue(undefined)
+      const user = userEvent.setup()
+      render(<Harness />)
+      await user.click(screen.getByText('start sign in'))
+      await waitFor(() => expect(signIn).toHaveBeenCalledTimes(1))
+      await user.click(screen.getByText('start sign in'))
+      await waitFor(() => expect(signIn).toHaveBeenCalledTimes(2))
+    })
+
+    it('accepts a new action once the previous one rejected', async () => {
+      signOut.mockRejectedValueOnce(new Error('wipe')).mockResolvedValue('cancelled')
+      const user = userEvent.setup()
+      render(<Harness />)
+      await user.click(screen.getByText('start sign out'))
+      await screen.findByRole('alert')
+      await user.click(screen.getByRole('button', { name: 'Close' }))
+      await user.click(screen.getByText('start sign out'))
+      await waitFor(() => expect(signOut).toHaveBeenCalledTimes(2))
+    })
+  })
 })

@@ -31,25 +31,39 @@ export function useAccountActions(): AccountActions {
     [],
   )
 
+  // One account action at a time: a second `ask` would overwrite the first one's pending answer
+  // and leave that auth promise unresolved forever. A call made while one is in flight is a no-op.
+  const inFlight = useRef(false)
+  const exclusive = useCallback((start: () => Promise<void>) => {
+    if (inFlight.current) return
+    inFlight.current = true
+    void start().finally(() => {
+      inFlight.current = false
+    })
+  }, [])
+
   const signIn = useCallback(() => {
     // A failed sign-in has no dialog: the session is already ended and the form of the
     // sign-in button is unchanged (parity with the old `void signIn()`).
-    authSignIn(makeAsk(() => null)).catch(() => undefined)
-  }, [authSignIn, makeAsk])
+    exclusive(() => authSignIn(makeAsk(() => null)).catch(() => undefined))
+  }, [authSignIn, makeAsk, exclusive])
 
   const signOut = useCallback(() => {
-    setState({ kind: 'sending' })
-    authSignOut(makeAsk((answer) => (answer === 'sign-out' ? { kind: 'sending' } : null))).then(
-      (result) => {
-        setState(null)
-        if (result === 'signed-out') {
-          // The avatar trigger is gone once signed out; focus the sign-in button when it mounts.
-          requestAnimationFrame(() => document.getElementById('shell-signin-button')?.focus())
-        }
-      },
-      () => setState({ kind: 'wipe-failed' }),
-    )
-  }, [authSignOut, makeAsk])
+    exclusive(() => {
+      setState({ kind: 'sending' })
+      const ask = makeAsk((answer) => (answer === 'sign-out' ? { kind: 'sending' } : null))
+      return authSignOut(ask).then(
+        (result) => {
+          setState(null)
+          if (result === 'signed-out') {
+            // The avatar trigger is gone once signed out; focus the sign-in button when it mounts.
+            requestAnimationFrame(() => document.getElementById('shell-signin-button')?.focus())
+          }
+        },
+        () => setState({ kind: 'wipe-failed' }),
+      )
+    })
+  }, [authSignOut, makeAsk, exclusive])
 
   const onAnswer = useCallback((answer: AccountAnswer) => {
     const resolve = pendingAnswer.current
@@ -58,11 +72,13 @@ export function useAccountActions(): AccountActions {
   }, [])
 
   const onRetryWipe = useCallback(() => {
-    eraseLocalData().then(
-      () => setState(null),
-      () => setState({ kind: 'wipe-failed' }),
+    exclusive(() =>
+      eraseLocalData().then(
+        () => setState(null),
+        () => setState({ kind: 'wipe-failed' }),
+      ),
     )
-  }, [eraseLocalData])
+  }, [eraseLocalData, exclusive])
 
   const onDismiss = useCallback(() => setState(null), [])
 
