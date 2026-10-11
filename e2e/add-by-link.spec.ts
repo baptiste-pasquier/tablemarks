@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures'
-import { closeDialog, openApp, placeCard, submitQuery } from './app'
+import { closeDialog, openApp, placeCard, placeDetail, submitQuery } from './app'
 import { PLACES } from './osm'
 
 test.beforeEach(async ({ page }) => {
@@ -12,7 +12,8 @@ test('a full Google Maps link creates the place', async ({ page }) => {
   const dialog = await submitQuery(page, link)
   await expect(dialog.getByText('Found on OpenStreetMap')).toBeVisible()
   await dialog.getByRole('button', { name: 'Add', exact: true }).click()
-  await expect(dialog).toBeHidden()
+  await placeDetail(page, name)
+  await closeDialog(page)
   await expect(placeCard(page, name)).toBeVisible()
 })
 

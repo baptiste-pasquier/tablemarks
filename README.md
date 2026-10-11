@@ -36,7 +36,7 @@ The demo runs with no backend, so there is no sign-in and no sync — and short 
 ## Features
 
 - 🔗 **Add by Link or Name**: Paste a Google Maps link or search a name, and check the
-  OpenStreetMap preview before the place is saved
+  OpenStreetMap preview before the place is saved -- it then opens straight on its details
 - 🕒 **Place Details**: Area, open now, weekly hours, and Call / Website buttons from
   OpenStreetMap -- _Complete_, _Refresh_ and _Correct_ keep them current
 - ✅ **Visits & Verdicts**: Log a visit with _I'm here now_ or a past date, and a returnability

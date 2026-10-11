@@ -90,23 +90,27 @@ async function pasteAndAdd(text: string): Promise<void> {
 
 describe('AddPlace', () => {
   it('renders the submit button through the shared Button primary variant', () => {
-    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
     expect(screen.getByRole('button', { name: 'Search' })).toHaveClass('py-2.5', 'bg-brand')
   })
 
-  it('creates a place from a pasted full URL and closes', async () => {
+  it('creates a place from a pasted full URL and hands its id over, so its detail can open', async () => {
     const onClose = vi.fn()
-    render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
+    const onAdded = vi.fn()
+    render(<AddPlace onClose={onClose} onOpenExisting={() => {}} onAdded={onAdded} />)
 
     await pasteAndAdd(FULL_URL)
 
-    await waitFor(() => expect(onClose).toHaveBeenCalled())
-    expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel')
+    await waitFor(() => expect(onAdded).toHaveBeenCalledTimes(1))
+    const [saved] = await allRestaurants()
+    expect(saved.name).toBe('Chez Marcel')
+    expect(onAdded).toHaveBeenCalledWith(saved.id)
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('submits on Enter from the single-line link field', async () => {
-    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
     const user = userEvent.setup()
 
     await user.type(screen.getByLabelText(/paste a google maps link/i), `${FULL_URL}{Enter}`)
@@ -120,7 +124,7 @@ describe('AddPlace', () => {
   })
 
   it('persists a chosen (custom) cuisine on the created place', async () => {
-    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
     const user = userEvent.setup()
 
     await pasteAndSubmit(FULL_URL)
@@ -136,7 +140,7 @@ describe('AddPlace', () => {
   })
 
   it('keeps a typed "Other…" category when Add is clicked without OK', async () => {
-    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
     const user = userEvent.setup()
 
     await pasteAndSubmit(FULL_URL)
@@ -152,7 +156,7 @@ describe('AddPlace', () => {
   })
 
   it('does not submit on Enter while an input method is still composing', async () => {
-    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
     const input = screen.getByLabelText(/paste a google maps link/i)
 
     fireEvent.change(input, { target: { value: FULL_URL } })
@@ -164,7 +168,7 @@ describe('AddPlace', () => {
 
   it('offers the existing place on a near-match duplicate', async () => {
     await createRestaurant({ name: 'Existing', lat: 48.8566, lng: 2.3522 })
-    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+    render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
     await pasteAndSubmit(FULL_URL)
 
@@ -179,7 +183,9 @@ describe('AddPlace', () => {
 
     it('refuses a pasted short link on its own surface, not the shared red error paragraph', async () => {
       const onClose = vi.fn()
-      const { container } = render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
+      const { container } = render(
+        <AddPlace onClose={onClose} onOpenExisting={() => {}} onAdded={() => {}} />,
+      )
 
       await pasteAndSubmit(SHORT_URL)
 
@@ -191,7 +197,7 @@ describe('AddPlace', () => {
     })
 
     it('says this deployment has no server, permanently', async () => {
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit(SHORT_URL)
 
@@ -201,7 +207,7 @@ describe('AddPlace', () => {
     })
 
     it('names both paths that still work: searching by name and a full Maps URL', async () => {
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit(SHORT_URL)
 
@@ -212,7 +218,7 @@ describe('AddPlace', () => {
 
     it('renders the refusal in French', async () => {
       await mockI18n.changeLanguage('fr')
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await user.type(screen.getByLabelText(/collez un lien google maps/i), SHORT_URL)
@@ -225,12 +231,12 @@ describe('AddPlace', () => {
     })
 
     it('still creates a place from a full Maps URL', async () => {
-      const onClose = vi.fn()
-      render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
+      const onAdded = vi.fn()
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={onAdded} />)
 
       await pasteAndAdd(FULL_URL)
 
-      await waitFor(() => expect(onClose).toHaveBeenCalled())
+      await waitFor(() => expect(onAdded).toHaveBeenCalled())
       expect((await allRestaurants()).map((r) => r.name)).toContain('Chez Marcel')
       expect(screen.queryByRole('note')).toBeNull()
     })
@@ -241,7 +247,7 @@ describe('AddPlace', () => {
       // Reachable backend, 400 from the hook. Before this the paste became a placeholder named by
       // the raw URL, with no pin, retried forever.
       vi.mocked(resolveShortLink).mockRejectedValue(new UnresolvableShortLink(400))
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit(SHORT_URL)
 
@@ -259,7 +265,7 @@ describe('AddPlace', () => {
     })
 
     it('says the server is unreachable, not that the app has none (review #13)', async () => {
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit(SHORT_URL)
 
@@ -271,7 +277,7 @@ describe('AddPlace', () => {
     })
 
     it('still names both paths that work in the meantime', async () => {
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit(SHORT_URL)
 
@@ -283,7 +289,7 @@ describe('AddPlace', () => {
 
   describe('a pasted link that fails before any draft (review #5)', () => {
     it('reports a failed add, not a failed search', async () => {
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       // Let the modal's own `useRestaurants` load settle before arming the one-shot rejection
       // below, so it lands on the preview's own call rather than that unrelated one.
       await waitFor(() => expect(allRestaurants).toHaveBeenCalled())
@@ -303,7 +309,9 @@ describe('AddPlace', () => {
         reverse: async () => undefined,
         lookup: async () => null,
       })
-      const { unmount } = render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const { unmount } = render(
+        <AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />,
+      )
       await pasteAndSubmit('Chez Marcel Paris')
       const empty = await screen.findByText(/no matching places found/i)
       expect(empty).toHaveClass('text-red-600')
@@ -316,7 +324,7 @@ describe('AddPlace', () => {
         reverse: async () => undefined,
         lookup: async () => null,
       })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       await pasteAndSubmit('Chez Marcel Paris')
       const failed = await screen.findByText(/search failed/i)
       expect(failed).toHaveTextContent(/full google maps link/i)
@@ -326,15 +334,15 @@ describe('AddPlace', () => {
 
   describe('search, select, category, add', () => {
     it('shows no category picker before a place is identified', () => {
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       expect(screen.queryByRole('button', { name: /^Category:/ })).toBeNull()
       expect(screen.getByRole('button', { name: 'Search' })).toBeDisabled()
     })
 
     it('selects a result, pre-fills its category, and adds it with its snapshot', async () => {
       provide({ search: [FALAFEL] })
-      const onClose = vi.fn()
-      render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
+      const onAdded = vi.fn()
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={onAdded} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit('As du Fallafel')
@@ -349,7 +357,7 @@ describe('AddPlace', () => {
       expect(await allRestaurants()).toEqual([])
 
       await user.click(screen.getByRole('button', { name: 'Add' }))
-      await waitFor(() => expect(onClose).toHaveBeenCalled())
+      await waitFor(() => expect(onAdded).toHaveBeenCalled())
       expect((await allRestaurants())[0]).toMatchObject({ cuisine: 'lebanese', osm: OSM })
     })
 
@@ -360,7 +368,7 @@ describe('AddPlace', () => {
           { ...FALAFEL, name: 'Le Fallafel 17e', osm: { ...OSM, id: 3 }, cuisineTag: 'kebab' },
         ],
       })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit('Fallafel')
@@ -376,7 +384,7 @@ describe('AddPlace', () => {
 
     it('goes back to Search when the text changes after a selection', async () => {
       provide({ search: [FALAFEL] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit('As du Fallafel')
@@ -390,7 +398,7 @@ describe('AddPlace', () => {
 
     it('folds results that are not eateries, and says when there is no eatery at all', async () => {
       provide({ search: [LEATHER] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit('Chez Aline')
@@ -403,7 +411,7 @@ describe('AddPlace', () => {
 
     it('previews a pasted link with its OSM match, and drops it on "Not this one"', async () => {
       provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit(FULL_URL)
@@ -422,7 +430,9 @@ describe('AddPlace', () => {
 
     it('names the OSM match in the preview when it differs from the pasted link, plain text when equal (review #8b)', async () => {
       provide({ near: [{ ...FALAFEL, name: 'Chez Paul Bistrot', lat: 48.8566, lng: 2.3522 }] })
-      const { unmount } = render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      const { unmount } = render(
+        <AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />,
+      )
 
       await pasteAndSubmit('https://www.google.com/maps/place/Paul/@48.8566,2.3522,15z')
 
@@ -432,7 +442,7 @@ describe('AddPlace', () => {
       unmount()
 
       provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit(FULL_URL)
 
@@ -443,7 +453,7 @@ describe('AddPlace', () => {
     it('reports a duplicate found at commit for a picked result', async () => {
       await createRestaurant({ name: 'Existing', lat: FALAFEL.lat, lng: FALAFEL.lng })
       provide({ search: [FALAFEL] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit('As du Fallafel')
@@ -456,7 +466,7 @@ describe('AddPlace', () => {
 
     it('keeps the category picker hidden while results are listed but none is selected', async () => {
       provide({ search: [FALAFEL] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit('As du Fallafel')
       await screen.findByRole('button', { name: /^L’As du Fallafel/ })
@@ -466,7 +476,7 @@ describe('AddPlace', () => {
 
     it('re-suggests the OSM category once the input changes and a new place is selected', async () => {
       provide({ search: [FALAFEL] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit('As du Fallafel')
@@ -494,7 +504,7 @@ describe('AddPlace', () => {
         reverse: async () => '1 Rue de Rivoli, Paris',
         lookup: async () => null,
       })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await user.type(screen.getByLabelText(/paste a google maps link/i), 'Fallafel')
@@ -517,7 +527,7 @@ describe('AddPlace', () => {
         reverse: async () => '1 Rue de Rivoli, Paris',
         lookup: async () => null,
       })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit(FULL_URL)
 
@@ -538,7 +548,7 @@ describe('AddPlace', () => {
           await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
         return real(input)
       })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit('Fallafel')
@@ -564,7 +574,7 @@ describe('AddPlace', () => {
 
     it('previews a provisional record when the short link resolver is unreachable', async () => {
       vi.mocked(resolveShortLink).mockRejectedValue(new Error('network down'))
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
 
       await pasteAndSubmit(SHORT_URL)
 
@@ -584,8 +594,8 @@ describe('AddPlace', () => {
           await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
         return real(input)
       })
-      const onClose = vi.fn()
-      render(<AddPlace onClose={onClose} onOpenExisting={() => {}} />)
+      const onAdded = vi.fn()
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={onAdded} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit('Fallafel')
@@ -598,7 +608,7 @@ describe('AddPlace', () => {
       expect(input).toHaveValue('Fallafel')
 
       release()
-      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+      await waitFor(() => expect(onAdded).toHaveBeenCalledTimes(1))
       expect((await allRestaurants()).map((r) => r.name)).toEqual(['L’As du Fallafel'])
     })
 
@@ -614,7 +624,7 @@ describe('AddPlace', () => {
           await vi.importActual<typeof import('../../data/restaurants')>('../../data/restaurants')
         return real(input)
       })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit(FULL_URL)
@@ -637,7 +647,7 @@ describe('AddPlace', () => {
 
     it('dismisses the match when the user rejected it before adding', async () => {
       provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit(FULL_URL)
@@ -651,7 +661,7 @@ describe('AddPlace', () => {
 
     it('does not dismiss a match the user kept', async () => {
       provide({ near: [{ ...FALAFEL, name: 'Chez Marcel', lat: 48.8566, lng: 2.3522 }] })
-      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} />)
+      render(<AddPlace onClose={vi.fn()} onOpenExisting={() => {}} onAdded={() => {}} />)
       const user = userEvent.setup()
 
       await pasteAndSubmit(FULL_URL)

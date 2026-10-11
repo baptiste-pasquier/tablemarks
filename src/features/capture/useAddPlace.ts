@@ -25,7 +25,7 @@ export type AddPlaceError = 'noMatches' | 'searchFailed' | 'add'
  * until "Add"; any edit to the input drops what was identified, so "Add" never saves a place for
  * text that no longer names it.
  */
-export function useAddPlace(onAdded: () => void) {
+export function useAddPlace(onAdded: (id: string) => void) {
   const [input, setInputValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<AddPlaceError | null>(null)
@@ -152,7 +152,7 @@ export function useAddPlace(onAdded: () => void) {
     // The saved place must not offer the same OSM match again if the user already turned it down
     // once, at capture time (review #4).
     if (rejectedMatch) dismissOsm(result.restaurant.id)
-    onAdded()
+    onAdded(result.restaurant.id)
   }
 
   async function submit() {

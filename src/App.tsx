@@ -117,6 +117,11 @@ export default function App() {
     setHoveredId(id)
   }
   const [adding, setAdding] = useState(false)
+  // A place just saved, or one already saved, opens straight on its detail.
+  function openFromAdd(id: string) {
+    setAdding(false)
+    setSelectedId(id)
+  }
   const [deciding, setDeciding] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Gates the mobile filters/sort bottom sheet (U4, KTD6) — a sibling of the other panel-open
@@ -459,10 +464,8 @@ export default function App() {
       {adding && (
         <AddPlace
           onClose={() => setAdding(false)}
-          onOpenExisting={(id) => {
-            setAdding(false)
-            setSelectedId(id)
-          }}
+          onOpenExisting={openFromAdd}
+          onAdded={openFromAdd}
         />
       )}
 
