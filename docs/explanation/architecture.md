@@ -56,9 +56,9 @@ A store owned by another account is never merged. The user erases it and continu
 
 A user sign-out erases the store after trying to send pending changes, and asks before losing unsent ones. If the erase fails, the store stays bound to its owner and the user can retry.
 
-An expired session and the automatic sign-out on a build with no backend keep the store and its owner.
+An expired session and the automatic sign-out on a build with no backend keep the store and its owner. A session that expires or changes account under a running sync, in this tab or another, stops that sync without erasing, and an erase refreshes every open tab.
 
-Startup with a valid session never asks: it syncs or binds when the answer is unambiguous, and otherwise ends the session without erasing so the next sign-in asks. Any failure during startup ends the session. The outcome of every sign-in and startup case is the table in the ADR.
+Startup with a valid session never asks: it syncs a store the account owns, binds an unbound store that is empty or predates owners, and otherwise ends the session without erasing so the next sign-in asks. Any failure during startup ends the session. The outcome of every sign-in and startup case is the table in the ADR.
 
 The decision, with its bounded waits, is [ADR-0008](../journal/decisions/0008-bind-the-local-store-to-one-account.md). The measured failure is in [the solutions entry](../journal/solutions/database-issues/account-switch-wedges-sync-on-shared-local-store.md).
 

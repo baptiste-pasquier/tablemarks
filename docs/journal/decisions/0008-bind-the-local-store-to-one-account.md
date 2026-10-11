@@ -31,7 +31,7 @@ The affected components are `src/data/` (the store), `src/auth/` (sign-in, sign-
 
 Chosen: **a `meta` object store in IndexedDB** (`tablemarks` v2), holding the owner account id. The store belongs to one account, a user sign-out erases it, and a sign-in that finds data asks before merging or erasing.
 
-The owner and the records live in one database, so an erase clears both in one transaction and they cannot disagree. The v1 to v2 upgrade only creates the store; an existing database opens with no owner.
+The owner and the records live in one database, so an erase clears both in one transaction and they cannot disagree. The v1 to v2 upgrade creates the store and marks an existing database `legacy`; it opens with no owner. Binding or erasing the store removes the marker.
 
 | Situation | Outcome |
 |---|---|
@@ -41,7 +41,8 @@ The owner and the records live in one database, so an erase clears both in one t
 | Sign-in, another owner | Ask: erase and continue, or cancel |
 | Startup, valid session, same owner | Sync |
 | Startup, valid session, no owner, no live places | Bind silently and sync |
-| Startup, valid session, no owner, live places | End the session without erasing; the next sign-in asks |
+| Startup, valid session, no owner, legacy store (live places or not) | Bind silently and sync |
+| Startup, valid session, no owner, live places, store created after the upgrade | End the session without erasing; the next sign-in asks |
 | Startup, valid session, another owner | End the session without erasing |
 | Expired session, or automatic sign-out on a build with no backend | Never erase; the store stays bound |
 
@@ -55,7 +56,7 @@ An erase emits a store change after the transaction commits and never a local ch
 
 ### Deviation from the design spec
 
-The design spec bound an ownerless store with places silently at startup. This decision ends the session instead, so the next sign-in asks. A reload during the add-or-erase question would otherwise have merged someone else's places into the account without a prompt.
+The design spec bound an ownerless store with places silently at startup. This decision keeps that only for a pre-existing store, one upgraded from v1, which the app was already syncing with the session it finds; binding it silently keeps an upgrade from signing every signed-in user out. An ownerless store created after the upgrade ends the session instead, so the next sign-in asks. A reload during the add-or-erase question would otherwise have merged someone else's places into the account without a prompt.
 
 ### Consequences
 
@@ -64,7 +65,7 @@ The design spec bound an ownerless store with places silently at startup. This d
 * Good: every sign-in outcome is a single decision on the owner and the live-place count.
 * Bad: signing out loses changes that could not be sent; the user is warned first and can cancel.
 * Bad: both bounded waits can expire, and a failed erase leaves the data on the device until the user retries.
-* Bad: a user whose session ended at startup on an ownerless store must sign in again to be asked.
+* Bad: a user whose session ended at startup on an ownerless store created after the upgrade must sign in again to be asked.
 * Out of scope: a pre-existing ownerless store adopted by the wrong account still wedges once, as before. The service worker's tile cache and the `localStorage` preferences are not erased.
 
 ### Confirmation

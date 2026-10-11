@@ -1,11 +1,14 @@
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest'
+import { openDB } from 'idb'
 import { freshDB } from '../test/idb'
 import { fakeSession } from '../test/session'
 import { auth, AuthService } from './auth'
+import { SignOutIncomplete } from './signOutIncomplete'
 import { pb } from '../sync/pocketbase'
 import { recomputePending } from '../sync/syncStatus'
 import { createRestaurant, allRestaurants } from '../data/restaurants'
-import { bindStoreOwner, getStoreOwner, wipeLocalStore } from '../data/storeOwner'
+import { closeDB } from '../data/db'
+import { bindStoreOwner, getStoreOwner, isLegacyStore, wipeLocalStore } from '../data/storeOwner'
 import type { RemoteStore } from '../sync/syncEngine'
 import type { AccountAnswer, AccountQuestion } from './signInDecision'
 import type { Restaurant, Visit } from '../types/models'
@@ -171,6 +174,8 @@ async function names(): Promise<string[]> {
 
 let oauthUser = 'u1'
 let authWithOAuth2: ReturnType<typeof vi.fn>
+/** The window `signInWithGoogle` opens; `window.open` returns it unless a test blocks it. */
+let popup: { location: { href: string }; close: ReturnType<typeof vi.fn> }
 let service: AuthService | undefined
 /** One per realtime subscription opened, in order. */
 let unsubscribes: Array<ReturnType<typeof vi.fn>>
@@ -178,6 +183,8 @@ let unsubscribes: Array<ReturnType<typeof vi.fn>>
 /** Stubs the realtime subscription and the OAuth popup, which signs in as `oauthUser`. */
 function stubPocketBase(): void {
   unsubscribes = []
+  popup = { location: { href: '' }, close: vi.fn() }
+  vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window)
   authWithOAuth2 = vi.fn(async () => fakeSession(oauthUser))
   vi.spyOn(pb, 'collection').mockReturnValue({
     subscribe: vi.fn(async () => {
@@ -202,10 +209,11 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-  // Stops the controller and waits for any run in flight, so none outlives its test.
+  // Stops the controller and waits for any run in flight, so none outlives its test. The erase
+  // refuses a live session, so the session goes first.
+  pb.authStore.clear()
   await service?.eraseLocalData()
   service = undefined
-  pb.authStore.clear()
   vi.restoreAllMocks()
 })
 
@@ -352,6 +360,64 @@ describe('signInWithGoogle', () => {
   })
 })
 
+describe('signInWithGoogle and the OAuth popup', () => {
+  it('opens the popup inside the click, before waiting on a run in flight', async () => {
+    const remote = new HangingRemote()
+    await bindStoreOwner('u1')
+    fakeSession('u1')
+    const s = serviceWith(remote)
+    await s.resume() // its first sync hangs in listRestaurants
+    authWithOAuth2.mockImplementation(async (options: { urlCallback?: (url: string) => void }) => {
+      options.urlCallback?.('https://accounts.example/auth')
+      return fakeSession(oauthUser)
+    })
+
+    const signingIn = s.signInWithGoogle(scriptedAsk().ask)
+
+    expect(window.open).toHaveBeenCalledTimes(1)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(authWithOAuth2).not.toHaveBeenCalled()
+    remote.release()
+    await signingIn
+    expect(authWithOAuth2).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'google', urlCallback: expect.any(Function) }),
+    )
+    expect(popup.location.href).toBe('https://accounts.example/auth')
+  })
+
+  it('closes the popup when OAuth rejects', async () => {
+    authWithOAuth2.mockRejectedValueOnce(new Error('popup closed'))
+
+    await expect(serviceWith(new FakeRemote()).signInWithGoogle(scriptedAsk().ask)).rejects.toThrow(
+      'popup closed',
+    )
+
+    expect(popup.close).toHaveBeenCalled()
+  })
+
+  it('closes the popup when a run in flight does not settle, and never starts OAuth', async () => {
+    const remote = new HangingRemote()
+    await bindStoreOwner('u1')
+    fakeSession('u1')
+    service = new AuthService(() => remote, 50)
+    await service.resume()
+
+    await expect(service.signInWithGoogle(scriptedAsk().ask)).rejects.toThrow('did not settle')
+
+    expect(popup.close).toHaveBeenCalled()
+    expect(authWithOAuth2).not.toHaveBeenCalled()
+    remote.release()
+  })
+
+  it('lets the SDK open its own popup when the browser blocked this one', async () => {
+    vi.mocked(window.open).mockReturnValue(null)
+
+    await serviceWith(new FakeRemote()).signInWithGoogle(scriptedAsk().ask)
+
+    expect(authWithOAuth2).toHaveBeenCalledWith({ provider: 'google' })
+  })
+})
+
 describe('resume', () => {
   it('syncs a store that belongs to this session', async () => {
     await bindStoreOwner('u1')
@@ -387,6 +453,30 @@ describe('resume', () => {
     expect(await names()).toEqual(['Unbound'])
     expect(await getStoreOwner()).toBeNull()
     expect(remote.pushedR).toEqual([])
+  })
+
+  it('binds a store from before owners (legacy) silently, places and all, and syncs it', async () => {
+    await closeDB()
+    const v1 = await openDB('tablemarks', 1, {
+      upgrade(db) {
+        db.createObjectStore('restaurants', { keyPath: 'id' })
+        db.createObjectStore('visits', { keyPath: 'id' }).createIndex(
+          'by-restaurant',
+          'restaurantId',
+        )
+      },
+    })
+    await v1.put('restaurants', { ...remoteRestaurant('legacy000001', 'From v1'), pending: true })
+    v1.close()
+    fakeSession('u1')
+    const remote = new FakeRemote()
+
+    await serviceWith(remote).resume()
+
+    expect(pb.authStore.isValid).toBe(true)
+    expect(await getStoreOwner()).toBe('u1')
+    expect(await isLegacyStore()).toBe(false)
+    await vi.waitFor(() => expect(remote.restaurants.map((r) => r.id)).toEqual(['legacy000001']))
   })
 
   it('ends the session and rethrows when reading the store fails', async () => {
@@ -520,13 +610,33 @@ describe('signOut', () => {
     })
   })
 
+  it('rejects with the session kept when it fails before closing the session', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    const s = await signedIn()
+    await createRestaurant({ name: 'Unsent', lat: 1, lng: 1 })
+    const ask = vi.fn(async (): Promise<AccountAnswer> => {
+      throw new Error('dialog unmounted')
+    })
+
+    const failure = s.signOut(ask)
+    await expect(failure).rejects.toBeInstanceOf(SignOutIncomplete)
+    await expect(failure).rejects.toMatchObject({ sessionCleared: false })
+
+    expect(pb.authStore.isValid).toBe(true)
+    expect(await names()).toEqual(['Unsent'])
+    expect(await getStoreOwner()).toBe('u1')
+  })
+
   it('reports a failed wipe and keeps the owner; eraseLocalData then empties the store', async () => {
     const s = await signedIn()
     await createRestaurant({ name: 'Stuck', lat: 1, lng: 1 })
     vi.mocked(wipeLocalStore).mockRejectedValueOnce(new Error('disk full'))
     const { ask } = scriptedAsk()
 
-    await expect(s.signOut(ask)).rejects.toThrow('disk full')
+    const failure = s.signOut(ask)
+    await expect(failure).rejects.toThrow('disk full')
+    await expect(failure).rejects.toMatchObject({ sessionCleared: true })
+    await expect(failure).rejects.toBeInstanceOf(SignOutIncomplete)
 
     expect(pb.authStore.isValid).toBe(false)
     expect(await getStoreOwner()).toBe('u1')
@@ -549,7 +659,9 @@ describe('signOut with a run in flight that never settles', () => {
     await service.resume() // its first sync hangs in listRestaurants
     const { ask, questions } = scriptedAsk('sign-out')
 
-    await expect(service.signOut(ask)).rejects.toThrow('did not settle')
+    const failure = service.signOut(ask)
+    await expect(failure).rejects.toThrow('did not settle')
+    await expect(failure).rejects.toMatchObject({ sessionCleared: true })
 
     expect(questions).toEqual([{ kind: 'loss', pendingCount: 1 }])
     expect(pb.authStore.isValid).toBe(false)
@@ -561,6 +673,74 @@ describe('signOut with a run in flight that never settles', () => {
 
     expect(await names()).toEqual([])
     expect(await getStoreOwner()).toBeNull()
+  })
+})
+
+describe('a session that changes under a running sync (another tab, an expiry)', () => {
+  /** A signed-in, syncing `u1` whose first sync has finished. */
+  async function syncingAsU1(remote: FakeRemote): Promise<AuthService> {
+    await bindStoreOwner('u1')
+    fakeSession('u1')
+    const s = serviceWith(remote)
+    await s.resume()
+    await vi.waitFor(async () => expect(await recomputePending()).toBe(0))
+    return s
+  }
+
+  /** Outlasts the controller's 400 ms local-write debounce, so a live controller would push. */
+  async function settle(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 600))
+  }
+
+  it('stops syncing when the session switches to another account, and erases nothing', async () => {
+    const remote = new FakeRemote()
+    await syncingAsU1(remote)
+    await createRestaurant({ name: 'Kept', lat: 1, lng: 1 })
+    await vi.waitFor(() => expect(remote.pushedR).toHaveLength(1))
+
+    fakeSession('u2')
+    await createRestaurant({ name: 'After the switch', lat: 2, lng: 2 })
+    await settle()
+
+    expect(remote.pushedR.map((r) => r.name)).toEqual(['Kept'])
+    expect(await names()).toEqual(['After the switch', 'Kept'])
+    expect(await getStoreOwner()).toBe('u1')
+  })
+
+  it('stops syncing when the session becomes invalid', async () => {
+    const remote = new FakeRemote()
+    await syncingAsU1(remote)
+
+    fakeSession('u1', -60)
+    await createRestaurant({ name: 'After the expiry', lat: 1, lng: 1 })
+    await settle()
+
+    expect(remote.pushedR).toEqual([])
+  })
+
+  it("keeps syncing when the same account's session is saved again (token refresh)", async () => {
+    const remote = new FakeRemote()
+    await syncingAsU1(remote)
+
+    fakeSession('u1')
+    await createRestaurant({ name: 'After the refresh', lat: 1, lng: 1 })
+
+    await vi.waitFor(() => expect(remote.pushedR.map((r) => r.name)).toEqual(['After the refresh']))
+  })
+})
+
+describe('eraseLocalData', () => {
+  it('refuses while signed in, and keeps the store', async () => {
+    await bindStoreOwner('u1')
+    await createRestaurant({ name: 'Mine', lat: 1, lng: 1 })
+    fakeSession('u1')
+    const s = serviceWith(new FakeRemote())
+    await s.resume()
+
+    await expect(s.eraseLocalData()).rejects.toThrow(/signed in/)
+
+    expect(await names()).toEqual(['Mine'])
+    expect(await getStoreOwner()).toBe('u1')
   })
 })
 
