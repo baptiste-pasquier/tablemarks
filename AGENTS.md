@@ -17,10 +17,10 @@ beats SOLID until a **second** implementation exists. Name the arbitration in th
 `npm run` lists them all; only these are not obvious:
 
 ```bash
-npm test                                  # single pass, what CI runs (test:watch watches)
-npx vitest run src/lib/dates.test.ts      # one file; -t "name" for one test
+npm test                                  # CI's single pass; one file: npx vitest run <file> -t "name"
 npx eslint . && npx prettier . --check    # check mode; `npm run lint` and `format` rewrite files
 npx vite build --mode demo --base=/tablemarks/ && sh scripts/check-demo-target.sh dist
+npm run test:e2e                          # Playwright on the demo build (needs `npx playwright install chromium webkit`)
 ```
 
 ## Architecture invariants

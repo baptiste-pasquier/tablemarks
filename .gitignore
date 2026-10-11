@@ -1,5 +1,6 @@
 node_modules
 dist
+dist-e2e
 dist-ssr
 *.local
 *.tsbuildinfo
@@ -41,3 +42,7 @@ pocketbase/pocketbase
 
 # Throwaway UI mockups (brainstorming)
 .mockups/
+
+# Playwright output (npm run test:e2e)
+playwright-report/
+test-results/

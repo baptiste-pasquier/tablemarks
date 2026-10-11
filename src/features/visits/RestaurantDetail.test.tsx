@@ -10,7 +10,7 @@ import {
   removeRestaurant,
   updateRestaurant,
 } from '../../data/restaurants'
-import { createVisit } from '../../data/visits'
+import { createVisit, removeVisit } from '../../data/visits'
 import { setGeocodeProvider, nominatim } from '../../capture/geocode'
 import { formatDisplayDate } from '../../lib/dates'
 import { VERDICTS, translateVerdict } from '../../types/models'
@@ -24,6 +24,16 @@ vi.mock('../../data/restaurants', async (importOriginal) => {
     ...actual,
     updateRestaurant: vi.fn(actual.updateRestaurant),
     removeRestaurant: vi.fn(actual.removeRestaurant),
+  }
+})
+
+// Same pattern for the visit writes, so a test can make logging or deleting a visit fail.
+vi.mock('../../data/visits', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../data/visits')>()
+  return {
+    ...actual,
+    createVisit: vi.fn(actual.createVisit),
+    removeVisit: vi.fn(actual.removeVisit),
   }
 })
 
@@ -81,6 +91,48 @@ describe('RestaurantDetail', () => {
     // disabled "Go back" button in the collapsed "Add a past visit" section (always in the DOM).
     await waitFor(() => expect(screen.getAllByText('Go back')).toHaveLength(3))
     expect(screen.getByText('(1)')).toBeInTheDocument()
+  })
+
+  it('tells the user when "I\'m here now" could not log the visit, and keeps the picker open', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    vi.mocked(createVisit).mockRejectedValueOnce(new Error('QuotaExceededError'))
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+    const user = userEvent.setup()
+
+    expect(await screen.findByText('To try')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /here now/i }))
+    await user.click(enabled(screen.getAllByRole('button', { name: 'Go back' })))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
+    // Still on the picker, so the user can try again.
+    expect(screen.getByText('How was it?')).toBeInTheDocument()
+  })
+
+  it('tells the user when a past visit could not be added, and keeps its date for a retry', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    vi.mocked(createVisit).mockRejectedValueOnce(new Error('QuotaExceededError'))
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByText('Add a past visit'))
+    await user.type(screen.getByLabelText('Visit date'), '2026-01-15')
+    await user.click(enabled(screen.getAllByRole('button', { name: 'Go back' })))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
+    expect(screen.getByLabelText('Visit date')).toHaveValue('2026-01-15')
+  })
+
+  it('tells the user when a visit could not be deleted, and keeps it listed', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    await createVisit({ restaurantId: r.id, date: '2026-06-01', verdict: 'go_back' })
+    vi.mocked(removeVisit).mockRejectedValueOnce(new Error('QuotaExceededError'))
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Delete visit on 01/06/2026' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
+    expect(screen.getByRole('button', { name: 'Delete visit on 01/06/2026' })).toBeInTheDocument()
   })
 
   it('renders the verdict-picker buttons through the shared Button secondary variant', async () => {

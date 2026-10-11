@@ -92,9 +92,15 @@ export function RestaurantDetail({
     save({ [field]: next })
   }
 
+  // A failed write keeps the picker open, so the user can pick again.
   async function logNow(verdict: Verdict) {
-    await createVisit({ restaurantId, verdict })
-    setLogging(false)
+    setSaveFailed(false)
+    try {
+      await createVisit({ restaurantId, verdict })
+      setLogging(false)
+    } catch {
+      setSaveFailed(true)
+    }
   }
 
   // Escape, the backdrop and the ✕ all come through here.
@@ -103,7 +109,7 @@ export function RestaurantDetail({
   }
 
   return (
-    <Modal onClose={close} panelClassName="max-h-[90vh] overflow-y-auto">
+    <Modal onClose={close} label={restaurant.name} panelClassName="max-h-[90vh] overflow-y-auto">
       <ModalHeader
         title={restaurant.name}
         subtitle={restaurant.osm && detailZone(restaurant.osm, t, i18n.language)}

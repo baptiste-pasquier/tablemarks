@@ -40,7 +40,11 @@ export function AddPlace({
   const duplicate = form.duplicate
 
   return (
-    <Modal onClose={onClose} panelClassName="max-h-[90vh] overflow-y-auto">
+    <Modal
+      onClose={onClose}
+      label={t('capture.title')}
+      panelClassName="max-h-[90vh] overflow-y-auto"
+    >
       <ModalHeader title={t('capture.title')} onClose={onClose} />
 
       <label className="block text-[13px] font-semibold text-gray-700" htmlFor="add-input">
