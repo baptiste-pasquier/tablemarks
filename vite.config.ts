@@ -57,10 +57,11 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           navigateFallback: 'index.html',
-          // Defensive: the resolve-short-link API runs cross-origin (PocketBase), so navigateFallback
-          // never intercepts it today — but this keeps the SPA shell off any same-origin /api/ path if
-          // PocketBase is ever co-hosted.
-          navigateFallbackDenylist: [/^\/api\//],
+          // PocketBase's own paths — the REST API under /api/ and the admin dashboard under /_/.
+          // A reverse proxy can route both to PocketBase on the app's origin; without this list the
+          // worker answers those navigations with the cached SPA shell and the request never leaves
+          // the browser, so the dashboard is unreachable from any browser that installed the app.
+          navigateFallbackDenylist: [/^\/api\//, /^\/_\//],
           cleanupOutdatedCaches: true,
           runtimeCaching: [
             {
