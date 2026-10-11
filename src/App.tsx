@@ -24,6 +24,8 @@ import { Modal } from './features/ui/Modal'
 import { Button } from './features/ui/Button'
 import { ReloadPrompt } from './features/pwa/ReloadPrompt'
 import { ShellAccount } from './features/account/ShellAccount'
+import { AccountPromptDialog } from './features/account/AccountPromptDialog'
+import { useAccountActions } from './features/account/useAccountActions'
 import { useBackendStatus } from './sync/useBackendStatus'
 import { backendAddressIsKnown, backendIsAbsent, backendIsUnreachable } from './sync/backendStatus'
 import { geolocate, type GeoPoint } from './lib/geolocate'
@@ -71,7 +73,8 @@ function FiltersPill({ count, onOpen }: { count: number; onOpen: () => void }) {
 export default function App() {
   const { t } = useTranslation()
   const restaurants = useRestaurants()
-  const { signedIn, email, avatarUrl, signIn, signOut } = useAuth()
+  const { signedIn, email, avatarUrl, endSession } = useAuth()
+  const { signIn, signOut, prompt } = useAccountActions()
   // Two separate signals, resolved in that order (KD3): presence answers "is a backend part of
   // this build?" and comes back immediately from a local file; reachability answers "did it
   // answer?" and lands later. Read through the module-singleton store (KTD2) — no context.
@@ -83,22 +86,14 @@ export default function App() {
   // Deliberately not `!backendAbsent`: while presence is `configured` and reachability is still
   // `unknown`, neither claim is true, so nothing renders (the helper is already false there).
   const showBackendProblem = backendIsUnreachable(backend)
-  // KTD3: after signing out from the dropdown, the avatar trigger no longer exists (the signed-out
-  // header mounts in its place), so focus moves to the "Se connecter" button once it mounts.
-  const handleSignOut = () => {
-    signOut()
-    requestAnimationFrame(() => {
-      document.getElementById('shell-signin-button')?.focus()
-    })
-  }
   // The signed-in check is a local token check, so it can still be true on a build that ships no
   // backend at all — and the account menu would then render a sync chip reading "all synced" while
   // nothing syncs, the one place the app makes a false backup claim. Clearing the session removes
-  // that state rather than adding a distinct one; local data is retained by design (auth.signOut),
-  // so the only visible effect is a session that does not survive losing the backend.
+  // that state rather than adding a distinct one. Only the session is dropped: the local store is
+  // kept and stays bound to its owner (endSession never erases; only a user sign-out does).
   useEffect(() => {
-    if (signedIn && backendAbsent) signOut()
-  }, [signedIn, backendAbsent, signOut])
+    if (signedIn && backendAbsent) endSession()
+  }, [signedIn, backendAbsent, endSession])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // Sibling to `selectedId`, same prop-threading pattern (U2 KTD1): desktop-only hover highlight
   // for the corresponding map pin, fed by RestaurantList's onHover and consumed by MapView's
@@ -306,11 +301,12 @@ export default function App() {
           backendAbsent={backendAbsent}
           signInDisabled={signInDisabled}
           showBackendProblem={showBackendProblem}
-          onSignIn={() => void signIn()}
-          onSignOut={handleSignOut}
+          onSignIn={signIn}
+          onSignOut={signOut}
           onOpenSettings={() => setSettingsOpen(true)}
         />
       </header>
+      {prompt && <AccountPromptDialog {...prompt} />}
 
       <div className="flex min-h-0 flex-1 flex-col md:contents">
         <aside
