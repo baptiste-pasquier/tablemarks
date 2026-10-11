@@ -2,7 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Restaurant, Visit } from '../types/models'
 
 const DB_NAME = 'tablemarks'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 interface TablemarksDB extends DBSchema {
   restaurants: {
@@ -13,6 +13,11 @@ interface TablemarksDB extends DBSchema {
     key: string
     value: Visit
     indexes: { 'by-restaurant': string }
+  }
+  /** Device-local bookkeeping (out-of-line keys), e.g. which account owns this store. */
+  meta: {
+    key: string
+    value: string
   }
 }
 
@@ -28,6 +33,9 @@ export function getDB(): Promise<IDBPDatabase<TablemarksDB>> {
           db.createObjectStore('restaurants', { keyPath: 'id' })
           const visits = db.createObjectStore('visits', { keyPath: 'id' })
           visits.createIndex('by-restaurant', 'restaurantId')
+        }
+        if (oldVersion < 2) {
+          db.createObjectStore('meta')
         }
       },
     }).catch((err) => {
