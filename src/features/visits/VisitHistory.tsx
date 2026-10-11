@@ -15,11 +15,25 @@ import type { Verdict, Visit } from '../../types/models'
 export function VisitHistory({ restaurantId, visits }: { restaurantId: string; visits: Visit[] }) {
   const { t } = useTranslation()
   const [pastDate, setPastDate] = useState('')
+  const [writeFailed, setWriteFailed] = useState(false)
 
+  // A rejected write (storage full, the place deleted meanwhile) is shown here, beside the action,
+  // rather than in the detail's alert at the top of a list that may be scrolled out of view.
+  async function attempt(write: () => Promise<unknown>): Promise<boolean> {
+    setWriteFailed(false)
+    try {
+      await write()
+      return true
+    } catch {
+      setWriteFailed(true)
+      return false
+    }
+  }
+
+  // The date is kept on failure, so the user can pick a verdict again.
   async function logPast(verdict: Verdict) {
     if (!pastDate) return
-    await createVisit({ restaurantId, date: pastDate, verdict })
-    setPastDate('')
+    if (await attempt(() => createVisit({ restaurantId, date: pastDate, verdict }))) setPastDate('')
   }
 
   return (
@@ -28,6 +42,11 @@ export function VisitHistory({ restaurantId, visits }: { restaurantId: string; v
         {t('visitDetail.visitsHeading')}{' '}
         {visits.length > 0 && <span className="font-normal text-gray-600">({visits.length})</span>}
       </h3>
+      {writeFailed && (
+        <p role="alert" className="mt-1 text-sm text-red-600">
+          {t('visitDetail.errorSave')}
+        </p>
+      )}
       {visits.length === 0 && (
         <p className="mt-1 text-sm text-gray-600">{t('visitDetail.noVisitsYet')}</p>
       )}
@@ -54,7 +73,7 @@ export function VisitHistory({ restaurantId, visits }: { restaurantId: string; v
                   <Button
                     variant="icon-dismiss"
                     tone="destructive"
-                    onClick={() => void removeVisit(v.id)}
+                    onClick={() => void attempt(() => removeVisit(v.id))}
                     aria-label={t('visitDetail.deleteVisitAria', {
                       date: formatDisplayDate(v.date),
                     })}
