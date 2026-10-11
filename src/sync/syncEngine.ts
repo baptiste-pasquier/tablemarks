@@ -372,6 +372,16 @@ export class SyncController {
     }, delay)
   }
 
+  /**
+   * Resolves once no sync run is in flight; never rejects. `stop()` clears timers but cannot cancel
+   * a `fullSync` already holding its remote, which would write pulled data after the caller's
+   * erase. A caller about to erase the local store must `stop()` and then `await settled()`.
+   */
+  async settled(): Promise<void> {
+    while (this.inFlight) await this.inFlight.catch(() => undefined)
+  }
+
+  /** Stops triggers and drops the remote; a run already in flight finishes — see `settled()`. */
   stop(): void {
     this.stopped = true
     if (this.debounceTimer) clearTimeout(this.debounceTimer)

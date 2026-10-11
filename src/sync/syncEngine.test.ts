@@ -707,3 +707,47 @@ describe('SyncController.flush', () => {
     expect(await controller.flush()).toBe(false)
   })
 })
+
+describe('SyncController.settled', () => {
+  let controller: SyncController | undefined
+
+  afterEach(() => {
+    controller?.stop()
+    controller = undefined
+    vi.restoreAllMocks()
+  })
+
+  function stubRealtime(): void {
+    vi.spyOn(pb, 'collection').mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue(() => {}),
+    } as unknown as ReturnType<typeof pb.collection>)
+  }
+
+  it('waits for a run already in flight after stop', async () => {
+    stubRealtime()
+    const remote = new DelayedRemote()
+    remote.delayMs = 30
+    remote.restaurants = [remoteRestaurant({ id: 'remote-1', updated: '2026-01-01T00:00:00.000Z' })]
+    controller = new SyncController()
+    await controller.start(remote)
+    void controller.syncNow()
+    controller.stop()
+    await controller.settled()
+
+    expect((await allRestaurantsForSync()).map((r) => r.id)).toContain('remote-1')
+  })
+
+  it('resolves immediately when idle', async () => {
+    controller = new SyncController()
+    await expect(controller.settled()).resolves.toBeUndefined()
+  })
+
+  it('never rejects when the in-flight run fails', async () => {
+    stubRealtime()
+    controller = new SyncController()
+    await controller.start(new FailingRemote())
+    void controller.syncNow()
+    controller.stop()
+    await expect(controller.settled()).resolves.toBeUndefined()
+  })
+})
