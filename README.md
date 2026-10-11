@@ -46,7 +46,7 @@ The demo runs with no backend, so there is no sign-in and no sync — and short 
   verdict
 - 🎲 **Where to Eat?**: Pick a place to try, or one worth going back to, near the map's center
 - 🔐 **Authentication**: Optional Google sign-in -- no account is needed to start
-- ☁️ **Cloud Sync**: Signed-in devices sync through PocketBase; signing out keeps your local data
+- ☁️ **Cloud Sync**: Signed-in devices sync through PocketBase; signing out erases this device's data, after sending what is pending
 - 🔌 **Offline Support**: An installable PWA whose data lives in IndexedDB, with the map tiles
   you have viewed cached for offline use
 - 💾 **Import/Export**: Back up places and visits together in one versioned JSON file
