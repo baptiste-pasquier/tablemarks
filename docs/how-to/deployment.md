@@ -202,6 +202,18 @@ That check proves the **app** is up. It does not prove the backend is answering:
 shell and its health endpoint whether or not PocketBase is reachable, by design. A visitor
 discovers a dead backend as a sign-in that does not complete, and the check stays green.
 
+## PocketBase on the app's origin
+
+A reverse proxy may route `/api/` and `/_/` to PocketBase on the same hostname as the app. The
+service worker leaves those two prefixes to the network: its `navigateFallbackDenylist` in
+`vite.config.ts` lists them, so they reach the proxy instead of being answered with the cached app
+shell. **Any other path PocketBase is exposed under must be added to that list.**
+
+A browser that installed the app before a change to that list keeps the old worker until it
+accepts the update prompt. Until then, open the dashboard in a private window, or unregister the
+worker from the browser's developer tools. The incident is in
+[`../journal/solutions/conventions/service-worker-must-skip-co-hosted-backend-paths.md`](../journal/solutions/conventions/service-worker-must-skip-co-hosted-backend-paths.md).
+
 ## The demo must never ship a service worker
 
 `scripts/check-demo-target.sh` refuses a tree, or a build, that would put a service worker or a web
