@@ -8,6 +8,34 @@
     "visitsCount_one": "{{count}} visite",
     "visitsCount_other": "{{count}} visites"
   },
+  "account": {
+    "prompt": {
+      "adopt": {
+        "title": "Des lieux sur cet appareil",
+        "body_one": "{{count}} lieu a été ajouté sur cet appareil sans compte.",
+        "body_other": "{{count}} lieux ont été ajoutés sur cet appareil sans compte.",
+        "add": "Ajouter à mon compte",
+        "erase": "Les effacer"
+      },
+      "replace": {
+        "title": "Les lieux d'un autre compte",
+        "body": "Cet appareil contient les lieux d'un autre compte. Ils ne peuvent pas être ajoutés au vôtre.",
+        "bodyPending_one": "Cet appareil contient les lieux d'un autre compte, dont {{count}} modification jamais sauvegardée. Ils ne peuvent pas être ajoutés au vôtre.",
+        "bodyPending_other": "Cet appareil contient les lieux d'un autre compte, dont {{count}} modifications jamais sauvegardées. Ils ne peuvent pas être ajoutés au vôtre.",
+        "erase": "Effacer et continuer"
+      },
+      "loss": {
+        "title": "Modifications non sauvegardées",
+        "body_one": "{{count}} modification n'a pas pu être envoyée et sera perdue.",
+        "body_other": "{{count}} modifications n'ont pas pu être envoyées et seront perdues.",
+        "signOut": "Se déconnecter quand même"
+      },
+      "cancel": "Annuler",
+      "sending": "Envoi de vos modifications…",
+      "wipeFailed": "Déconnecté, mais les données de cet appareil n'ont pas pu être effacées.",
+      "retry": "Réessayer"
+    }
+  },
   "shell": {
     "tagline": "Votre carte des adresses qui valent le détour",
     "signIn": "Se connecter",

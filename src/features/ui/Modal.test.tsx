@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
@@ -15,7 +16,24 @@ function Harness({ onClose }: { onClose: () => void }) {
   )
 }
 
+function RefFocusHarness() {
+  const targetRef = useRef<HTMLButtonElement>(null)
+  return (
+    <Modal onClose={() => {}} label="Ref dialog" initialFocus={targetRef}>
+      <button type="button">First</button>
+      <button type="button" ref={targetRef}>
+        Target
+      </button>
+    </Modal>
+  )
+}
+
 describe('Modal', () => {
+  it('focuses the element an initialFocus ref points at instead of the first focusable', () => {
+    render(<RefFocusHarness />)
+    expect(screen.getByRole('button', { name: 'Target' })).toHaveFocus()
+  })
+
   it('closes when the backdrop is clicked, but not when the panel content is clicked', async () => {
     const onClose = vi.fn()
     const user = userEvent.setup()
