@@ -81,7 +81,7 @@ IndexedDB (via `idb`, `src/data/db.ts`):
 
 - `restaurants` object store, keyed by `id`
 - `visits` object store, keyed by `id`, with a `by-restaurant` index on `restaurantId`
-- `meta` object store (v2), out-of-line string keys and values; holds the `owner` key, the id of the account the local store is bound to (`src/data/storeOwner.ts`). Absent means unbound. It is device-local and never synced or exported.
+- `meta` object store (v2), out-of-line string keys and values; holds the `owner` key, the id of the account the local store is bound to (`src/data/storeOwner.ts`). Absent means unbound. The v1 to v2 upgrade also writes a `legacy` key, which binding or erasing the store removes: startup binds a legacy store silently. Both keys are device-local and never synced or exported.
 
 The upgrade handler branches on `oldVersion` so future schema versions add stores incrementally.
 

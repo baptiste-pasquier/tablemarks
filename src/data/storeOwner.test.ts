@@ -10,26 +10,55 @@ import {
   removeRestaurant,
 } from './restaurants'
 import { allVisitsForSync, createVisit } from './visits'
-import { bindStoreOwner, countLiveRestaurants, getStoreOwner, wipeLocalStore } from './storeOwner'
+import {
+  bindStoreOwner,
+  countLiveRestaurants,
+  getStoreOwner,
+  isLegacyStore,
+  wipeLocalStore,
+} from './storeOwner'
 
 beforeEach(freshDB)
 afterEach(() => vi.restoreAllMocks())
 
+/** Leaves a v1 database behind for the next `getDB()` to upgrade. */
+async function seedV1Store(): Promise<void> {
+  await closeDB()
+  const v1 = await openDB('tablemarks', 1, {
+    upgrade(db) {
+      db.createObjectStore('restaurants', { keyPath: 'id' })
+      const visits = db.createObjectStore('visits', { keyPath: 'id' })
+      visits.createIndex('by-restaurant', 'restaurantId')
+    },
+  })
+  await v1.put('restaurants', { id: 'r1', name: 'Chez Marcel', deleted: false })
+  v1.close()
+}
+
 describe('store owner', () => {
-  it('upgrades a v1 store to v2 keeping its records, with no owner', async () => {
-    await closeDB()
-    const v1 = await openDB('tablemarks', 1, {
-      upgrade(db) {
-        db.createObjectStore('restaurants', { keyPath: 'id' })
-        const visits = db.createObjectStore('visits', { keyPath: 'id' })
-        visits.createIndex('by-restaurant', 'restaurantId')
-      },
-    })
-    await v1.put('restaurants', { id: 'r1', name: 'Chez Marcel', deleted: false })
-    v1.close()
+  it('upgrades a v1 store to v2 keeping its records, with no owner, marked legacy', async () => {
+    await seedV1Store()
 
     expect(await getStoreOwner()).toBeNull()
     expect((await getRestaurant('r1'))?.id).toBe('r1')
+    expect(await isLegacyStore()).toBe(true)
+  })
+
+  it('does not mark a store created at v2 as legacy', async () => {
+    expect(await isLegacyStore()).toBe(false)
+  })
+
+  it('binding the owner clears the legacy marker', async () => {
+    await seedV1Store()
+    await bindStoreOwner('userA')
+    expect(await isLegacyStore()).toBe(false)
+    expect(await getStoreOwner()).toBe('userA')
+  })
+
+  it('wipeLocalStore clears the legacy marker', async () => {
+    await seedV1Store()
+    await wipeLocalStore()
+    expect(await isLegacyStore()).toBe(false)
   })
 
   it('binds and reads the owner', async () => {

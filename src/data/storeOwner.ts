@@ -1,4 +1,4 @@
-import { getDB } from './db'
+import { getDB, LEGACY_KEY } from './db'
 import { emitStoreChange } from './events'
 
 const OWNER_KEY = 'owner'
@@ -9,9 +9,20 @@ export async function getStoreOwner(): Promise<string | null> {
   return (await db.get('meta', OWNER_KEY)) ?? null
 }
 
+/** Binds the store to `owner`; a bound store is no longer legacy. One transaction. */
 export async function bindStoreOwner(owner: string): Promise<void> {
   const db = await getDB()
-  await db.put('meta', owner, OWNER_KEY)
+  const tx = db.transaction('meta', 'readwrite')
+  await Promise.all([tx.store.put(owner, OWNER_KEY), tx.store.delete(LEGACY_KEY), tx.done])
+}
+
+/**
+ * Whether this store predates owners (upgraded from v1) and was never bound since. Startup binds
+ * such a store silently to the session it finds, as the app synced it before owners existed.
+ */
+export async function isLegacyStore(): Promise<boolean> {
+  const db = await getDB()
+  return (await db.get('meta', LEGACY_KEY)) !== undefined
 }
 
 /**

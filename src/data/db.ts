@@ -3,6 +3,8 @@ import type { Restaurant, Visit } from '../types/models'
 
 const DB_NAME = 'tablemarks'
 const DB_VERSION = 2
+/** `meta` key marking a store that existed before v2 introduced owners. */
+export const LEGACY_KEY = 'legacy'
 
 interface TablemarksDB extends DBSchema {
   restaurants: {
@@ -25,8 +27,8 @@ let dbPromise: Promise<IDBPDatabase<TablemarksDB>> | null = null
 
 export function getDB(): Promise<IDBPDatabase<TablemarksDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<TablemarksDB>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
+    const opening: Promise<IDBPDatabase<TablemarksDB>> = openDB<TablemarksDB>(DB_NAME, DB_VERSION, {
+      upgrade(db, oldVersion, _newVersion, tx) {
         // Branch on oldVersion so future version bumps add stores incrementally instead of
         // re-running v1 creates against an existing database.
         if (oldVersion < 1) {
@@ -36,16 +38,34 @@ export function getDB(): Promise<IDBPDatabase<TablemarksDB>> {
         }
         if (oldVersion < 2) {
           db.createObjectStore('meta')
+          // A v1 store predates owners: startup may bind it silently (see storeOwner.ts).
+          if (oldVersion === 1) void tx.objectStore('meta').put('1', LEGACY_KEY)
         }
+      },
+      // Another tab opens a newer version: close so its upgrade is not blocked, and let the next
+      // call reopen rather than reuse a closed connection.
+      blocking(_currentVersion, _blockedVersion, event) {
+        ;(event.target as IDBDatabase).close()
+        forget(opening)
+      },
+      // The browser closed the connection (storage cleared, disk error): reopen on the next call.
+      terminated() {
+        forget(opening)
       },
     }).catch((err) => {
       // Don't cache a rejected open (private-browsing / quota / transient) — clear so the
       // next call retries instead of failing forever.
-      dbPromise = null
+      forget(opening)
       throw err
     })
+    dbPromise = opening
   }
   return dbPromise
+}
+
+/** Drops the cached open if it is still `opening`, so a newer one is never discarded. */
+function forget(opening: Promise<IDBPDatabase<TablemarksDB>>): void {
+  if (dbPromise === opening) dbPromise = null
 }
 
 /** Close the cached connection (so a pending deleteDatabase isn't blocked) and drop the cache. */
