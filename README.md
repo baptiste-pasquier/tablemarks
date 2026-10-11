@@ -1,4 +1,18 @@
+<p align="center">
+  <img src="public/logo.svg" alt="Tablemarks Logo" width="120" height="120" />
+</p>
+
 # Tablemarks
+
+<p align="center">
+  <a href="https://baptiste-pasquier.github.io/tablemarks/">
+    <img src="https://img.shields.io/badge/Live%20Demo-Tablemarks-EA580C?style=for-the-badge&logo=github" alt="Live Demo" />
+  </a>
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" alt="Tablemarks demo preview" />
+</p>
 
 Save your favorite and to-try restaurants on a map. Tablemarks is **local-first**: it works fully in your browser with no account, and signing in with Google backs up and syncs your places across devices.
 

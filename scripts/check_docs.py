@@ -59,9 +59,9 @@ INDEX_NAME = "README.md"
 #: there is NOT configured separately - see `root_allowed()`.
 BACKLOG_NAME = "BACKLOG.md"
 #: Anything else the project keeps at the root of `docs/`, beyond the index and
-#: the mirror. Empty here: this repo has no backlog mirror, and no other doc
-#: without a folder has a home.
-ROOT_ALLOWED_EXTRA: frozenset[str] = frozenset()
+#: the mirror. This repo has no backlog mirror; the one extra is the README's
+#: demo GIF, an image that `npm run test:demo` regenerates, not a doc.
+ROOT_ALLOWED_EXTRA: frozenset[str] = frozenset({"demo.gif"})
 
 #: Extensions this gate knows how to read as a doc. `.html` is here for the
 #: one standalone ideation export under `journal/ideation/` - it carries no
