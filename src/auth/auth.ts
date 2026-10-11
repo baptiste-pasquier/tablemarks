@@ -37,8 +37,9 @@ function defaultRemote(owner: string): RemoteStore {
  *   account owns, an empty unbound one, or an unbound one from before owners existed (legacy). Any
  *   other store ends the session, and the next sign-in asks. `endSession` (expiry, backend gone)
  *   and `resume` never erase.
- * - A session that changes under a running sync (another tab signs out or in, the token expires)
+ * - A session that changes under a running sync (a sign-out or a sign-in, in this tab or another)
  *   stops the controller, without erasing: the store stays bound to the account that synced it.
+ *   A token that merely runs out fires no `onChange`; the sync runs on until the server refuses it.
  *
  * Every erase and every start first stops the controller and waits, bounded, for a run in flight
  * (`quiesce`): `stop()` cannot cancel a `fullSync`, which would otherwise write pulled records into
