@@ -10,10 +10,14 @@ import type { RemoteStore } from '../sync/syncEngine'
 import type { AccountAnswer, AccountQuestion } from './signInDecision'
 import type { Restaurant, Visit } from '../types/models'
 
-// Wrapped, not replaced: every test runs the real wipe unless it queues a failure of its own.
+// Wrapped, not replaced: every test runs the real functions unless it queues a failure of its own.
 vi.mock('../data/storeOwner', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../data/storeOwner')>()
-  return { ...actual, wipeLocalStore: vi.fn(actual.wipeLocalStore) }
+  return {
+    ...actual,
+    getStoreOwner: vi.fn(actual.getStoreOwner),
+    wipeLocalStore: vi.fn(actual.wipeLocalStore),
+  }
 })
 
 class FakeRemote implements RemoteStore {
@@ -47,6 +51,55 @@ class DelayedRemote extends FakeRemote {
   async listRestaurants(): Promise<Restaurant[]> {
     if (this.delayMs > 0) await new Promise((resolve) => setTimeout(resolve, this.delayMs))
     return super.listRestaurants()
+  }
+}
+
+/** A FakeRemote whose `listRestaurants` hangs until `release()`, like a request with no timeout. */
+class HangingRemote extends FakeRemote {
+  private hanging = true
+  private unblock: (() => void) | undefined
+
+  async listRestaurants(): Promise<Restaurant[]> {
+    if (this.hanging) await new Promise<void>((resolve) => (this.unblock = resolve))
+    return super.listRestaurants()
+  }
+
+  release(): void {
+    this.hanging = false
+    this.unblock?.()
+  }
+}
+
+/**
+ * Lists and pushes as whichever account the global session's token belongs to — as
+ * `PocketBaseRemote` does through the shared `pb` client, whatever owner it was built for.
+ * `calls` is the account each call actually ran as.
+ */
+class SessionRoutedRemote implements RemoteStore {
+  calls: string[] = []
+  private readonly accounts: Record<string, FakeRemote>
+
+  constructor(accounts: Record<string, FakeRemote>) {
+    this.accounts = accounts
+  }
+
+  private account(): FakeRemote {
+    const id = String(pb.authStore.record?.id)
+    this.calls.push(id)
+    return this.accounts[id]
+  }
+
+  listRestaurants() {
+    return this.account().listRestaurants()
+  }
+  listVisits() {
+    return this.account().listVisits()
+  }
+  pushRestaurant(r: Restaurant) {
+    return this.account().pushRestaurant(r)
+  }
+  pushVisit(v: Visit) {
+    return this.account().pushVisit(v)
   }
 }
 
@@ -119,12 +172,19 @@ async function names(): Promise<string[]> {
 let oauthUser = 'u1'
 let authWithOAuth2: ReturnType<typeof vi.fn>
 let service: AuthService | undefined
+/** One per realtime subscription opened, in order. */
+let unsubscribes: Array<ReturnType<typeof vi.fn>>
 
 /** Stubs the realtime subscription and the OAuth popup, which signs in as `oauthUser`. */
 function stubPocketBase(): void {
+  unsubscribes = []
   authWithOAuth2 = vi.fn(async () => fakeSession(oauthUser))
   vi.spyOn(pb, 'collection').mockReturnValue({
-    subscribe: vi.fn().mockResolvedValue(() => {}),
+    subscribe: vi.fn(async () => {
+      const unsubscribe = vi.fn()
+      unsubscribes.push(unsubscribe)
+      return unsubscribe
+    }),
     authWithOAuth2,
   } as unknown as ReturnType<typeof pb.collection>)
 }
@@ -304,15 +364,62 @@ describe('resume', () => {
     await vi.waitFor(() => expect(remote.restaurants.map((r) => r.id)).toEqual([place.id]))
   })
 
-  it('binds an ownerless store silently and syncs it', async () => {
-    const place = await createRestaurant({ name: 'Pre-existing', lat: 1, lng: 1 })
+  it('binds an empty ownerless store silently and syncs it', async () => {
+    fakeSession('u1')
+    const remote = new FakeRemote()
+    remote.restaurants.push(remoteRestaurant('remote000001', 'From the account'))
+
+    await serviceWith(remote).resume()
+
+    expect(pb.authStore.isValid).toBe(true)
+    expect(await getStoreOwner()).toBe('u1')
+    await vi.waitFor(async () => expect(await names()).toEqual(['From the account']))
+  })
+
+  it('ends the session over ownerless places instead of adopting them unasked', async () => {
+    await createRestaurant({ name: 'Unbound', lat: 1, lng: 1 })
     fakeSession('u1')
     const remote = new FakeRemote()
 
     await serviceWith(remote).resume()
 
-    expect(await getStoreOwner()).toBe('u1')
-    await vi.waitFor(() => expect(remote.restaurants.map((r) => r.id)).toEqual([place.id]))
+    expect(pb.authStore.isValid).toBe(false)
+    expect(await names()).toEqual(['Unbound'])
+    expect(await getStoreOwner()).toBeNull()
+    expect(remote.pushedR).toEqual([])
+  })
+
+  it('ends the session and rethrows when reading the store fails', async () => {
+    fakeSession('u1')
+    vi.mocked(getStoreOwner).mockRejectedValueOnce(new Error('idb broken'))
+
+    await expect(serviceWith(new FakeRemote()).resume()).rejects.toThrow('idb broken')
+
+    expect(pb.authStore.isValid).toBe(false)
+  })
+
+  it('does not double the realtime subscriptions when resumed twice', async () => {
+    await bindStoreOwner('u1')
+    fakeSession('u1')
+    const s = serviceWith(new FakeRemote())
+    await s.resume()
+
+    await s.resume()
+
+    await vi.waitFor(() => expect(unsubscribes).toHaveLength(4))
+    expect(unsubscribes.filter((u) => u.mock.calls.length === 0)).toHaveLength(2)
+  })
+
+  it('does not double the realtime subscriptions when the owner signs in again', async () => {
+    await bindStoreOwner('u1')
+    fakeSession('u1')
+    const s = serviceWith(new FakeRemote())
+    await s.resume()
+
+    await s.signInWithGoogle(scriptedAsk().ask)
+
+    await vi.waitFor(() => expect(unsubscribes).toHaveLength(4))
+    expect(unsubscribes.filter((u) => u.mock.calls.length === 0)).toHaveLength(2)
   })
 
   it('ends a session that does not own the store, keeping the store and its owner', async () => {
@@ -432,6 +539,31 @@ describe('signOut', () => {
   })
 })
 
+describe('signOut with a run in flight that never settles', () => {
+  it('rejects after the bound without erasing; eraseLocalData succeeds once the run ends', async () => {
+    const remote = new HangingRemote()
+    await bindStoreOwner('u1')
+    await createRestaurant({ name: 'Unsent', lat: 1, lng: 1 })
+    fakeSession('u1')
+    service = new AuthService(() => remote, 100)
+    await service.resume() // its first sync hangs in listRestaurants
+    const { ask, questions } = scriptedAsk('sign-out')
+
+    await expect(service.signOut(ask)).rejects.toThrow('did not settle')
+
+    expect(questions).toEqual([{ kind: 'loss', pendingCount: 1 }])
+    expect(pb.authStore.isValid).toBe(false)
+    expect(await names()).toEqual(['Unsent'])
+    expect(await getStoreOwner()).toBe('u1')
+
+    remote.release()
+    await service.eraseLocalData()
+
+    expect(await names()).toEqual([])
+    expect(await getStoreOwner()).toBeNull()
+  })
+})
+
 describe('endSession', () => {
   it('clears the session and keeps the store and its owner', async () => {
     await bindStoreOwner('u1')
@@ -488,5 +620,48 @@ describe('U23: a second account on a device whose first session expired', () => 
     expect(out.ask).not.toHaveBeenCalled()
     expect(remotes.B.restaurants.map((r) => r.id)).toEqual([bPlace.id])
     expect(remotes.B.attempted.filter((id) => aIds.includes(id))).toEqual([])
+  })
+})
+
+describe('U23: a session that expires in the tab, with nobody ending it', () => {
+  it("never syncs A's controller with B's token while B is being asked", async () => {
+    const accounts = { A: new FakeRemote(), B: new FakeRemote() }
+    accounts.B.restaurants.push(remoteRestaurant('remoteB00001', 'B remote'))
+    const remote = new SessionRoutedRemote(accounts)
+    service = new AuthService(() => remote)
+    await bindStoreOwner('A')
+    await createRestaurant({ name: 'A one', lat: 1, lng: 1 })
+    fakeSession('A')
+    await service.resume()
+    await vi.waitFor(async () => {
+      expect(accounts.A.restaurants).toHaveLength(1)
+      expect(await recomputePending()).toBe(0)
+    })
+
+    // A's token expires while the tab is open: nothing calls endSession, the controller runs on.
+    fakeSession('A', -60)
+    expect(pb.authStore.isValid).toBe(false)
+    const asALeftIt = await allRestaurants()
+
+    // B signs in. While the question is open, a trigger reaches the controller.
+    oauthUser = 'B'
+    let callsAsB: string[] = []
+    let duringAsk: string[] = []
+    const ask = vi.fn(async (): Promise<AccountAnswer> => {
+      window.dispatchEvent(new Event('online'))
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      callsAsB = remote.calls.filter((id) => id === 'B')
+      duringAsk = await names()
+      return 'cancel'
+    })
+    await service.signInWithGoogle(ask)
+
+    expect(ask).toHaveBeenCalledWith({ kind: 'replace', pendingCount: 0 })
+    expect(callsAsB).toEqual([])
+    expect(duringAsk).toEqual(['A one'])
+    expect(accounts.B.pushedR).toEqual([])
+    expect(await allRestaurants()).toEqual(asALeftIt)
+    expect(await getStoreOwner()).toBe('A')
+    expect(pb.authStore.isValid).toBe(false)
   })
 })
