@@ -20,6 +20,13 @@ describe('ModalHeader', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('renders no close button when there is nothing to close', () => {
+    render(<ModalHeader title="Sending your changes…" />)
+
+    expect(screen.getByRole('heading', { name: 'Sending your changes…' })).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
   it('renders the detail variant with a larger, top-aligned heading for a dynamic title', () => {
     render(<ModalHeader title="Chez Marcel" onClose={vi.fn()} variant="detail" />)
 

@@ -74,13 +74,12 @@ describe('AccountPromptDialog', () => {
     expect(onAnswer).toHaveBeenCalledWith('cancel')
   })
 
-  it('sending shows progress and no action', async () => {
+  it('sending shows progress and offers no control, not even a close button', async () => {
     const { onAnswer, onDismiss } = setup({ kind: 'sending' })
     expect(screen.getByText('Sending your changes…')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Sign out anyway' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toHaveFocus()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
     await userEvent.keyboard('{Escape}')
     expect(onAnswer).not.toHaveBeenCalled()
     expect(onDismiss).not.toHaveBeenCalled()

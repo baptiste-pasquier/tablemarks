@@ -111,8 +111,9 @@ export function AccountPromptDialog({
   if (state.kind === 'sending') {
     const title = t('account.prompt.sending')
     return (
-      <Modal onClose={() => {}} label={title}>
-        <ModalHeader title={title} onClose={() => {}} />
+      // The flush cannot be interrupted, so the dialog offers nothing to press until it ends.
+      <Modal onClose={() => {}} label={title} initialFocus="panel">
+        <ModalHeader title={title} />
       </Modal>
     )
   }
