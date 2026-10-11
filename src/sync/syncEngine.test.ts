@@ -684,6 +684,9 @@ describe('SyncController.flush', () => {
     await createRestaurant({ name: 'Slow', lat: 1, lng: 1 })
 
     expect(await controller.flush(10)).toBe(false)
+    // The 50 ms run is still in flight: let it finish here, not inside the next test's database.
+    controller.stop()
+    await controller.settled()
   })
 
   it('waits for an in-flight sync', async () => {
