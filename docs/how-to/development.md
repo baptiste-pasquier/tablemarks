@@ -39,6 +39,7 @@ other feature works. To attach a local PocketBase, see
 | `npm test`           | Run the Vitest suite once                                                                                                                                               |
 | `npm run test:watch` | Vitest in watch mode                                                                                                                                                    |
 | `npm run test:e2e`   | Playwright end-to-end suite: builds the demo target, serves it, and runs `e2e/` on Chromium desktop and iPhone WebKit                                                   |
+| `npm run test:demo`  | Regenerate the README's `docs/demo.gif` from the `demo` journey, offline — see [`demo-preview.md`](demo-preview.md)                                                     |
 | `npm run type-check` | Type-check the app and `e2e/` (`tsc --noEmit`, twice)                                                                                                                   |
 | `npm run lint`       | ESLint over the repository, fixing what it can (`eslint . --fix`)                                                                                                       |
 | `npm run format`     | Prettier over the repository (`prettier . --write`)                                                                                                                     |
@@ -72,7 +73,7 @@ The dependency direction is one-way: `features → data → IndexedDB`, and only
 
 - **Framework:** Vitest + Testing Library, jsdom environment.
 - **IndexedDB:** tests use `fake-indexeddb`; data/repository tests import `freshDB` from `src/test/idb.ts` and call it in `beforeEach` for a clean store per test.
-- **End-to-end:** `npm run test:e2e` runs the journeys in `e2e/` against the demo build, on Chromium desktop and iPhone WebKit. Install the browsers once with `npx playwright install chromium webkit`; after a failure, `npx playwright show-report` opens the report (traces are kept on the first retry in CI).
+- **End-to-end:** `npm run test:e2e` runs the journeys in `e2e/` against the demo build, on Chromium desktop and iPhone WebKit, plus the README demo journey in its own 1280×820 `demo` project. Install the browsers once with `npx playwright install chromium webkit`; after a failure, `npx playwright show-report` opens the report (traces are kept on the first retry in CI).
 - **No real network in E2E:** `e2e/fixtures.ts` answers Nominatim, the OSM tiles and Google Fonts with canned replies, and fails the test on any other external request. A new external host means a new branch in `mockFor`, never a live call.
 - **What's unit-tested:** the pure logic that carries the risk — reconcile, mappers, `parseMapsUrl`, dedup, rollup, the repositories, and the capture/visit UI flows.
 - **What's verified at runtime, not in jsdom:** the live PocketBase round-trip and the Google OAuth popup. Leaflet map rendering has no layout in jsdom (`MapContainer` is stubbed in component tests); the E2E suite covers it in a real browser.

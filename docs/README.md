@@ -62,6 +62,7 @@ Every maintained doc appears here. A doc missing from this list fails the gate.
 
 ### `how-to/`
 
+- [`demo-preview.md`](how-to/demo-preview.md) — regenerate the README's demo GIF, offline
 - [`deployment.md`](how-to/deployment.md) — the two deployment targets, the PocketBase console
   sequence, upgrade, rollback and recovery
 - [`development.md`](how-to/development.md) — setup, project structure, testing, and the optional PocketBase backend
