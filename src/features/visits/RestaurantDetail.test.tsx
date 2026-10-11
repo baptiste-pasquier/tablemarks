@@ -27,6 +27,12 @@ vi.mock('../../data/restaurants', async (importOriginal) => {
   }
 })
 
+// Same pattern for `createVisit`, so one test can make "I'm here now" fail.
+vi.mock('../../data/visits', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../data/visits')>()
+  return { ...actual, createVisit: vi.fn(actual.createVisit) }
+})
+
 beforeEach(freshDB)
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -81,6 +87,21 @@ describe('RestaurantDetail', () => {
     // disabled "Go back" button in the collapsed "Add a past visit" section (always in the DOM).
     await waitFor(() => expect(screen.getAllByText('Go back')).toHaveLength(3))
     expect(screen.getByText('(1)')).toBeInTheDocument()
+  })
+
+  it('tells the user when "I\'m here now" could not log the visit, and keeps the picker open', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    vi.mocked(createVisit).mockRejectedValueOnce(new Error('QuotaExceededError'))
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+    const user = userEvent.setup()
+
+    expect(await screen.findByText('To try')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /here now/i }))
+    await user.click(enabled(screen.getAllByRole('button', { name: 'Go back' })))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
+    // Still on the picker, so the user can try again.
+    expect(screen.getByText('How was it?')).toBeInTheDocument()
   })
 
   it('renders the verdict-picker buttons through the shared Button secondary variant', async () => {
