@@ -638,3 +638,72 @@ describe('SyncController -> backendStatus reachability', () => {
     expect(getBackendStatus().reachability).toBe('unknown')
   })
 })
+
+describe('SyncController.flush', () => {
+  let controller: SyncController | undefined
+
+  afterEach(() => {
+    controller?.stop()
+    controller = undefined
+    vi.restoreAllMocks()
+  })
+
+  /** Same realtime stub as the `SyncController` suite: no test touches the network. */
+  function stubRealtime(): void {
+    vi.spyOn(pb, 'collection').mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue(() => {}),
+    } as unknown as ReturnType<typeof pb.collection>)
+  }
+
+  it('resolves true once local changes are pushed', async () => {
+    stubRealtime()
+    const remote = new FakeRemote()
+    controller = new SyncController()
+    await controller.start(remote)
+    const created = await createRestaurant({ name: 'Pushed', lat: 1, lng: 1 })
+
+    expect(await controller.flush()).toBe(true)
+    expect(remote.restaurants.map((r) => r.id)).toContain(created.id)
+  })
+
+  it('resolves false when the push fails', async () => {
+    stubRealtime()
+    controller = new SyncController()
+    await controller.start(new FailingRemote())
+    await createRestaurant({ name: 'Stuck', lat: 1, lng: 1 })
+
+    expect(await controller.flush()).toBe(false)
+  })
+
+  it('resolves false when the bound elapses', async () => {
+    stubRealtime()
+    const remote = new DelayedRemote()
+    remote.delayMs = 50
+    controller = new SyncController()
+    await controller.start(remote)
+    await createRestaurant({ name: 'Slow', lat: 1, lng: 1 })
+
+    expect(await controller.flush(10)).toBe(false)
+  })
+
+  it('waits for an in-flight sync', async () => {
+    stubRealtime()
+    const remote = new DelayedRemote()
+    remote.delayMs = 30
+    controller = new SyncController()
+    await controller.start(remote)
+    const inFlight = controller.syncNow()
+    const created = await createRestaurant({ name: 'Raced', lat: 1, lng: 1 })
+
+    expect(await controller.flush()).toBe(true)
+    expect(remote.restaurants.map((r) => r.id)).toContain(created.id)
+    await inFlight
+  })
+
+  it('resolves false when the controller is not started', async () => {
+    await createRestaurant({ name: 'Unsent', lat: 1, lng: 1 })
+    controller = new SyncController()
+
+    expect(await controller.flush()).toBe(false)
+  })
+})
