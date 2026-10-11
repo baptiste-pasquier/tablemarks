@@ -50,7 +50,7 @@ There is no "local vs cloud" mode toggle. Everyone starts local with no account.
 
 The on-device store belongs to one account, its **Store Owner**, recorded in the `meta` object store. Sync starts only for a store whose owner is the signing-in account or that has no owner.
 
-The one-time **union reconcile** runs for a store with no owner, and only after the user agrees to add its places to the account. A store with no places is bound and synced without a question.
+The one-time **union reconcile** runs for a store with no owner, after the user agrees to add its places to the account, or immediately when the store holds no places.
 
 A store owned by another account is never merged. The user erases it and continues, or cancels, and a cancel leaves the store untouched.
 
@@ -58,7 +58,7 @@ A user sign-out erases the store after trying to send pending changes, and asks 
 
 An expired session and the automatic sign-out on a build with no backend keep the store and its owner.
 
-At startup with a valid session, a store with no owner and some places ends the session without erasing, so the next sign-in asks.
+Startup with a valid session never asks: it syncs or binds when the answer is unambiguous, and otherwise ends the session without erasing so the next sign-in asks. Any failure during startup ends the session. The outcome of every sign-in and startup case is the table in the ADR.
 
 The decision, with its bounded waits, is [ADR-0008](../journal/decisions/0008-bind-the-local-store-to-one-account.md). The measured failure is in [the solutions entry](../journal/solutions/database-issues/account-switch-wedges-sync-on-shared-local-store.md).
 

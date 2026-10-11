@@ -90,7 +90,7 @@ A deployment configured with no backend at all, so sign-in, sync, and short-link
 
 ### Store Owner
 
-The account the on-device store belongs to. It is set at the first sync and cleared by a user sign-out, which erases the store. A store with no Store Owner is merged into an account only after the user agrees; a store owned by another account is never merged.
+The account the on-device store belongs to. It is set at the first sync and cleared by a user sign-out, which erases the store. A store with no Store Owner is merged into an account only after the user agrees, if it holds places; a store owned by another account is never merged.
 
 ### Last-Write-Wins (LWW)
 
