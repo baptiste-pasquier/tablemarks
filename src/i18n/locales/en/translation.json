@@ -8,6 +8,38 @@
     "visitsCount_one": "{{count}} visit",
     "visitsCount_other": "{{count}} visits"
   },
+  "account": {
+    "prompt": {
+      "adopt": {
+        "title": "Places on this device",
+        "body_one": "{{count}} place was added on this device without an account.",
+        "body_other": "{{count}} places were added on this device without an account.",
+        "add": "Add to my account",
+        "erase": "Erase them"
+      },
+      "replace": {
+        "title": "Another account's places",
+        "body": "This device holds another account's places. They can't be added to yours.",
+        "bodyPending_one": "This device holds another account's places, including {{count}} change never backed up. They can't be added to yours.",
+        "bodyPending_other": "This device holds another account's places, including {{count}} changes never backed up. They can't be added to yours.",
+        "erase": "Erase and continue"
+      },
+      "loss": {
+        "title": "Changes not backed up",
+        "body_one": "{{count}} change could not be sent and will be lost.",
+        "body_other": "{{count}} changes could not be sent and will be lost.",
+        "signOut": "Sign out anyway"
+      },
+      "cancel": "Cancel",
+      "sending": "Sending your changes…",
+      "wipeFailed": "Signed out, but this device's data could not be erased.",
+      "retry": "Try again",
+      "signInFailedTitle": "Sign-in failed",
+      "signInFailed": "Sign-in did not complete. Please try again.",
+      "signOutFailedTitle": "Sign-out failed",
+      "signOutFailed": "Sign-out did not complete. You are still signed in."
+    }
+  },
   "shell": {
     "tagline": "Your map of places worth a table",
     "signIn": "Sign in",

@@ -46,7 +46,7 @@ direction is what makes the app behave identically with or without an account.
 
 ## Storage and PocketBase
 
-IndexedDB `tablemarks` v1 is canonical and doubles as the durable sync outbox; localStorage holds
+IndexedDB `tablemarks` v2 is canonical and doubles as the durable sync outbox; localStorage holds
 only device-local preferences, keyed `tablemarks:<domain>` (`tablemarks:sortPreference`). Record
 shapes and local↔remote mapping: `docs/reference/data-model.md`.
 
@@ -55,7 +55,7 @@ shapes and local↔remote mapping: `docs/reference/data-model.md`.
   record into another account (measured — see `database-issues/`). `users.createRule` stays closed
   to `@request.context = "oauth2"`; "must be authenticated" would break the first sign-in.
 - Reconciliation is last-write-wins on `updated`, keyed by `id`, tombstones included. A sign-in
-  starts with a one-time union reconcile; signing out leaves local data intact.
+  syncs only a store it owns or adopts; a user sign-out erases it (ADR-0008).
 - Import is source → validate → commit: the `tablemarks-export` envelope is versioned, an unknown
   version is refused whole, and no relation id is ever exported.
 - In `docker/`: the `TABLEMARKS_*` prefix is what makes `NGINX_ENVSUBST_FILTER` safe,

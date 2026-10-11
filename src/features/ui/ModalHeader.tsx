@@ -13,7 +13,8 @@ const VARIANT_STYLES: Record<ModalHeaderVariant, { wrapper: string; title: strin
 }
 
 /**
- * Shared title-bar chrome for every Modal-hosted panel (KTD3): a title plus a close button.
+ * Shared title-bar chrome for every Modal-hosted panel (KTD3): a title plus a close button. A
+ * panel the user cannot leave yet (a progress state) omits `onClose`, and the button with it.
  * Purely presentational — Escape-close, backdrop-click, and focus-trap semantics all live in
  * `Modal.tsx` itself, so this component is safe to render even without a surrounding `Modal`
  * (e.g. `PortabilityPanel` nested in `SettingsPanel`).
@@ -26,7 +27,7 @@ export function ModalHeader({
 }: {
   title: string
   subtitle?: string
-  onClose: () => void
+  onClose?: () => void
   variant?: ModalHeaderVariant
 }) {
   const { t } = useTranslation()
@@ -38,14 +39,16 @@ export function ModalHeader({
         <h2 className={styles.title}>{title}</h2>
         {subtitle && <p className="mt-0.5 text-[13px] font-semibold text-gray-600">{subtitle}</p>}
       </div>
-      <Button
-        variant="icon-dismiss"
-        tone="neutral"
-        onClick={onClose}
-        aria-label={t('common.close')}
-      >
-        ✕
-      </Button>
+      {onClose && (
+        <Button
+          variant="icon-dismiss"
+          tone="neutral"
+          onClick={onClose}
+          aria-label={t('common.close')}
+        >
+          ✕
+        </Button>
+      )}
     </div>
   )
 }

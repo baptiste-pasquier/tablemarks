@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { getFocusables, trapTabFocus } from './focusTrap'
 
 /**
@@ -18,7 +18,9 @@ import { getFocusables, trapTabFocus } from './focusTrap'
  * close button) first. A caller with no such safe leading control — content that starts with a
  * state-mutating action, e.g. the mobile filters sheet's first cuisine chip — passes `'panel'`
  * instead, which focuses the (inert, `tabIndex={-1}`) panel container itself so opening the
- * modal never fires an unintended action.
+ * modal never fires an unintended action. A caller whose safest control is not the first one
+ * (a confirm dialog that must open on "Cancel") passes a ref to it; the ref is read in the
+ * mount effect, after children are attached, and falls back to `'auto'` if it is empty.
  */
 export function Modal({
   onClose,
@@ -39,7 +41,7 @@ export function Modal({
   label: string
   zIndexClassName?: string
   panelClassName?: string
-  initialFocus?: 'auto' | 'panel'
+  initialFocus?: 'auto' | 'panel' | RefObject<HTMLElement | null>
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
   // Keep the latest onClose in a ref so the effect depends on nothing that changes identity
@@ -55,8 +57,11 @@ export function Modal({
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
     if (panelRef.current) {
-      if (initialFocusRef.current === 'panel') {
+      const initial = initialFocusRef.current
+      if (initial === 'panel') {
         panelRef.current.focus()
+      } else if (typeof initial === 'object' && initial.current) {
+        initial.current.focus()
       } else {
         getFocusables(panelRef.current)[0]?.focus()
       }

@@ -185,6 +185,8 @@ export class SyncController {
   private syncing = false
   /** Set when a trigger arrives while `syncing` — consumed as exactly one rerun on completion. */
   private rerunRequested = false
+  /** The run `syncNow` started and has not finished, so `flush` can wait for it. */
+  private inFlight: Promise<SyncOutcome | undefined> | null = null
 
   async start(remote: RemoteStore): Promise<void> {
     this.remote = remote
@@ -247,22 +249,57 @@ export class SyncController {
    * finishing, unless that attempt itself just scheduled a backoff retry (in which case the
    * pending rerun is dropped in favor of letting the retry run on its own schedule).
    */
-  async syncNow(): Promise<SyncOutcome | undefined> {
+  syncNow(): Promise<SyncOutcome | undefined> {
     if (this.syncing) {
       this.rerunRequested = true
-      return undefined
+      return Promise.resolve(undefined)
     }
     this.syncing = true
-    try {
-      let outcome: SyncOutcome | undefined
-      for (;;) {
-        this.rerunRequested = false
-        outcome = await this.attemptSync()
-        if (!this.rerunRequested || this.backoffTimer) break
-      }
-      return outcome
-    } finally {
+    const run = this.runSerialized().finally(() => {
       this.syncing = false
+      this.inFlight = null
+    })
+    this.inFlight = run
+    return run
+  }
+
+  /** The attempt-and-rerun loop behind `syncNow`; the caller owns the `syncing` flag. */
+  private async runSerialized(): Promise<SyncOutcome | undefined> {
+    let outcome: SyncOutcome | undefined
+    for (;;) {
+      this.rerunRequested = false
+      outcome = await this.attemptSync()
+      if (!this.rerunRequested || this.backoffTimer) break
+    }
+    return outcome
+  }
+
+  /**
+   * Sends pending local changes now and reports whether nothing is left unsent — `true` iff the
+   * pending count is `0` after one attempt. Built for sign-out, which erases the local store, so
+   * a wrong `true` loses data: it never trusts an attempt's silence, it re-reads the pending count.
+   * Waits for an in-flight sync first (a call mid-flight would only return `undefined`), makes one
+   * attempt of its own, and gives up with `false` once `timeoutMs` elapses. It schedules no backoff
+   * beyond what the attempt itself does; a failed or timed-out attempt leaves the retry to the engine.
+   */
+  async flush(timeoutMs = 10_000): Promise<boolean> {
+    const settle = async (): Promise<void> => {
+      await this.inFlight?.catch(() => undefined)
+    }
+    const attempt = async (): Promise<boolean> => {
+      await settle()
+      await this.syncNow()
+      await settle()
+      return (await recomputePending()) === 0
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const bound = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), timeoutMs)
+    })
+    try {
+      return await Promise.race([attempt().catch(() => false), bound])
+    } finally {
+      clearTimeout(timer)
     }
   }
 
@@ -335,6 +372,16 @@ export class SyncController {
     }, delay)
   }
 
+  /**
+   * Resolves once no sync run is in flight; never rejects. `stop()` clears timers but cannot cancel
+   * a `fullSync` already holding its remote, which would write pulled data after the caller's
+   * erase. A caller about to erase the local store must `stop()` and then `await settled()`.
+   */
+  async settled(): Promise<void> {
+    while (this.inFlight) await this.inFlight.catch(() => undefined)
+  }
+
+  /** Stops triggers and drops the remote; a run already in flight finishes — see `settled()`. */
   stop(): void {
     this.stopped = true
     if (this.debounceTimer) clearTimeout(this.debounceTimer)

@@ -88,9 +88,13 @@ The principle that the on-device store is the source of truth and always written
 
 A deployment configured with no backend at all, so sign-in, sync, and short-link resolution are absent by design rather than temporarily failing. Distinct from a deployment whose backend is configured but not answering, where those capabilities exist and are interrupted.
 
+### Store Owner
+
+The account the on-device store belongs to. It is set at the first sync and cleared by a user sign-out, which erases the store. A store with no Store Owner is merged into an account only after the user agrees, if it holds places; a store owned by another account is never merged.
+
 ### Last-Write-Wins (LWW)
 
-The conflict-resolution rule: when the same record exists on two sides, the version with the newer change-timestamp (an Instant) wins, both directions, with ties keeping the local copy. Reconciliation is keyed on a stable client-generated id shared between local and cloud, so signing in merges rather than duplicates.
+The conflict-resolution rule: when the same record exists on two sides, the version with the newer change-timestamp (an Instant) wins, both directions, with ties keeping the local copy. Reconciliation is keyed on a stable client-generated id shared between local and cloud, so a store with no Store Owner merges rather than duplicates when its user signs in.
 
 ### Tombstone
 

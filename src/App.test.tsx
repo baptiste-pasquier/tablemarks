@@ -112,6 +112,8 @@ beforeEach(async () => {
     avatarUrl: null,
     signIn: vi.fn(),
     signOut: vi.fn(),
+    endSession: vi.fn(),
+    eraseLocalData: vi.fn(),
   })
   mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
   // Module-global store, shared across this file's tests — reset so an unreachable case set by
@@ -155,6 +157,8 @@ describe('App shell', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     const user = userEvent.setup()
     render(<App />)
@@ -177,13 +181,15 @@ describe('App shell', () => {
   })
 
   it('signing out from the account menu clears auth and unmounts the avatar subtree, mirroring the old SyncStatusIndicator gating', async () => {
-    const signOutMock = vi.fn()
+    const signOutMock = vi.fn().mockResolvedValue('signed-out')
     mockUseAuth.mockReturnValue({
       signedIn: true,
       email: 'person@example.com',
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: signOutMock,
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     const user = userEvent.setup()
     const { rerender } = render(<App />)
@@ -202,6 +208,8 @@ describe('App shell', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     rerender(<App />)
 
@@ -212,13 +220,15 @@ describe('App shell', () => {
   })
 
   it('moves focus to the "Se connecter" button after signing out from the account menu (KTD3)', async () => {
-    const signOutMock = vi.fn()
+    const signOutMock = vi.fn().mockResolvedValue('signed-out')
     mockUseAuth.mockReturnValue({
       signedIn: true,
       email: 'person@example.com',
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: signOutMock,
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     const user = userEvent.setup()
     const { rerender } = render(<App />)
@@ -233,6 +243,8 @@ describe('App shell', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     rerender(<App />)
 
@@ -1147,13 +1159,15 @@ describe('backend availability in the header (U4)', () => {
   })
 
   it('renders the Sign in control active when the address is known but unreachable — retrying can work', async () => {
-    const signInMock = vi.fn()
+    const signInMock = vi.fn().mockResolvedValue(undefined)
     mockUseAuth.mockReturnValue({
       signedIn: false,
       email: null,
       avatarUrl: null,
       signIn: signInMock,
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
     const user = userEvent.setup()
@@ -1167,13 +1181,15 @@ describe('backend availability in the header (U4)', () => {
   })
 
   it('renders the Sign in control present but disabled when the configuration itself could not be read (KTD9)', async () => {
-    const signInMock = vi.fn()
+    const signInMock = vi.fn().mockResolvedValue(undefined)
     mockUseAuth.mockReturnValue({
       signedIn: false,
       email: null,
       avatarUrl: null,
       signIn: signInMock,
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(UNAVAILABLE)
     render(<App />)
@@ -1222,6 +1238,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(CONFIGURED_REACHABLE)
     render(<App />)
@@ -1234,19 +1252,24 @@ describe('backend availability in the header (U4)', () => {
 
   it('clears the stored session when presence is absent, leaving the stored restaurants untouched', async () => {
     const signOutMock = vi.fn()
+    const endSessionMock = vi.fn()
     mockUseAuth.mockReturnValue({
       signedIn: true,
       email: 'person@example.com',
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: signOutMock,
+      endSession: endSessionMock,
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(ABSENT)
     await createRestaurant({ id: 'r1', name: 'R1 Place', lat: 1, lng: 1, cuisine: 'French' })
 
     const { rerender } = render(<App />)
     await screen.findByText('R1 Place')
-    await waitFor(() => expect(signOutMock).toHaveBeenCalled())
+    await waitFor(() => expect(endSessionMock).toHaveBeenCalled())
+    // A vanished backend must never erase the local store: only the user's own sign-out does.
+    expect(signOutMock).not.toHaveBeenCalled()
 
     // useAuth is mocked statically here (its own reactivity is covered by useAuth.test.ts), so
     // stand in for the re-render the real hook triggers once the auth store is cleared.
@@ -1256,6 +1279,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     rerender(<App />)
 
@@ -1275,6 +1300,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(CONFIGURED_UNREACHABLE)
     setSyncState('problem', 'server-unreachable')
@@ -1290,18 +1317,20 @@ describe('backend availability in the header (U4)', () => {
   })
 
   it('makes no "all synced" backup claim once presence turns out to be absent', async () => {
-    const signOutMock = vi.fn()
+    const endSessionMock = vi.fn()
     mockUseAuth.mockReturnValue({
       signedIn: true,
       email: 'person@example.com',
       avatarUrl: null,
       signIn: vi.fn(),
-      signOut: signOutMock,
+      signOut: vi.fn(),
+      endSession: endSessionMock,
+      eraseLocalData: vi.fn(),
     })
     mockUseBackendStatus.mockReturnValue(ABSENT)
     const { rerender } = render(<App />)
     await screen.findByText(/no places yet/i)
-    await waitFor(() => expect(signOutMock).toHaveBeenCalled())
+    await waitFor(() => expect(endSessionMock).toHaveBeenCalled())
 
     mockUseAuth.mockReturnValue({
       signedIn: false,
@@ -1309,6 +1338,8 @@ describe('backend availability in the header (U4)', () => {
       avatarUrl: null,
       signIn: vi.fn(),
       signOut: vi.fn(),
+      endSession: vi.fn(),
+      eraseLocalData: vi.fn(),
     })
     rerender(<App />)
 

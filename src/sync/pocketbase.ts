@@ -1,4 +1,7 @@
-import PocketBase from 'pocketbase'
+import PocketBase, { LocalAuthStore } from 'pocketbase'
+
+/** The SDK's default key, named here so a change in another tab can be told apart. */
+const AUTH_STORAGE_KEY = 'pocketbase_auth'
 
 /**
  * Shared PocketBase client. Auth state persists in localStorage via the SDK's default store.
@@ -10,7 +13,20 @@ import PocketBase from 'pocketbase'
  * reference. Until the bootstrap assigns it, an empty base URL resolves against the app's own
  * origin — which is why the bootstrap starts no backend-touching controller before it does.
  */
-export const pb = new PocketBase('')
+export const pb = new PocketBase('', new LocalAuthStore(AUTH_STORAGE_KEY))
+
+/**
+ * Calls `fn` when another tab saves or clears the session. The SDK's own `storage` listener,
+ * registered when `pb` was built, has already applied the change here by then.
+ */
+export function onSessionChangeInOtherTab(fn: () => void): () => void {
+  if (typeof window === 'undefined') return () => {}
+  const listener = (e: StorageEvent) => {
+    if (e.key === AUTH_STORAGE_KEY) fn()
+  }
+  window.addEventListener('storage', listener)
+  return () => window.removeEventListener('storage', listener)
+}
 
 export interface ResolvedLink {
   lat: number

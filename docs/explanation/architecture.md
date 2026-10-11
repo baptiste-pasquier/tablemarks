@@ -46,7 +46,21 @@ Sync engine (src/sync/)  ◄──►  PocketBase (optional)
 
 ## Local-first and accounts
 
-There is no "local vs cloud" mode toggle. Everyone starts local with no account. Signing in with Google is framed as _back up + sync across devices_ — its first action is a one-time **union reconcile** that merges existing local data with the account. Signing out stops syncing and leaves local data intact.
+There is no "local vs cloud" mode toggle. Everyone starts local with no account. Signing in with Google is framed as _back up + sync across devices_.
+
+The on-device store belongs to one account, its **Store Owner**, recorded in the `meta` object store. Sync starts only for a store whose owner is the signing-in account or that has no owner.
+
+The one-time **union reconcile** runs for a store with no owner, after the user agrees to add its places to the account, or immediately when the store holds no places.
+
+A store owned by another account is never merged. The user erases it and continues, or cancels, and a cancel leaves the store untouched.
+
+A user sign-out erases the store after trying to send pending changes, and asks before losing unsent ones. If the erase fails, the store stays bound to its owner and the user can retry.
+
+An expired session and the automatic sign-out on a build with no backend keep the store and its owner. A sign-out or a sign-in under a running sync, in this tab or another, stops that sync without erasing. A tab resumes it once another tab hands the store back to its account, by signing that account in again or binding the store to it. Every write, erase or bind refreshes the other open tabs. A token that merely runs out fires no event: the sync keeps running until the server refuses it, and the store stays bound to its owner.
+
+Startup with a valid session never asks: it syncs a store the account owns, binds an unbound store that is empty or predates owners, and otherwise ends the session without erasing so the next sign-in asks. Any failure during startup ends the session. The outcome of every sign-in and startup case is the table in the ADR.
+
+The decision, with its bounded waits, is [ADR-0008](../journal/decisions/0008-bind-the-local-store-to-one-account.md). The measured failure is in [the solutions entry](../journal/solutions/database-issues/account-switch-wedges-sync-on-shared-local-store.md).
 
 Because every write lands in IndexedDB first, the local store also serves as the **durable sync outbox**: an offline write survives a page reload and is flushed to the cloud on the next connection. There is no separate queue to lose.
 
@@ -69,7 +83,7 @@ flowchart TB
 Key properties:
 
 - **Tombstones propagate.** Deletes set a `deleted` flag with a fresh `updated` rather than removing the row, so a delete wins by recency and a stale peer can't resurrect it.
-- **Sign-in is a union, not a batch-create.** Because the client `id` is reused as the PocketBase record id, the same record merges across devices instead of duplicating.
+- **Reconcile is a union, not a batch-create.** Because the client `id` is reused as the PocketBase record id, the same record merges across devices instead of duplicating. It runs only for a store whose owner is the signing-in account, or that has none.
 - **The rollup is local-derived.** Each restaurant caches `latestVerdict` / `latestVisitDate` / `visitCount`, recomputed on each device from its own visits — it is never the sync source of truth, and pulled visits trigger a local recompute.
 
 The reconcile logic (`src/sync/reconcile.ts`) is pure and heavily unit-tested; the live PocketBase round-trip is verified at runtime.
