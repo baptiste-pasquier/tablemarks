@@ -11,6 +11,8 @@ import { defineConfig, devices } from '@playwright/test'
 const PORT = 4174
 const BASE = '/tablemarks/'
 const MOBILE_ONLY = /mobile\.spec\.ts$/
+// The README GIF's journey runs once, in its own fixed viewport; `npm run test:demo` captures it.
+const DEMO = /demo\.spec\.ts$/
 // Not `dist`: that is the real production build, and this suite's build must never overwrite it.
 const OUT_DIR = 'dist-e2e'
 
@@ -36,8 +38,14 @@ export default defineConfig({
   },
   // The app is used mostly on a phone, so the phone is a first-class project, not an extra.
   projects: [
-    { name: 'chromium', testIgnore: MOBILE_ONLY, use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-webkit', use: { ...devices['iPhone 15'] } },
+    { name: 'chromium', testIgnore: [MOBILE_ONLY, DEMO], use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile-webkit', testIgnore: DEMO, use: { ...devices['iPhone 15'] } },
+    // Wide enough for the list and the map side by side, so every frame shows both.
+    {
+      name: 'demo',
+      testMatch: DEMO,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 820 } },
+    },
   ],
   webServer: {
     command: `npx vite build --mode demo --base=${BASE} --outDir ${OUT_DIR} && npx vite preview --base=${BASE} --outDir ${OUT_DIR} --port ${PORT} --strictPort`,
