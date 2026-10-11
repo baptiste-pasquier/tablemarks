@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   capturePaste,
   commitCapture,
@@ -50,6 +50,14 @@ export function useAddPlace(onAdded: (id: string) => void) {
   // matches this ref once its await settles is stale (superseded by an edit or a later submit),
   // and its result — including an error, or `onAdded` — is dropped rather than written.
   const requestId = useRef(0)
+  // Closing the modal is the last edit: a commit still in flight saves the place, but must not
+  // then open its detail over whatever the user has moved on to (code review).
+  useEffect(
+    () => () => {
+      requestId.current += 1
+    },
+    [],
+  )
 
   function suggest(match: GeoCandidate | undefined) {
     if (!cuisineTouched) setCuisineValue(match ? (suggestCategory(match) ?? '') : '')
