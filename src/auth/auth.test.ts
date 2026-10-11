@@ -196,6 +196,22 @@ function stubPocketBase(): void {
   } as unknown as ReturnType<typeof pb.collection>)
 }
 
+/** Another tab's end of the store-change channel. */
+let otherTab: BroadcastChannel | undefined
+
+/** Another tab saves `userId`'s session, or clears it (null): the SDK applies it, then `storage` fires. */
+function otherTabSession(userId: string | null): void {
+  if (userId === null) pb.authStore.clear()
+  else fakeSession(userId)
+  window.dispatchEvent(new StorageEvent('storage', { key: 'pocketbase_auth' }))
+}
+
+/** Another tab announces a store change (an erase, a bind, a write). */
+function otherTabChangesStore(): void {
+  otherTab ??= new BroadcastChannel('tablemarks')
+  otherTab.postMessage('store-change')
+}
+
 function serviceWith(remote: RemoteStore): AuthService {
   service = new AuthService(() => remote)
   return service
@@ -213,7 +229,10 @@ afterEach(async () => {
   // refuses a live session, so the session goes first.
   pb.authStore.clear()
   await service?.eraseLocalData()
+  service?.dispose()
   service = undefined
+  otherTab?.close()
+  otherTab = undefined
   vi.restoreAllMocks()
 })
 
@@ -716,6 +735,36 @@ describe('a session that changes under a running sync (another tab, an expiry)',
     await settle()
 
     expect(remote.pushedR).toEqual([])
+  })
+
+  it('restarts syncing when another tab signs the same account back in', async () => {
+    const remote = new FakeRemote()
+    await syncingAsU1(remote)
+
+    otherTabSession(null)
+    otherTabSession('u1')
+    await createRestaurant({ name: 'Back', lat: 1, lng: 1 })
+
+    await vi.waitFor(() => expect(remote.pushedR.map((r) => r.name)).toEqual(['Back']))
+  })
+
+  it('restarts syncing only once another tab binds the store to the account it signed in', async () => {
+    const remote = new FakeRemote()
+    await syncingAsU1(remote)
+
+    otherTabSession('u2')
+    otherTabChangesStore()
+    await createRestaurant({ name: "Still u1's", lat: 1, lng: 1 })
+    await settle()
+    expect(remote.pushedR).toEqual([])
+
+    // The other tab answers "erase and continue" for u2.
+    await wipeLocalStore()
+    await bindStoreOwner('u2')
+    otherTabChangesStore()
+    await createRestaurant({ name: "u2's", lat: 2, lng: 2 })
+
+    await vi.waitFor(() => expect(remote.pushedR.map((r) => r.name)).toEqual(["u2's"]))
   })
 
   it("keeps syncing when the same account's session is saved again (token refresh)", async () => {

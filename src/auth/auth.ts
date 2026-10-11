@@ -1,6 +1,7 @@
-import { pb } from '../sync/pocketbase'
+import { onSessionChangeInOtherTab, pb } from '../sync/pocketbase'
 import { PocketBaseRemote, SyncController } from '../sync/syncEngine'
 import { recomputePending } from '../sync/syncStatus'
+import { onOtherTabStoreChange } from '../data/events'
 import {
   bindStoreOwner,
   countLiveRestaurants,
@@ -40,6 +41,8 @@ function defaultRemote(owner: string): RemoteStore {
  * - A session that changes under a running sync (a sign-out or a sign-in, in this tab or another)
  *   stops the controller, without erasing: the store stays bound to the account that synced it.
  *   A token that merely runs out fires no `onChange`; the sync runs on until the server refuses it.
+ * - Another tab can hand the session its store back: it signs the same account in again, or binds
+ *   the store to the account it signed in. This tab then resumes its own sync.
  *
  * Every erase and every start first stops the controller and waits, bounded, for a run in flight
  * (`quiesce`): `stop()` cannot cancel a `fullSync`, which would otherwise write pulled records into
@@ -52,6 +55,7 @@ export class AuthService {
   private readonly waitBoundMs: number
   /** The account the controller was started for; null while it is stopped. */
   private syncingFor: string | null = null
+  private readonly unsubscribers: Array<() => void>
 
   constructor(
     remoteFor: (owner: string) => RemoteStore = defaultRemote,
@@ -59,8 +63,19 @@ export class AuthService {
   ) {
     this.remoteFor = remoteFor
     this.waitBoundMs = waitBoundMs
-    // Never unsubscribed: the service lives as long as the page.
-    pb.authStore.onChange(() => this.stopIfSessionMoved(), false)
+    // The app's service lives as long as the page; `dispose` is for the ones tests build.
+    this.unsubscribers = [
+      pb.authStore.onChange(() => this.stopIfSessionMoved(), false),
+      onSessionChangeInOtherTab(() => void this.resumeIfOwned()),
+      onOtherTabStoreChange(() => void this.resumeIfOwned()),
+    ]
+  }
+
+  /** Stops syncing and drops every subscription. */
+  dispose(): void {
+    this.controller.stop()
+    this.syncingFor = null
+    for (const off of this.unsubscribers) off()
   }
 
   get user() {
@@ -211,9 +226,30 @@ export class AuthService {
     await this.startSync(userId)
   }
 
+  /** Starts, or restarts, the controller: a second `start` would subscribe everything twice. */
   private async startSync(userId: string): Promise<void> {
+    this.controller.stop()
     this.syncingFor = userId
     await this.controller.start(this.remoteFor(userId))
+  }
+
+  /**
+   * Resumes a sync that a session change in another tab stopped, once the session and the store
+   * belong to the same account again. Waits like every start; a failure leaves the sync stopped
+   * until the next change from another tab, or a reload, tries again.
+   */
+  private async resumeIfOwned(): Promise<void> {
+    const userId = this.user?.id
+    if (this.syncingFor !== null || !this.isSignedIn || !userId) return
+    try {
+      if ((await getStoreOwner()) !== userId) return
+      await this.quiesce()
+      // Re-checked after the waits: this tab may have signed out, or started on its own, meanwhile.
+      if (this.syncingFor !== null || !this.isSignedIn || this.user?.id !== userId) return
+      await this.startSync(userId)
+    } catch {
+      // Nobody is waiting on this run; the sync stays stopped as it was.
+    }
   }
 
   /** Stops the controller once the session no longer belongs to the account it syncs for. */

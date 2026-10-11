@@ -14,6 +14,8 @@ export async function bindStoreOwner(owner: string): Promise<void> {
   const db = await getDB()
   const tx = db.transaction('meta', 'readwrite')
   await Promise.all([tx.store.put(owner, OWNER_KEY), tx.store.delete(LEGACY_KEY), tx.done])
+  // Another tab signed in to this account waits for the bind to resume its own sync.
+  emitStoreChange()
 }
 
 /**

@@ -56,7 +56,7 @@ A store owned by another account is never merged. The user erases it and continu
 
 A user sign-out erases the store after trying to send pending changes, and asks before losing unsent ones. If the erase fails, the store stays bound to its owner and the user can retry.
 
-An expired session and the automatic sign-out on a build with no backend keep the store and its owner. A sign-out or a sign-in under a running sync, in this tab or another, stops that sync without erasing, and an erase refreshes every open tab. A token that merely runs out fires no event: the sync keeps running until the server refuses it, and the store stays bound to its owner.
+An expired session and the automatic sign-out on a build with no backend keep the store and its owner. A sign-out or a sign-in under a running sync, in this tab or another, stops that sync without erasing. A tab resumes it once another tab hands the store back to its account, by signing that account in again or binding the store to it. Every write, erase or bind refreshes the other open tabs. A token that merely runs out fires no event: the sync keeps running until the server refuses it, and the store stays bound to its owner.
 
 Startup with a valid session never asks: it syncs a store the account owns, binds an unbound store that is empty or predates owners, and otherwise ends the session without erasing so the next sign-in asks. Any failure during startup ends the session. The outcome of every sign-in and startup case is the table in the ADR.
 
