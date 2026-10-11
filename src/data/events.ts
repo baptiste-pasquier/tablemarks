@@ -7,6 +7,7 @@ type Listener = () => void
 // refreshing the UI when remote changes land.
 const localListeners = new Set<Listener>()
 const storeListeners = new Set<Listener>()
+const otherTabListeners = new Set<Listener>()
 
 /** Subscribe to user-driven mutations (the sync push trigger). */
 export function onLocalChange(fn: Listener): () => void {
@@ -20,19 +21,28 @@ export function onStoreChange(fn: Listener): () => void {
   return () => storeListeners.delete(fn)
 }
 
+/** Subscribe to store changes announced by another tab only (an erase or a bind there). */
+export function onOtherTabStoreChange(fn: Listener): () => void {
+  otherTabListeners.add(fn)
+  return () => otherTabListeners.delete(fn)
+}
+
 /** Fired by repositories after a user-driven create/update/delete. Implies a store change too. */
 export function emitLocalChange(): void {
   for (const fn of localListeners) fn()
-  for (const fn of storeListeners) fn()
+  emitStoreChange()
 }
 
 /**
- * Store changes also reach the app's other tabs, so an erase there refreshes the view here. An
- * incoming message only notifies this tab's store listeners: it never triggers a push and is
- * never posted again.
+ * Store changes also reach the app's other tabs, so a write or an erase there refreshes the view
+ * here. An incoming message only notifies this tab's store listeners: it never triggers a push
+ * and is never posted again.
  */
 const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tablemarks') : null
-channel?.addEventListener('message', notifyStoreListeners)
+channel?.addEventListener('message', () => {
+  notifyStoreListeners()
+  for (const fn of otherTabListeners) fn()
+})
 
 function notifyStoreListeners(): void {
   for (const fn of storeListeners) fn()

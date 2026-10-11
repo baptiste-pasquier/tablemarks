@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { emitStoreChange, onLocalChange, onStoreChange } from './events'
+import { emitLocalChange, emitStoreChange, onLocalChange, onStoreChange } from './events'
 
 /** Another tab's end of the channel. */
 let otherTab: BroadcastChannel | undefined
@@ -23,6 +23,15 @@ describe('store changes across tabs', () => {
     emitStoreChange()
 
     await vi.waitFor(() => expect(messages).toHaveLength(1))
+  })
+
+  it('a user write is posted to the other tabs too, so an added place shows there', async () => {
+    otherTab = new BroadcastChannel('tablemarks')
+    const messages = received(otherTab)
+
+    emitLocalChange()
+
+    await vi.waitFor(() => expect(messages).toEqual(['store-change']))
   })
 
   it("another tab's store change refreshes this tab, is not a local change, and is not re-posted", async () => {
