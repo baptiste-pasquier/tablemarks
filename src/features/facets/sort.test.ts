@@ -103,6 +103,24 @@ describe('sortRestaurants — date', () => {
     expect(ids(oldestFirst)).toEqual(['undated', 'dated'])
   })
 
+  it('puts a visited place with no visit date last newest-first, first oldest-first', () => {
+    const undated = r({ id: 'undated', visitCount: 1, latestVerdict: 'go_back' })
+    const dated = r({ id: 'dated', visitCount: 1, latestVisitDate: '2025-01-01' })
+    const toTry = r({ id: 'new', added: '2026-01-01T00:00:00.000Z' })
+    const items = [undated, dated, toTry]
+
+    expect(ids(sortRestaurants(items, 'date', 'newest', undefined))).toEqual([
+      'new',
+      'dated',
+      'undated',
+    ])
+    expect(ids(sortRestaurants(items, 'date', 'oldest', undefined))).toEqual([
+      'undated',
+      'dated',
+      'new',
+    ])
+  })
+
   it('treats an unparsable added date the same as a fully absent one (sorts as oldest)', () => {
     const dated = r({ id: 'dated', added: '2024-01-01' })
     const malformed = r({ id: 'malformed', added: 'not-a-date' })
