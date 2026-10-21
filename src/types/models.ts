@@ -129,8 +129,8 @@ export interface Restaurant extends SyncFields {
 
 export interface Visit extends SyncFields {
   restaurantId: string
-  /** ISO date (YYYY-MM-DD). */
-  date: string
+  /** Local day (YYYY-MM-DD), or null when the user does not remember it. */
+  date: string | null
   verdict: Verdict
   note?: string
 }

@@ -7,8 +7,13 @@ import type { Visit } from '../types/models'
 
 beforeEach(freshDB)
 
-function visit(date: string, verdict: Visit['verdict'], deleted = false): Visit {
-  return { id: date, restaurantId: 'r', date, verdict, updated: date, deleted }
+function visit(
+  date: string | null,
+  verdict: Visit['verdict'],
+  deleted = false,
+  updated = date ?? '2026-01-01T00:00:00.000Z',
+): Visit {
+  return { id: `${date}-${updated}`, restaurantId: 'r', date, verdict, updated, deleted }
 }
 
 describe('rollupOf (pure)', () => {
@@ -33,9 +38,36 @@ describe('rollupOf (pure)', () => {
     const r = rollupOf([visit('2026-02-11', 'never_again', true), visit('2025-08-20', 'go_back')])
     expect(r).toEqual({ latestVerdict: 'go_back', latestVisitDate: '2025-08-20', visitCount: 1 })
   })
+
+  it('lets a dated visit win over an undated one recorded later', () => {
+    const r = rollupOf([
+      visit('2024-03-01', 'go_back', false, '2024-03-01T00:00:00.000Z'),
+      visit(null, 'never_again', false, '2026-10-01T00:00:00.000Z'),
+    ])
+    expect(r).toEqual({ latestVerdict: 'go_back', latestVisitDate: '2024-03-01', visitCount: 2 })
+  })
+
+  it('takes the most recently recorded undated visit when none is dated', () => {
+    const r = rollupOf([
+      visit(null, 'go_back', false, '2026-01-01T00:00:00.000Z'),
+      visit(null, 'worth_a_detour', false, '2026-02-01T00:00:00.000Z'),
+    ])
+    expect(r).toEqual({ latestVerdict: 'worth_a_detour', latestVisitDate: null, visitCount: 2 })
+  })
 })
 
 describe('recomputeRollup (persisted)', () => {
+  it('falls back to the undated verdict once the only dated visit is deleted', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    await createVisit({ restaurantId: r.id, date: null, verdict: 'once_was_enough' })
+    const dated = await createVisit({ restaurantId: r.id, date: '2025-01-01', verdict: 'go_back' })
+    await removeVisit(dated.id)
+    const after = await getRestaurant(r.id)
+    expect(after?.latestVerdict).toBe('once_was_enough')
+    expect(after?.latestVisitDate).toBeNull()
+    expect(after?.visitCount).toBe(1)
+  })
+
   it('writes latest verdict + count onto the restaurant', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2024-01-01', verdict: 'go_back' })
