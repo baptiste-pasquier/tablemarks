@@ -40,7 +40,8 @@ The demo runs with no backend, so there is no sign-in and no sync — and short 
 - 🕒 **Place Details**: Area, open now, weekly hours, and Call / Website buttons from
   OpenStreetMap -- _Complete_, _Refresh_ and _Correct_ keep them current
 - ✅ **Visits & Verdicts**: Log a visit with _I'm here now_ or a past date, and a returnability
-  verdict -- _Go back · Worth a detour · Once was enough · Never again_
+  verdict -- _Go back · Worth a detour · Once was enough · Never again_. Forgot when? Log it
+  without a date
 - 🗺️ **Map & List**: Every place on a map beside the list, sorted by distance or by date
 - 🏷️ **Filters**: Narrow the list and the map by category (cuisine, bakery, bar…), status and
   verdict

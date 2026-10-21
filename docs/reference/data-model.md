@@ -51,12 +51,12 @@ absent, a malformed one as absent on sync and as a rejected file on import.
 ```
 id, updated, deleted          (sync fields)
 restaurantId                  links to its Restaurant
-date                          ISO date (YYYY-MM-DD)
+date                          local day (YYYY-MM-DD), or null when unknown
 verdict                       returnability verdict (below)
 note?                          free text
 ```
 
-A restaurant has zero or more visits, each its own synced record. Modeling visits as separate records (not an embedded array) is what lets concurrent visits on two devices both survive last-write-wins reconciliation.
+A restaurant has zero or more visits, each its own synced record. An omitted date defaults to today; only an explicit `null` records an undated visit. Modeling visits as separate records (not an embedded array) is what lets concurrent visits on two devices both survive last-write-wins reconciliation.
 
 ## Verdict
 
@@ -73,7 +73,7 @@ The rating is a four-level **returnability verdict** — no numeric score:
 
 ## Rollup
 
-A restaurant caches the verdict of its **most recent visit** plus a visit count (`src/data/rollup.ts`). It's recomputed locally whenever that restaurant's visits change — including after a sync pull. It is intentionally **not** a sync source of truth and does not bump `updated`; each device derives its own.
+A restaurant caches the verdict of its **most recent visit** plus a visit count (`src/data/rollup.ts`). Visits order by `compareVisitsMostRecentFirst`: dated visits first, newest date first, then undated visits, then ties by `updated` descending. The rollup and the visit history both use it, so an undated visit sits at the bottom of the history and counts toward the visit count. The latest verdict is the latest dated visit's, or, with no dated visit, the most recently recorded undated one's; `latestVisitDate` is `null` in that case. It's recomputed locally whenever that restaurant's visits change — including after a sync pull. It is intentionally **not** a sync source of truth and does not bump `updated`; each device derives its own.
 
 ## Local storage
 
@@ -87,13 +87,14 @@ The upgrade handler branches on `oldVersion` so future schema versions add store
 
 ## Local ↔ PocketBase mapping
 
-The IndexedDB model and the PocketBase schema differ in three places; `src/sync/mappers.ts` translates between them:
+The IndexedDB model and the PocketBase schema differ in four places; `src/sync/mappers.ts` translates between them:
 
-| Local (IndexedDB)          | Remote (PocketBase)     | Why                                                                               |
-| -------------------------- | ----------------------- | --------------------------------------------------------------------------------- |
-| `updated`                  | `syncedAt`              | PocketBase reserves `updated` as a system autodate field it overwrites on save.   |
-| `restaurantId` (on visits) | `restaurant` (relation) | PocketBase models the link as a relation.                                         |
-| —                          | `owner`                 | Set on push to the signed-in user; absent locally (no-account mode has no owner). |
+| Local (IndexedDB)          | Remote (PocketBase)     | Why                                                                                        |
+| -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------ |
+| `updated`                  | `syncedAt`              | PocketBase reserves `updated` as a system autodate field it overwrites on save.            |
+| `restaurantId` (on visits) | `restaurant` (relation) | PocketBase models the link as a relation.                                                  |
+| —                          | `owner`                 | Set on push to the signed-in user; absent locally (no-account mode has no owner).          |
+| `date: null` (on visits)   | `date: ''`              | PocketBase stores an empty text, not `null`; `''` or an absent value reads back as `null`. |
 
 `osm` is a `json` field on both sides; the incoming value is validated by `readOsmSnapshot`, which drops unknown keys.
 

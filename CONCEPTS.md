@@ -14,7 +14,11 @@ A saved place — a favorite or one to try — with a location, optional cuisine
 
 ### Visit
 
-A single timestamped record of going to a Restaurant, carrying a date (a Local day) and a Verdict. Visits are separate records (not embedded in the Restaurant), so two devices can each add a visit without one overwriting the other under Last-Write-Wins.
+A single timestamped record of going to a Restaurant, carrying a date (a Local day, or unknown) and a Verdict. Visits are separate records (not embedded in the Restaurant), so two devices can each add a visit without one overwriting the other under Last-Write-Wins.
+
+### Undated visit
+
+A Visit whose date the user does not remember, stored with a `null` date rather than an invented one. It counts as a Visit, so its Restaurant is _visited_ and carries its Verdict, but it sorts after every dated Visit; with no dated Visit, the most recently recorded undated one gives the Rollup's latest Verdict.
 
 ### Provisional record
 
