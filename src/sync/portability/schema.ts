@@ -8,7 +8,8 @@ import {
 } from '../../types/models'
 
 /** Current export file-format version. Distinct from the IndexedDB database version. */
-export const EXPORT_SCHEMA_VERSION = 1
+// v2: a visit's `date` may be `null`.
+export const EXPORT_SCHEMA_VERSION = 2
 
 /** Identity guard so a non-Tablemarks JSON file is rejected before any record processing. */
 export const EXPORT_FORMAT = 'tablemarks-export'
@@ -83,7 +84,7 @@ function isOptionalString(x: unknown): boolean {
 function isOptionalTimestamp(x: unknown): boolean {
   return x === undefined || x === '' || isValidTimestamp(x)
 }
-/** `date` is always a local calendar day (`YYYY-MM-DD`), never a full instant. */
+/** A present `date` is always a local calendar day (`YYYY-MM-DD`), never a full instant. */
 function isLocalDayString(x: unknown): x is string {
   return typeof x === 'string' && isLocalDay(x)
 }
@@ -147,7 +148,7 @@ function asVisit(x: unknown): Visit | null {
   if (typeof x !== 'object' || x === null) return null
   const v = x as Record<string, unknown>
   if (!isString(v.id) || v.id === '') return null
-  if (!isString(v.restaurantId) || !isLocalDayString(v.date)) return null
+  if (!isString(v.restaurantId) || !(v.date === null || isLocalDayString(v.date))) return null
   if (!isValidTimestamp(v.updated) || typeof v.deleted !== 'boolean') return null
   if (!isOptionalString(v.note)) return null
   return {
@@ -163,7 +164,7 @@ function asVisit(x: unknown): Visit | null {
 
 /**
  * Forward-migrate raw records of a known older `schemaVersion` to the current shape.
- * Identity at v1 — the hook exists so future versions add ordered transforms here.
+ * Identity so far: a v1 file is valid v2 as is (v2 only allows a `null` visit date). The hook exists so future versions add ordered transforms here.
  */
 function migrateToCurrent(
   records: { restaurants: unknown[]; visits: unknown[] },

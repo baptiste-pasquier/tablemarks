@@ -83,6 +83,18 @@ describe('mappers', () => {
     expect(back.updated).toBe(restaurant.updated)
   })
 
+  it('sends an undated visit as an empty date', () => {
+    expect(visitToRemote({ ...visit, date: null }, 'user1').date).toBe('')
+  })
+
+  it('reads an empty or absent remote date as null', () => {
+    const remote = visitToRemote(visit, 'u')
+    const { date: _date, ...absent } = remote
+    expect(visitFromRemote({ ...remote, date: '' }).date).toBeNull()
+    expect(visitFromRemote(absent).date).toBeNull()
+    expect(visitFromRemote({ ...remote, date: '2026-02-01' }).date).toBe('2026-02-01')
+  })
+
   it('normalizes a PocketBase space-separated visit syncedAt to the canonical T-separated shape', () => {
     const remote = { ...visitToRemote(visit, 'user1'), syncedAt: '2026-02-01 10:00:00.000Z' }
     const back = visitFromRemote(remote)
