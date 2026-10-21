@@ -54,6 +54,19 @@ describe('parseImport', () => {
     expect(parseImport(envelope({ schemaVersion: 1 })).ok).toBe(true)
   })
 
+  it('reads a v1 file’s empty visit date and latestVisitDate as undated', () => {
+    const base = JSON.parse(withVisitDate('')) as {
+      schemaVersion: number
+      records: { restaurants: Record<string, unknown>[] }
+    }
+    base.schemaVersion = 1
+    base.records.restaurants[0].latestVisitDate = ''
+    expect(parseImport(JSON.stringify(base))).toMatchObject({
+      ok: true,
+      records: { restaurants: [{ latestVisitDate: null }], visits: [{ date: null }] },
+    })
+  })
+
   it.each(['', '2023'])('rejects an empty or partial visit date (%j)', (date) => {
     expect(parseImport(withVisitDate(date))).toMatchObject({
       ok: false,

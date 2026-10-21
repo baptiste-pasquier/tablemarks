@@ -1,7 +1,8 @@
 import { getDB } from './db'
 import { newId } from './ids'
 import { now, today } from '../lib/dates'
-import { compareVisitsMostRecentFirst, recomputeRollup } from './rollup'
+import { recomputeRollup } from './rollup'
+import { compareVisitsMostRecentFirst } from './visitOrder'
 import { emitLocalChange, emitStoreChange } from './events'
 import type { Verdict, Visit } from '../types/models'
 
