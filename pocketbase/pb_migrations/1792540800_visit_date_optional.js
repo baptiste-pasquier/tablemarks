@@ -11,6 +11,8 @@ migrate(
     visits.fields.getByName('date').required = false
     app.save(visits)
   },
+  // Down: rows already holding '' violate `required: true`, so any later update of them fails —
+  // roll back by restoring a backup, not by `migrate down`.
   (app) => {
     const visits = app.findCollectionByNameOrId('visits')
     visits.fields.getByName('date').required = true

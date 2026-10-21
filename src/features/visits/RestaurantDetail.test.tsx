@@ -137,6 +137,13 @@ describe('RestaurantDetail', () => {
     expect(await screen.findByText('Date unknown')).toBeInTheDocument()
     expect(screen.getByText('(1)')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete undated visit' })).toBeInTheDocument()
+    // The form resets for the next visit: dated again, with an empty date.
+    expect(screen.getByRole('button', { name: /remember when/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(screen.getByLabelText('Visit date')).toBeEnabled()
+    expect(screen.getByLabelText('Visit date')).toHaveValue('')
   })
 
   it('requires a date again once "I don\'t remember when" is turned off', async () => {

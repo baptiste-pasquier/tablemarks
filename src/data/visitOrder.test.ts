@@ -42,6 +42,14 @@ describe('rollupOf (pure)', () => {
     expect(r).toEqual({ latestVerdict: 'go_back', latestVisitDate: '2024-03-01', visitCount: 2 })
   })
 
+  it('breaks a same-day tie by the more recently recorded visit, whatever the input order', () => {
+    const earlier = visit('2026-03-01', 'go_back', false, '2026-03-01T09:00:00.000Z')
+    const later = visit('2026-03-01', 'never_again', false, '2026-03-01T21:00:00.000Z')
+    const expected = { latestVerdict: 'never_again', latestVisitDate: '2026-03-01', visitCount: 2 }
+    expect(rollupOf([earlier, later])).toEqual(expected)
+    expect(rollupOf([later, earlier])).toEqual(expected)
+  })
+
   it('takes the most recently recorded undated visit when none is dated', () => {
     const r = rollupOf([
       visit(null, 'go_back', false, '2026-01-01T00:00:00.000Z'),
