@@ -56,16 +56,23 @@ export async function addBySearch(page: Page, name: string): Promise<void> {
   // A result card's name starts with the place's; the non-eatery row starts with "Passage".
   await dialog.getByRole('button', { name: new RegExp(`^${escapeRegExp(name)}`) }).click()
   await dialog.getByRole('button', { name: 'Add', exact: true }).click()
-  await expect(dialog).toBeHidden()
+  // A saved place opens straight on its detail; closed here so every caller starts from the list.
+  await placeDetail(page, name)
+  await closeDialog(page)
   await expect(placeCard(page, name)).toBeVisible()
+}
+
+/** The open detail of `name`, waited for by its heading. */
+export async function placeDetail(page: Page, name: string): Promise<Locator> {
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('heading', { name })).toBeVisible()
+  return dialog
 }
 
 export async function openPlace(page: Page, name: string): Promise<Locator> {
   await showList(page)
   await placeCard(page, name).getByRole('button').click()
-  const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name })).toBeVisible()
-  return dialog
+  return placeDetail(page, name)
 }
 
 /** "I'm here now" with a verdict: logs today's visit, then closes the detail. */

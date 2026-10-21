@@ -29,12 +29,15 @@ const ERROR_COPY = {
 export function AddPlace({
   onClose,
   onOpenExisting,
+  onAdded,
 }: {
   onClose: () => void
   onOpenExisting: (id: string) => void
+  /** The place was saved — distinct from `onClose` so the caller can open its detail next. */
+  onAdded: (id: string) => void
 }) {
   const { t } = useTranslation()
-  const form = useAddPlace(onClose)
+  const form = useAddPlace(onAdded)
   const restaurants = useRestaurants()
   const options = useRankedCuisines(restaurants, true)
   const duplicate = form.duplicate

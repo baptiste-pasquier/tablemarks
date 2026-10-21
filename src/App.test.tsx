@@ -9,6 +9,7 @@ import type { BackendStatus } from './sync/backendStatus'
 import { setSyncState } from './sync/syncStatus'
 import { mockI18n } from './test/setup'
 import { createRestaurant } from './data/restaurants'
+import { setGeocodeProvider } from './capture/geocode'
 import { readSortPreference, writeSortPreference } from './lib/sortPreference'
 import type { GeoPoint } from './lib/geolocate'
 
@@ -1416,5 +1417,30 @@ describe('backend availability in the header (U4)', () => {
     render(<App />)
     await screen.findByText(/aucun lieu pour l'instant/i)
     expect(screen.getByRole('status', { name: 'Serveur injoignable' })).toBeInTheDocument()
+  })
+})
+
+describe('adding a place', () => {
+  it('opens the saved place straight on its detail', async () => {
+    setGeocodeProvider({
+      search: async () => [],
+      reverse: async () => '1 Rue de Rivoli, Paris',
+      lookup: async () => null,
+    })
+    render(<App />)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: '+ Add a place' }))
+    await user.type(
+      screen.getByLabelText(/paste a google maps link/i),
+      'https://www.google.com/maps/place/Chez+Marcel/@48.8566,2.3522,15z',
+    )
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    await user.click(await screen.findByRole('button', { name: 'Add' }))
+
+    // By its name: for a moment the add modal is still the one dialog in the document.
+    const detail = await screen.findByRole('dialog', { name: 'Chez Marcel' })
+    expect(within(detail).getByRole('heading', { name: 'Chez Marcel' })).toBeVisible()
+    expect(screen.queryByRole('dialog', { name: 'Add a place' })).not.toBeInTheDocument()
   })
 })

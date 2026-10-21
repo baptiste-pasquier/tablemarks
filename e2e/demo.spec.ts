@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Page } from '@playwright/test'
 import { expect, test } from './fixtures'
-import { addBySearch, logVisit, openApp, openPlace, placeCard, submitQuery } from './app'
+import { addBySearch, logVisit, openApp, placeCard, placeDetail, submitQuery } from './app'
 import { PLACES } from './osm'
 
 const DEMO_PAUSE_MS = 350
@@ -169,10 +169,9 @@ test('records the README demo flow', async ({ page }) => {
   await settleFrame(page)
   await captureFrame(page, '03-add-by-link.png')
 
+  // Adding opens the saved place straight on its detail.
   await add.getByRole('button', { name: 'Add', exact: true }).click()
-  await expect(add).toBeHidden()
-
-  const detail = await openPlace(page, name)
+  const detail = await placeDetail(page, name)
   await expect(detail.getByRole('link', { name: 'Call' })).toBeVisible()
   await expect(detail.getByRole('link', { name: 'Website' })).toBeVisible()
   await tick()
