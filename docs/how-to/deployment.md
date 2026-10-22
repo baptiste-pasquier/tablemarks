@@ -141,7 +141,8 @@ restore-from-backup**, and nothing else.
    off the host** and store it where a secret belongs — the same place as the OAuth client secret,
    not next to a code checkout.
 
-2. **Pull and restart.** Both images answer to `latest`, and they move together:
+2. **Pull and restart.** Both images answer to `latest` and move together — never the app alone,
+   since a release can need its migration (PocketBase refuses the pushes until it has run):
 
    ```bash
    docker compose -f docker/docker-compose.prod.yml pull
