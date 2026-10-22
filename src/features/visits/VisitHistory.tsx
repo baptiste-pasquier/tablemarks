@@ -108,15 +108,16 @@ export function VisitHistory({ restaurantId, visits }: { restaurantId: string; v
           {t('visitDetail.addPastVisit')}
         </summary>
         <div className="mt-2.5 space-y-2 text-left">
-          <input
-            type="date"
-            value={pastDate}
-            onChange={(e) => setPastDate(e.target.value)}
-            disabled={dateUnknown}
-            aria-label={t('visitDetail.visitDateAria')}
-            className="rounded-md border border-gray-300 bg-white p-1.5 text-sm disabled:opacity-50"
-          />
-          <div>
+          {/* Wraps under the date on a narrow screen rather than overflowing it. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="date"
+              value={pastDate}
+              onChange={(e) => setPastDate(e.target.value)}
+              disabled={dateUnknown}
+              aria-label={t('visitDetail.visitDateAria')}
+              className="rounded-md border border-gray-300 bg-white p-1.5 text-sm disabled:opacity-50"
+            />
             <ToggleChip shape="pill" active={dateUnknown} onClick={toggleDateUnknown}>
               {t('visitDetail.dateUnknownToggle')}
             </ToggleChip>
