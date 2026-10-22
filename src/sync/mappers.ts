@@ -42,7 +42,8 @@ export interface RemoteVisit {
   id: string
   owner?: string
   restaurant: string
-  date: string
+  /** PocketBase sends `''` for an empty text field: that is the stored form of "unknown". */
+  date?: string
   verdict: string
   note?: string
   syncedAt: string
@@ -86,7 +87,9 @@ export function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
     osm: readOsmSnapshot(r.osm) ?? undefined,
     pending: r.pending,
     latestVerdict: asVerdict(r.latestVerdict),
-    latestVisitDate: r.latestVisitDate,
+    // PocketBase stores a null text field as '', which an export would then refuse; the rollup
+    // recompute after a pull rewrites it anyway, but not when the sync stops before that.
+    latestVisitDate: r.latestVisitDate || null,
     visitCount: r.visitCount,
     updated: r.syncedAt ? normalizeInstant(r.syncedAt) : r.syncedAt,
     deleted: r.deleted,
@@ -98,7 +101,7 @@ export function visitToRemote(v: Visit, owner: string): RemoteVisit {
     id: v.id,
     owner,
     restaurant: v.restaurantId,
-    date: v.date,
+    date: v.date ?? '',
     verdict: v.verdict,
     note: v.note,
     syncedAt: v.updated,
@@ -110,7 +113,7 @@ export function visitFromRemote(v: RemoteVisit): Visit {
   return {
     id: v.id,
     restaurantId: v.restaurant,
-    date: v.date,
+    date: v.date ? v.date : null,
     verdict: asVerdict(v.verdict) ?? 'once_was_enough',
     note: v.note,
     updated: v.syncedAt ? normalizeInstant(v.syncedAt) : v.syncedAt,

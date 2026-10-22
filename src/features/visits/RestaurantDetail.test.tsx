@@ -122,6 +122,63 @@ describe('RestaurantDetail', () => {
     expect(screen.getByLabelText('Visit date')).toHaveValue('2026-01-15')
   })
 
+  it('adds an undated past visit and marks the place visited', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByText('Add a past visit'))
+    const unknown = screen.getByRole('button', { name: /remember when/i })
+    await user.click(unknown)
+    expect(unknown).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Visit date')).toBeDisabled()
+    await user.click(enabled(screen.getAllByRole('button', { name: 'Go back' })))
+
+    expect(await screen.findByText('Date unknown')).toBeInTheDocument()
+    expect(screen.getByText('(1)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete undated visit' })).toBeInTheDocument()
+    // The form resets for the next visit: dated again, with an empty date.
+    expect(screen.getByRole('button', { name: /remember when/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(screen.getByLabelText('Visit date')).toBeEnabled()
+    expect(screen.getByLabelText('Visit date')).toHaveValue('')
+  })
+
+  it('requires a date again once "I don\'t remember when" is turned off', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByText('Add a past visit'))
+    await user.type(screen.getByLabelText('Visit date'), '2026-01-15')
+    const unknown = screen.getByRole('button', { name: /remember when/i })
+    await user.click(unknown)
+    await user.click(unknown)
+
+    expect(screen.getByLabelText('Visit date')).toBeEnabled()
+    expect(screen.getByLabelText('Visit date')).toHaveValue('')
+    for (const b of screen.getAllByRole('button', { name: 'Go back' })) expect(b).toBeDisabled()
+  })
+
+  it('keeps "I don\'t remember when" on when the undated visit could not be saved', async () => {
+    const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
+    vi.mocked(createVisit).mockRejectedValueOnce(new Error('QuotaExceededError'))
+    render(<RestaurantDetail restaurantId={r.id} onClose={vi.fn()} onDeleted={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByText('Add a past visit'))
+    await user.click(screen.getByRole('button', { name: /remember when/i }))
+    await user.click(enabled(screen.getAllByRole('button', { name: 'Go back' })))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this change.')
+    expect(screen.getByRole('button', { name: /remember when/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
   it('tells the user when a visit could not be deleted, and keeps it listed', async () => {
     const r = await createRestaurant({ name: 'New place', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2026-06-01', verdict: 'go_back' })
@@ -303,7 +360,10 @@ describe('RestaurantDetail', () => {
     // ... where the date field and the verdict buttons stay opaque white, even while the buttons
     // are disabled at half opacity waiting for a date.
     expect(screen.getByLabelText('Visit date')).toHaveClass('bg-white')
-    const pastButtons = within(panel).getAllByRole('button')
+    // The "I don't remember when" chip is a pill of its own; the other four are verdict buttons.
+    const pastButtons = within(panel)
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-pressed') === null)
     expect(pastButtons).toHaveLength(4)
     for (const button of pastButtons) expect(button.parentElement).toHaveClass('bg-white')
     expect(panel.querySelector('.bg-white:not(input):not(span):not(button)')).toBeNull()

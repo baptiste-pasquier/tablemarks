@@ -7,8 +7,11 @@ import {
   type Visit,
 } from '../../types/models'
 
-/** Current export file-format version. Distinct from the IndexedDB database version. */
-export const EXPORT_SCHEMA_VERSION = 1
+/**
+ * Current export file-format version. Distinct from the IndexedDB database version.
+ * v2: a visit's `date` may be `null`.
+ */
+export const EXPORT_SCHEMA_VERSION = 2
 
 /** Identity guard so a non-Tablemarks JSON file is rejected before any record processing. */
 export const EXPORT_FORMAT = 'tablemarks-export'
@@ -83,7 +86,7 @@ function isOptionalString(x: unknown): boolean {
 function isOptionalTimestamp(x: unknown): boolean {
   return x === undefined || x === '' || isValidTimestamp(x)
 }
-/** `date` is always a local calendar day (`YYYY-MM-DD`), never a full instant. */
+/** A present `date` is always a local calendar day (`YYYY-MM-DD`), never a full instant. */
 function isLocalDayString(x: unknown): x is string {
   return typeof x === 'string' && isLocalDay(x)
 }
@@ -147,7 +150,7 @@ function asVisit(x: unknown): Visit | null {
   if (typeof x !== 'object' || x === null) return null
   const v = x as Record<string, unknown>
   if (!isString(v.id) || v.id === '') return null
-  if (!isString(v.restaurantId) || !isLocalDayString(v.date)) return null
+  if (!isString(v.restaurantId) || !(v.date === null || isLocalDayString(v.date))) return null
   if (!isValidTimestamp(v.updated) || typeof v.deleted !== 'boolean') return null
   if (!isOptionalString(v.note)) return null
   return {
@@ -161,15 +164,28 @@ function asVisit(x: unknown): Visit | null {
   }
 }
 
+/** An old client stored an unknown date as `''` (PocketBase's empty value); v2 spells it `null`. */
+function emptyDateToNull(raw: unknown, field: 'date' | 'latestVisitDate'): unknown {
+  if (typeof raw !== 'object' || raw === null) return raw
+  const record = raw as Record<string, unknown>
+  return record[field] === '' ? { ...record, [field]: null } : raw
+}
+
 /**
  * Forward-migrate raw records of a known older `schemaVersion` to the current shape.
- * Identity at v1 — the hook exists so future versions add ordered transforms here.
+ * v1 → v2: a v1 file written by a client that had already pulled an undated visit carries `''` for
+ * a visit's `date` and a restaurant's `latestVisitDate`; both become `null`. A v2 file keeps
+ * refusing `''`.
  */
 function migrateToCurrent(
   records: { restaurants: unknown[]; visits: unknown[] },
-  _fromVersion: number,
+  fromVersion: number,
 ) {
-  return records
+  if (fromVersion >= 2) return records
+  return {
+    restaurants: records.restaurants.map((r) => emptyDateToNull(r, 'latestVisitDate')),
+    visits: records.visits.map((v) => emptyDateToNull(v, 'date')),
+  }
 }
 
 /**

@@ -1,8 +1,15 @@
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import {
+  openDB,
+  type DBSchema,
+  type IDBPDatabase,
+  type IDBPTransaction,
+  type StoreNames,
+} from 'idb'
+import { rollupOf } from './visitOrder'
 import type { Restaurant, Visit } from '../types/models'
 
 const DB_NAME = 'tablemarks'
-const DB_VERSION = 2
+const DB_VERSION = 3
 /** `meta` key marking a store that existed before v2 introduced owners. */
 export const LEGACY_KEY = 'legacy'
 
@@ -41,6 +48,8 @@ export function getDB(): Promise<IDBPDatabase<TablemarksDB>> {
           // A v1 store predates owners: startup may bind it silently (see storeOwner.ts).
           if (oldVersion === 1) void tx.objectStore('meta').put('1', LEGACY_KEY)
         }
+        // A fresh store has nothing to repair; only one an older client wrote to can hold `''`.
+        if (oldVersion >= 1 && oldVersion < 3) void repairEmptyVisitDates(tx)
       },
       // Another tab opens a newer version: close so its upgrade is not blocked, and let the next
       // call reopen rather than reuse a closed connection.
@@ -61,6 +70,37 @@ export function getDB(): Promise<IDBPDatabase<TablemarksDB>> {
     dbPromise = opening
   }
   return dbPromise
+}
+
+type UpgradeTransaction = IDBPTransaction<TablemarksDB, StoreNames<TablemarksDB>[], 'versionchange'>
+
+/**
+ * v3: a client predating undated visits stored a pulled undated visit's date as `''`, and
+ * last-write-wins never replaces it (same `updated`). Rewrite it as `null` and recompute the
+ * rollup of each restaurant it touched, inside the upgrade transaction — `getDB()` would wait on
+ * this very open. No `updated` bump and no event: it repairs an encoding, not a user edit.
+ */
+async function repairEmptyVisitDates(tx: UpgradeTransaction): Promise<void> {
+  const visits = tx.objectStore('visits')
+  const restaurants = tx.objectStore('restaurants')
+  // Every visit is already in memory, so group them here rather than query the index per restaurant.
+  const byRestaurant = new Map<string, Visit[]>()
+  const affected = new Set<string>()
+  for (const stored of await visits.getAll()) {
+    const visit = stored.date === '' ? { ...stored, date: null } : stored
+    if (visit !== stored) {
+      affected.add(visit.restaurantId)
+      await visits.put(visit)
+    }
+    const theirs = byRestaurant.get(visit.restaurantId)
+    if (theirs) theirs.push(visit)
+    else byRestaurant.set(visit.restaurantId, [visit])
+  }
+  for (const restaurantId of affected) {
+    const restaurant = await restaurants.get(restaurantId)
+    if (!restaurant) continue
+    await restaurants.put({ ...restaurant, ...rollupOf(byRestaurant.get(restaurantId) ?? []) })
+  }
 }
 
 /** Drops the cached open if it is still `opening`, so a newer one is never discarded. */

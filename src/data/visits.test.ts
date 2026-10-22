@@ -21,6 +21,24 @@ describe('visit repository', () => {
     expect((await getRestaurant(r.id))?.visitCount).toBe(1)
   })
 
+  it('stores an explicit null date as an undated visit', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    const v = await createVisit({ restaurantId: r.id, date: null, verdict: 'go_back' })
+    expect(v.date).toBeNull()
+    const after = await getRestaurant(r.id)
+    expect(after?.visitCount).toBe(1)
+    expect(after?.latestVisitDate).toBeNull()
+  })
+
+  it('lists undated visits after every dated one', async () => {
+    const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
+    await createVisit({ restaurantId: r.id, date: null, verdict: 'go_back' })
+    await createVisit({ restaurantId: r.id, date: '2025-01-01', verdict: 'go_back' })
+    await createVisit({ restaurantId: r.id, date: '2026-01-01', verdict: 'go_back' })
+    const list = await visitsForRestaurant(r.id)
+    expect(list.map((v) => v.date)).toEqual(['2026-01-01', '2025-01-01', null])
+  })
+
   it('lists a restaurant visits most-recent-first and excludes deleted', async () => {
     const r = await createRestaurant({ name: 'X', lat: 1, lng: 1 })
     await createVisit({ restaurantId: r.id, date: '2025-01-01', verdict: 'go_back' })

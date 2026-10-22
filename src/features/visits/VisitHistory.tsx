@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { VerdictButtons } from './VerdictButtons'
 import { createVisit, removeVisit } from '../../data/visits'
 import { Button } from '../ui/Button'
+import { ToggleChip } from '../ui/ToggleChip'
 import { VerdictBadge } from '../StatusBadge'
 import { formatDisplayDate } from '../../lib/dates'
 import type { Verdict, Visit } from '../../types/models'
@@ -10,11 +11,14 @@ import type { Verdict, Visit } from '../../types/models'
 /**
  * A place's visit history (R7/R8): an always-expanded timeline, most-recent-first (already
  * guaranteed by visitsForRestaurant's sort — see useRestaurantDetail), with "add a past visit"
- * rendered as the timeline's last row. Its <details>/<summary> reveal mechanism is KTD9.
+ * rendered as the timeline's last row. Its <details>/<summary> reveal mechanism is KTD9. A past
+ * visit needs a date or the "I don't remember when" choice; the latter is stored as a null date
+ * and listed after the dated visits.
  */
 export function VisitHistory({ restaurantId, visits }: { restaurantId: string; visits: Visit[] }) {
   const { t } = useTranslation()
   const [pastDate, setPastDate] = useState('')
+  const [dateUnknown, setDateUnknown] = useState(false)
   const [writeFailed, setWriteFailed] = useState(false)
 
   // A rejected write (storage full, the place deleted meanwhile) is shown here, beside the action,
@@ -30,10 +34,19 @@ export function VisitHistory({ restaurantId, visits }: { restaurantId: string; v
     }
   }
 
-  // The date is kept on failure, so the user can pick a verdict again.
+  function toggleDateUnknown() {
+    setDateUnknown(!dateUnknown)
+    setPastDate('')
+  }
+
+  // The date (or "unknown") is kept on failure, so the user can pick a verdict again.
   async function logPast(verdict: Verdict) {
-    if (!pastDate) return
-    if (await attempt(() => createVisit({ restaurantId, date: pastDate, verdict }))) setPastDate('')
+    if (!pastDate && !dateUnknown) return
+    const date = dateUnknown ? null : pastDate
+    if (await attempt(() => createVisit({ restaurantId, date, verdict }))) {
+      setPastDate('')
+      setDateUnknown(false)
+    }
   }
 
   return (
@@ -68,15 +81,19 @@ export function VisitHistory({ restaurantId, visits }: { restaurantId: string; v
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <VerdictBadge verdict={v.verdict} />
-                    <span className="font-medium text-gray-700">{formatDisplayDate(v.date)}</span>
+                    <span className="font-medium text-gray-700">
+                      {v.date ? formatDisplayDate(v.date) : t('visitDetail.dateUnknown')}
+                    </span>
                   </span>
                   <Button
                     variant="icon-dismiss"
                     tone="destructive"
                     onClick={() => void attempt(() => removeVisit(v.id))}
-                    aria-label={t('visitDetail.deleteVisitAria', {
-                      date: formatDisplayDate(v.date),
-                    })}
+                    aria-label={
+                      v.date
+                        ? t('visitDetail.deleteVisitAria', { date: formatDisplayDate(v.date) })
+                        : t('visitDetail.deleteUndatedVisitAria')
+                    }
                   >
                     ✕
                   </Button>
@@ -91,14 +108,21 @@ export function VisitHistory({ restaurantId, visits }: { restaurantId: string; v
           {t('visitDetail.addPastVisit')}
         </summary>
         <div className="mt-2.5 space-y-2 text-left">
-          <input
-            type="date"
-            value={pastDate}
-            onChange={(e) => setPastDate(e.target.value)}
-            aria-label={t('visitDetail.visitDateAria')}
-            className="rounded-md border border-gray-300 bg-white p-1.5 text-sm"
-          />
-          <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate} />
+          {/* Wraps under the date on a narrow screen rather than overflowing it. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="date"
+              value={pastDate}
+              onChange={(e) => setPastDate(e.target.value)}
+              disabled={dateUnknown}
+              aria-label={t('visitDetail.visitDateAria')}
+              className="rounded-md border border-gray-300 bg-white p-1.5 text-sm disabled:opacity-50"
+            />
+            <ToggleChip shape="pill" size="button" active={dateUnknown} onClick={toggleDateUnknown}>
+              {t('visitDetail.dateUnknownToggle')}
+            </ToggleChip>
+          </div>
+          <VerdictButtons onPick={(v) => void logPast(v)} disabled={!pastDate && !dateUnknown} />
         </div>
       </details>
     </div>

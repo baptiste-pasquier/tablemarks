@@ -1,5 +1,6 @@
 import { beforeEach, describe, it, expect } from 'vitest'
 import { freshDB } from '../../test/idb'
+import { parseImport } from './import'
 import { buildExport, exportCollection } from './export'
 import { EXPORT_FORMAT, EXPORT_SCHEMA_VERSION } from './schema'
 import { createRestaurant, removeRestaurant } from '../../data/restaurants'
@@ -71,6 +72,15 @@ describe('exportCollection', () => {
     expect(env.records.visits).toHaveLength(1)
     expect(env.records.visits[0].verdict).toBe('go_back')
     expect(typeof env.exportedAt).toBe('string')
+  })
+
+  it('round-trips an undated visit through export and import', async () => {
+    const r = await createRestaurant({ name: 'Chez Marcel', lat: 48, lng: 2 })
+    await createVisit({ restaurantId: r.id, date: null, verdict: 'go_back' })
+
+    const parsed = parseImport(JSON.stringify(await exportCollection()))
+
+    expect(parsed).toMatchObject({ ok: true, records: { visits: [{ date: null }] } })
   })
 
   it('includes soft-deleted tombstones for full fidelity', async () => {

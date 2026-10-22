@@ -39,6 +39,41 @@ function envelope(over: Record<string, unknown> = {}): string {
 }
 
 describe('parseImport', () => {
+  function withVisitDate(date: unknown): string {
+    const base = JSON.parse(envelope()) as { records: { visits: Record<string, unknown>[] } }
+    base.records.visits[0].date = date
+    return JSON.stringify(base)
+  }
+
+  it('accepts an undated visit', () => {
+    const res = parseImport(withVisitDate(null))
+    expect(res).toMatchObject({ ok: true, records: { visits: [{ date: null }] } })
+  })
+
+  it('still imports a v1 file', () => {
+    expect(parseImport(envelope({ schemaVersion: 1 })).ok).toBe(true)
+  })
+
+  it('reads a v1 file’s empty visit date and latestVisitDate as undated', () => {
+    const base = JSON.parse(withVisitDate('')) as {
+      schemaVersion: number
+      records: { restaurants: Record<string, unknown>[] }
+    }
+    base.schemaVersion = 1
+    base.records.restaurants[0].latestVisitDate = ''
+    expect(parseImport(JSON.stringify(base))).toMatchObject({
+      ok: true,
+      records: { restaurants: [{ latestVisitDate: null }], visits: [{ date: null }] },
+    })
+  })
+
+  it.each(['', '2023'])('rejects an empty or partial visit date (%j)', (date) => {
+    expect(parseImport(withVisitDate(date))).toMatchObject({
+      ok: false,
+      error: { code: 'malformed_visit' },
+    })
+  })
+
   it('parses a well-formed v1 envelope', () => {
     const res = parseImport(envelope())
     expect(res.ok).toBe(true)

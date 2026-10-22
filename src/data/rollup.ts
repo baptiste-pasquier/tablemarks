@@ -1,26 +1,7 @@
 import { getDB } from './db'
 import { mutateRestaurant } from './restaurants'
-import type { Restaurant, Verdict, Visit } from '../types/models'
-
-export interface Rollup {
-  latestVerdict: Verdict | null
-  latestVisitDate: string | null
-  visitCount: number
-}
-
-/** Pure rollup: latest-by-date visit's verdict + count, over non-deleted visits. */
-export function rollupOf(visits: Visit[]): Rollup {
-  const live = visits.filter((v) => !v.deleted)
-  if (live.length === 0) {
-    return { latestVerdict: null, latestVisitDate: null, visitCount: 0 }
-  }
-  const latest = live.reduce((a, b) => (b.date > a.date ? b : a))
-  return {
-    latestVerdict: latest.verdict,
-    latestVisitDate: latest.date,
-    visitCount: live.length,
-  }
-}
+import { rollupOf } from './visitOrder'
+import type { Restaurant } from '../types/models'
 
 /**
  * Recompute and persist a restaurant's denormalized rollup from its visits, through the shared

@@ -2,14 +2,15 @@ import { getDB } from './db'
 import { newId } from './ids'
 import { now, today } from '../lib/dates'
 import { recomputeRollup } from './rollup'
+import { compareVisitsMostRecentFirst } from './visitOrder'
 import { emitLocalChange, emitStoreChange } from './events'
 import type { Verdict, Visit } from '../types/models'
 
 export interface VisitInput {
   id?: string
   restaurantId: string
-  /** ISO date (YYYY-MM-DD); defaults to today. */
-  date?: string
+  /** ISO date (YYYY-MM-DD); omitted defaults to today, null is an undated visit. */
+  date?: string | null
   verdict: Verdict
   note?: string
 }
@@ -20,7 +21,7 @@ export async function createVisit(input: VisitInput): Promise<Visit> {
   const record: Visit = {
     id: input.id ?? newId(),
     restaurantId: input.restaurantId,
-    date: input.date ?? today(),
+    date: input.date === undefined ? today() : input.date,
     verdict: input.verdict,
     note: input.note,
     updated: now(),
@@ -57,7 +58,7 @@ export async function removeVisit(id: string): Promise<void> {
 export async function visitsForRestaurant(restaurantId: string): Promise<Visit[]> {
   const db = await getDB()
   const all = await db.getAllFromIndex('visits', 'by-restaurant', restaurantId)
-  return all.filter((v) => !v.deleted).sort((a, b) => (a.date < b.date ? 1 : -1))
+  return all.filter((v) => !v.deleted).sort(compareVisitsMostRecentFirst)
 }
 
 /** Low-level write with no `updated` stamp and no change event — used by the sync engine. */

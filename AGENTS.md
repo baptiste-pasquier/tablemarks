@@ -46,7 +46,7 @@ direction is what makes the app behave identically with or without an account.
 
 ## Storage and PocketBase
 
-IndexedDB `tablemarks` v2 is canonical and doubles as the durable sync outbox; localStorage holds
+IndexedDB `tablemarks` v3 is canonical and doubles as the durable sync outbox; localStorage holds
 only device-local preferences, keyed `tablemarks:<domain>` (`tablemarks:sortPreference`). Record
 shapes and local↔remote mapping: `docs/reference/data-model.md`.
 
