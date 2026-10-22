@@ -87,7 +87,9 @@ export function restaurantFromRemote(r: RemoteRestaurant): Restaurant {
     osm: readOsmSnapshot(r.osm) ?? undefined,
     pending: r.pending,
     latestVerdict: asVerdict(r.latestVerdict),
-    latestVisitDate: r.latestVisitDate,
+    // PocketBase stores a null text field as '', which an export would then refuse; the rollup
+    // recompute after a pull rewrites it anyway, but not when the sync stops before that.
+    latestVisitDate: r.latestVisitDate || null,
     visitCount: r.visitCount,
     updated: r.syncedAt ? normalizeInstant(r.syncedAt) : r.syncedAt,
     deleted: r.deleted,
