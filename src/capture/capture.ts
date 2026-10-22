@@ -58,10 +58,6 @@ interface ResolvedPlace {
 }
 
 async function preview(place: ResolvedPlace): Promise<CaptureResult> {
-  const existing = await allRestaurants()
-  const near = findNearMatch({ lat: place.lat, lng: place.lng, mapsUrl: place.mapsUrl }, existing)
-  if (near) return { status: 'duplicate', match: near }
-
   let match: GeoCandidate | undefined
   let matchFailed = false
   if (place.name) {
@@ -71,9 +67,13 @@ async function preview(place: ResolvedPlace): Promise<CaptureResult> {
       matchFailed = true
     }
   }
-  const sameObject =
-    match?.osm && findNearMatch({ lat: place.lat, lng: place.lng, osm: match.osm }, existing)
-  if (sameObject) return { status: 'duplicate', match: sameObject }
+  // Checked once the OSM object is known: before it, proximity alone would call a neighbour that
+  // OSM knows as a different place a duplicate.
+  const duplicate = findNearMatch(
+    { lat: place.lat, lng: place.lng, mapsUrl: place.mapsUrl, osm: match?.osm },
+    await allRestaurants(),
+  )
+  if (duplicate) return { status: 'duplicate', match: duplicate }
 
   // OSM's address when matched; a reverse geocode only when the place has no name of its own —
   // the address then provides it. Otherwise it is left for `commitCapture`: showing it here cost a
