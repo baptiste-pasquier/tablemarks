@@ -30,7 +30,7 @@ export function rollupOf(visits: Visit[]): Rollup {
   if (live.length === 0) {
     return { latestVerdict: null, latestVisitDate: null, visitCount: 0 }
   }
-  const latest = [...live].sort(compareVisitsMostRecentFirst)[0]
+  const latest = live.reduce((a, b) => (compareVisitsMostRecentFirst(b, a) < 0 ? b : a))
   return {
     latestVerdict: latest.verdict,
     latestVisitDate: latest.date,

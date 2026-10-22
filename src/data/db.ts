@@ -83,17 +83,23 @@ type UpgradeTransaction = IDBPTransaction<TablemarksDB, StoreNames<TablemarksDB>
 async function repairEmptyVisitDates(tx: UpgradeTransaction): Promise<void> {
   const visits = tx.objectStore('visits')
   const restaurants = tx.objectStore('restaurants')
+  // Every visit is already in memory, so group them here rather than query the index per restaurant.
+  const byRestaurant = new Map<string, Visit[]>()
   const affected = new Set<string>()
-  for (const visit of await visits.getAll()) {
-    if (visit.date !== '') continue
-    affected.add(visit.restaurantId)
-    await visits.put({ ...visit, date: null })
+  for (const stored of await visits.getAll()) {
+    const visit = stored.date === '' ? { ...stored, date: null } : stored
+    if (visit !== stored) {
+      affected.add(visit.restaurantId)
+      await visits.put(visit)
+    }
+    const theirs = byRestaurant.get(visit.restaurantId)
+    if (theirs) theirs.push(visit)
+    else byRestaurant.set(visit.restaurantId, [visit])
   }
   for (const restaurantId of affected) {
     const restaurant = await restaurants.get(restaurantId)
     if (!restaurant) continue
-    const theirs = await visits.index('by-restaurant').getAll(restaurantId)
-    await restaurants.put({ ...restaurant, ...rollupOf(theirs) })
+    await restaurants.put({ ...restaurant, ...rollupOf(byRestaurant.get(restaurantId) ?? []) })
   }
 }
 
