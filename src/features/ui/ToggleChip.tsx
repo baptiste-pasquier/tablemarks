@@ -43,18 +43,14 @@ function chipClass(
   // A tinted pill already reads as its thing without being selected, so it keeps its colors in
   // both states and the selection shows as a ring (see `chipStyle`) instead of a fill.
   const { base, inactiveWeight } = PILL_SIZE[size]
-  if (tinted) {
-    return `inline-flex ${base} items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold transition hover:brightness-95`
-  }
+  const pill = cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition', base)
+  if (tinted) return cn(pill, 'font-semibold hover:brightness-95')
   // Soft Pop is borderless, so relief tells a chip from the white card it sits on -- `shadow-chip`
   // is denser than a card's for that reason. Only the selected chip takes a fill, which is what
   // makes the selection findable among a dozen siblings; the pastel fill it replaced did not.
-  return cn(
-    `inline-flex ${base} items-center gap-1.5 rounded-full px-3 py-1.5 transition`,
-    active
-      ? `${activeTone ?? DEFAULT_ACTIVE_PILL} font-semibold shadow-chip`
-      : cn(inactiveWeight, 'bg-white text-gray-700 shadow-chip hover:bg-gray-50'),
-  )
+  return active
+    ? cn(pill, activeTone ?? DEFAULT_ACTIVE_PILL, 'font-semibold shadow-chip')
+    : cn(pill, inactiveWeight, 'bg-white text-gray-700 shadow-chip hover:bg-gray-50')
 }
 
 function chipStyle(
