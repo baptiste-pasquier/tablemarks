@@ -10,7 +10,9 @@ export interface DedupCandidate {
 
 /**
  * Find an already-saved place matching the candidate: the same OSM object, the same Maps link,
- * or coordinates within the near-match radius (~50 m default). Tombstoned records are ignored.
+ * or coordinates within the near-match radius (~50 m default). Proximity is skipped when both
+ * sides name a different OSM object: in a dense street, two restaurants sit well inside 50 m of
+ * each other. Tombstoned records are ignored.
  */
 export function findNearMatch(
   candidate: DedupCandidate,
@@ -19,9 +21,11 @@ export function findNearMatch(
 ): Restaurant | null {
   for (const r of existing) {
     if (r.deleted) continue
-    if (candidate.osm && r.osm?.type === candidate.osm.type && r.osm.id === candidate.osm.id)
-      return r
     if (candidate.mapsUrl && r.mapsUrl && candidate.mapsUrl === r.mapsUrl) return r
+    if (candidate.osm && r.osm) {
+      if (r.osm.type === candidate.osm.type && r.osm.id === candidate.osm.id) return r
+      continue
+    }
     if (r.lat !== null && r.lng !== null) {
       if (haversineMeters(candidate.lat, candidate.lng, r.lat, r.lng) <= radiusM) return r
     }

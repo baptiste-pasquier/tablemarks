@@ -49,4 +49,29 @@ describe('findNearMatch', () => {
     expect(findNearMatch({ lat: 45, lng: 4, osm: { type: 'node', id: 7 } }, [saved])?.id).toBe('a')
     expect(findNearMatch({ lat: 45, lng: 4, osm: { type: 'way', id: 7 } }, [saved])).toBeNull()
   })
+
+  it('does not match a nearby place that is a different OSM object', () => {
+    // Naniwa-ya (node 1477602784) and On the Bab (node 7680066685), rue Sainte-Anne: ~42 m apart.
+    const saved = r({
+      id: 'a',
+      lat: 48.8660452,
+      lng: 2.3352669,
+      osm: { type: 'node', id: 1477602784, checkedAt: 'x' },
+    })
+    const candidate = {
+      lat: 48.8664135,
+      lng: 2.3350978,
+      osm: { type: 'node' as const, id: 7680066685 },
+    }
+    expect(findNearMatch(candidate, [saved])).toBeNull()
+  })
+
+  it('still matches a nearby place when either side has no OSM object', () => {
+    const matched = r({ id: 'a', osm: { type: 'node', id: 1, checkedAt: 'x' } })
+    const unmatched = r({ id: 'b' })
+    expect(findNearMatch({ lat: 48.8567, lng: 2.3522 }, [matched])?.id).toBe('a')
+    expect(
+      findNearMatch({ lat: 48.8567, lng: 2.3522, osm: { type: 'node', id: 2 } }, [unmatched])?.id,
+    ).toBe('b')
+  })
 })
