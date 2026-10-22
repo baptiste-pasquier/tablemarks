@@ -66,6 +66,19 @@ describe('findNearMatch', () => {
     expect(findNearMatch(candidate, [saved])).toBeNull()
   })
 
+  it('prefers the same OSM object or Maps link over a nearby place listed first', () => {
+    const neighbour = r({ id: 'near', lat: 48.8567, lng: 2.3522 })
+    const sameOsm = r({ id: 'osm', lat: 0, lng: 0, osm: { type: 'node', id: 7, checkedAt: 'x' } })
+    const sameLink = r({ id: 'link', lat: 0, lng: 0, mapsUrl: 'https://maps.app.goo.gl/x' })
+    const at = { lat: 48.8566, lng: 2.3522 }
+    expect(findNearMatch({ ...at, osm: { type: 'node', id: 7 } }, [neighbour, sameOsm])?.id).toBe(
+      'osm',
+    )
+    expect(
+      findNearMatch({ ...at, mapsUrl: 'https://maps.app.goo.gl/x' }, [neighbour, sameLink])?.id,
+    ).toBe('link')
+  })
+
   it('still matches a nearby place when either side has no OSM object', () => {
     const matched = r({ id: 'a', osm: { type: 'node', id: 1, checkedAt: 'x' } })
     const unmatched = r({ id: 'b' })

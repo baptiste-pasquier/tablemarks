@@ -214,6 +214,33 @@ describe('capturePaste', () => {
     expect((await allRestaurants()).length).toBe(1)
   })
 
+  it('previews a pasted link whose OSM object differs from a saved neighbour', async () => {
+    // On the Bab is ~42 m from Naniwa-ya, rue Sainte-Anne: close, but a different OSM object.
+    await commitCapture(
+      draftFromCandidate({
+        name: 'Naniwa-ya',
+        lat: 48.8660452,
+        lng: 2.3352669,
+        osmClass: 'amenity=restaurant',
+        osm: { type: 'node', id: 1477602784, checkedAt: 'x' },
+      }),
+    )
+    const onTheBab = { type: 'node' as const, id: 7680066685, checkedAt: 'x' }
+    provider([
+      {
+        name: 'On the Bab',
+        lat: 48.8664135,
+        lng: 2.3350978,
+        osmClass: 'amenity=restaurant',
+        osm: onTheBab,
+      },
+    ])
+    const draft = await draftOf(
+      'https://www.google.com/maps/place/On+the+Bab/@48.8664135,2.3350978,17z',
+    )
+    expect(draft.match?.osm).toEqual(onTheBab)
+  })
+
   it('flags a duplicate at commit for a search pick of an already-saved OSM object', async () => {
     const candidate = {
       name: 'Chez Marcel',
