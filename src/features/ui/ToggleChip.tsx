@@ -2,6 +2,17 @@ import type { CSSProperties, ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 type ToggleChipShape = 'segment' | 'pill'
+type ToggleChipSize = 'chip' | 'button'
+
+/**
+ * A pill's height and type. `chip` is the filter row's touch-sized pill; `button` takes `Button`'s
+ * `secondary` format (text-sm, medium weight, no minimum height) for a toggle that sits among
+ * secondary buttons, such as "I don't remember when" beside the verdict picker.
+ */
+const PILL_SIZE: Record<ToggleChipSize, { base: string; inactiveWeight: string }> = {
+  chip: { base: 'min-h-10 text-xs', inactiveWeight: '' },
+  button: { base: 'text-sm', inactiveWeight: 'font-medium' },
+}
 
 // Exact active/hover/disabled class values preserved byte-for-byte from SortBar's `segmentClass`
 // and FilterBar's local `Chip` (KTD4) — no new values invented, no KD1 (Button) reconciliation
@@ -21,6 +32,7 @@ function chipClass(
   disabled: boolean,
   activeTone: string | undefined,
   tinted: boolean,
+  size: ToggleChipSize,
 ): string {
   if (shape === 'segment') {
     if (disabled) return 'min-h-10 px-3 py-1.5 text-xs font-medium text-gray-300 cursor-not-allowed'
@@ -30,17 +42,19 @@ function chipClass(
   }
   // A tinted pill already reads as its thing without being selected, so it keeps its colors in
   // both states and the selection shows as a ring (see `chipStyle`) instead of a fill.
+  const { base, inactiveWeight } = PILL_SIZE[size]
   if (tinted) {
-    return 'inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition hover:brightness-95'
+    return `inline-flex ${base} items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold transition hover:brightness-95`
   }
   // Soft Pop is borderless, so relief tells a chip from the white card it sits on -- `shadow-chip`
   // is denser than a card's for that reason. Only the selected chip takes a fill, which is what
   // makes the selection findable among a dozen siblings; the pastel fill it replaced did not.
-  return `inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition ${
+  return cn(
+    `inline-flex ${base} items-center gap-1.5 rounded-full px-3 py-1.5 transition`,
     active
       ? `${activeTone ?? DEFAULT_ACTIVE_PILL} font-semibold shadow-chip`
-      : 'bg-white text-gray-700 shadow-chip hover:bg-gray-50'
-  }`
+      : cn(inactiveWeight, 'bg-white text-gray-700 shadow-chip hover:bg-gray-50'),
+  )
 }
 
 function chipStyle(
@@ -76,6 +90,7 @@ function chipStyle(
  */
 export function ToggleChip({
   shape,
+  size = 'chip',
   active,
   activeTone,
   activeColor,
@@ -86,6 +101,8 @@ export function ToggleChip({
   children,
 }: {
   shape: ToggleChipShape
+  /** Pill only: see {@link PILL_SIZE}. A segment keeps SortBar's own sizing. */
+  size?: ToggleChipSize
   active: boolean
   /**
    * Surface + text classes for the selected state, replacing the brand fill. A chip that filters
@@ -123,6 +140,7 @@ export function ToggleChip({
           disabled,
           activeColor ? 'text-white' : activeTone,
           shape === 'pill' && tint !== undefined,
+          size,
         ),
         className,
       )}

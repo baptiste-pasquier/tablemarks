@@ -123,6 +123,25 @@ describe('ToggleChip', () => {
       expect(button).not.toHaveClass('bg-gray-200', 'shadow-sm', 'border', 'border-gray-300')
     })
 
+    it('takes the secondary button format at size="button", to sit in a row of buttons', () => {
+      const { rerender } = render(
+        <ToggleChip shape="pill" size="button" active={false} onClick={vi.fn()}>
+          Unknown
+        </ToggleChip>,
+      )
+      const button = screen.getByRole('button', { name: 'Unknown' })
+      expect(button).toHaveClass('px-3', 'py-1.5', 'text-sm', 'font-medium', 'bg-white')
+      expect(button).not.toHaveClass('min-h-10', 'text-xs')
+
+      rerender(
+        <ToggleChip shape="pill" size="button" active onClick={vi.fn()}>
+          Unknown
+        </ToggleChip>,
+      )
+      expect(button).toHaveClass('text-sm', 'font-semibold', 'bg-brand')
+      expect(button).not.toHaveClass('font-medium', 'min-h-10', 'text-xs')
+    })
+
     it('reflects active in aria-pressed', () => {
       render(
         <ToggleChip shape="pill" active onClick={vi.fn()}>

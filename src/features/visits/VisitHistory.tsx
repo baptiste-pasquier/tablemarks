@@ -118,7 +118,7 @@ export function VisitHistory({ restaurantId, visits }: { restaurantId: string; v
               aria-label={t('visitDetail.visitDateAria')}
               className="rounded-md border border-gray-300 bg-white p-1.5 text-sm disabled:opacity-50"
             />
-            <ToggleChip shape="pill" active={dateUnknown} onClick={toggleDateUnknown}>
+            <ToggleChip shape="pill" size="button" active={dateUnknown} onClick={toggleDateUnknown}>
               {t('visitDetail.dateUnknownToggle')}
             </ToggleChip>
           </div>
