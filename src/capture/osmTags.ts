@@ -15,7 +15,10 @@ export interface NominatimRow {
   extratags?: Record<string, string> | null
 }
 
-/** The kinds of place this app saves: exactly the families of the category catalog. */
+/**
+ * The kinds of place search lists first. Only display: a venue outside this list keeps its OSM data
+ * all the same, and a class here suggests a category only through `CLASS_CATEGORIES`.
+ */
 const EATERY_CLASSES: ReadonlySet<string> = new Set([
   'amenity=restaurant',
   'amenity=fast_food',
@@ -30,25 +33,20 @@ const EATERY_CLASSES: ReadonlySet<string> = new Set([
 ])
 
 /**
- * The OSM categories of an establishment, as opposed to a street, an address, a building or an
- * area. Every eatery is one; a shop that is not an eatery still is, and keeps its OSM data.
+ * The OSM categories whose every object is a business. `amenity`, `leisure` and `tourism` are not
+ * here: beside eateries they hold parks, car parks and viewpoints, which must not lend a place
+ * their snapshot (review #2).
  */
-const VENUE_CATEGORIES: ReadonlySet<string> = new Set([
-  'amenity',
-  'shop',
-  'craft',
-  'tourism',
-  'leisure',
-  'office',
-])
+const VENUE_CATEGORIES: ReadonlySet<string> = new Set(['shop', 'craft', 'office'])
 
 export function isEatery(candidate: Pick<GeoCandidate, 'osmClass'>): boolean {
   return candidate.osmClass !== undefined && EATERY_CLASSES.has(candidate.osmClass)
 }
 
+/** An establishment whose OSM data a place may keep: an eatery, a shop, a craft or an office. */
 export function isVenue(candidate: Pick<GeoCandidate, 'osmClass'>): boolean {
   const category = candidate.osmClass?.split('=')[0]
-  return category !== undefined && VENUE_CATEGORIES.has(category)
+  return isEatery(candidate) || (category !== undefined && VENUE_CATEGORIES.has(category))
 }
 
 function asOsmType(value: string | undefined): OsmType | undefined {

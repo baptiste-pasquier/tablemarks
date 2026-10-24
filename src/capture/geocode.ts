@@ -166,8 +166,8 @@ export async function matchNear(
       const got = foldName(c.name)
       return c.osm && isVenue(c) && got && wholeWordMatch(wanted, got)
     })
-    .map((c) => ({ c, distance: haversineMeters(lat, lng, c.lat, c.lng) }))
+    .map((c) => ({ c, eatery: isEatery(c), distance: haversineMeters(lat, lng, c.lat, c.lng) }))
     .filter((m) => m.distance <= MATCH_RADIUS_M)
-  matches.sort((a, b) => Number(isEatery(b.c)) - Number(isEatery(a.c)) || a.distance - b.distance)
+  matches.sort((a, b) => Number(b.eatery) - Number(a.eatery) || a.distance - b.distance)
   return matches[0]?.c ?? null
 }
