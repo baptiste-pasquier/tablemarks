@@ -33,7 +33,8 @@ never edited; OSM is where it is corrected.
 ### Eatery
 
 An OpenStreetMap object of a kind this app saves: a restaurant, fast food, café, bar, pub, ice
-cream, food court, bakery or pastry shop. Search results that are not eateries fold away.
+cream, food court, bakery, pastry shop or deli. Search results that are not eateries fold away,
+but a shop or other venue picked among them keeps its OpenStreetMap data all the same.
 
 ## Rating and status
 
