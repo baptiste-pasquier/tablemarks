@@ -33,13 +33,14 @@ never edited; OSM is where it is corrected.
 ### Eatery
 
 An OpenStreetMap object of a kind search lists first: a restaurant, fast food, café, bar, pub,
-ice cream, food court, bakery, pastry shop or deli. Search results that are not eateries fold
+beer garden, ice cream, food court, bakery, pastry shop, deli, caterer, chocolatier,
+confectioner, coffee or tea shop. Search results that are not eateries fold
 away, but a Venue picked among them keeps its OpenStreetMap data all the same.
 
 ### Venue
 
-An OpenStreetMap object that is a business: an Eatery, a shop, a craft (a brewery, a caterer) or
-an office. A Venue picked or matched brings its OSM snapshot; a street, an address, a park or a
+An OpenStreetMap object that is a business: an Eatery, a shop, a craft (a brewery, a winery), an
+office, a hotel or a covered market. A Venue picked or matched brings its OSM snapshot; a street, an address, a park or a
 car park never does.
 
 ## Rating and status

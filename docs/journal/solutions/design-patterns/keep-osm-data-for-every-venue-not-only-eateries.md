@@ -51,7 +51,14 @@ duplicates. Adding classes one by one only moves the next miss.
 
 - A new kind of food place should appear among the restaurants in search: add it to
   `EATERY_CLASSES`. Its OSM data is kept either way.
-- A result type should never carry a snapshot: it must fall outside `VENUE_CATEGORIES`.
+- A result type should never carry a snapshot: it must fall outside `VENUE_CATEGORIES` and
+  `VENUE_CLASSES`.
+
+The eatery list was then checked against taginfo frequencies (2026-10-23, world and France): it
+gained `amenity=biergarten`, `shop=ice_cream`, `craft=caterer` (the usual French tag for a
+traiteur, 2,209 in France), `shop=chocolate`, `shop=confectionery`, `shop=coffee` and `shop=tea`;
+`tourism=hotel` and `amenity=marketplace` became venues. Left out as too rare: `amenity=canteen`
+(266 in France) and `amenity=juice_bar` (2).
 
 ## Related
 
