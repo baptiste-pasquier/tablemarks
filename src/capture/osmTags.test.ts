@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { candidateFrom, isEatery, type NominatimRow } from './osmTags'
+import { candidateFrom, isEatery, isVenue, type NominatimRow } from './osmTags'
 
 const CHECKED = '2026-09-26T10:00:00.000Z'
 
@@ -91,6 +91,14 @@ describe('isEatery', () => {
     ['amenity=pub', true],
     ['shop=pastry', true],
     ['shop=bakery', true],
+    ['shop=deli', true],
+    ['amenity=biergarten', true],
+    ['shop=ice_cream', true],
+    ['craft=caterer', true],
+    ['shop=chocolate', true],
+    ['shop=confectionery', true],
+    ['shop=coffee', true],
+    ['shop=tea', true],
     ['shop=leather', false],
     ['highway=residential', false],
   ])('%s → %s', (osmClass, expected) => {
@@ -99,5 +107,31 @@ describe('isEatery', () => {
 
   it('is false without a class', () => {
     expect(isEatery({})).toBe(false)
+  })
+})
+
+describe('isVenue', () => {
+  it.each([
+    ['amenity=restaurant', true],
+    ['shop=chocolate', true],
+    ['shop=leather', true],
+    ['craft=brewery', true],
+    ['office=company', true],
+    ['tourism=hotel', true],
+    ['amenity=marketplace', true],
+    ['leisure=park', false],
+    ['amenity=parking', false],
+    ['amenity=toilets', false],
+    ['tourism=viewpoint', false],
+    ['highway=residential', false],
+    ['place=house', false],
+    ['building=yes', false],
+    ['boundary=administrative', false],
+  ])('%s → %s', (osmClass, expected) => {
+    expect(isVenue({ osmClass })).toBe(expected)
+  })
+
+  it('is false without a class', () => {
+    expect(isVenue({})).toBe(false)
   })
 })

@@ -104,8 +104,10 @@ its identity, address parts, `opening_hours`, phone and website. OSM stays the s
 for those fields — the app never edits them; it writes a snapshot at capture or on "Complete",
 replaces it whole on "Refresh", and sends "Correct" to openstreetmap.org. Only the category can
 come from it, and only for a place that has none. Matching a point to OSM (a pasted link, an old
-place) is a bounded Nominatim search: the nearest eatery within 75 m whose name matches, always
-confirmed by the user. Everything shown from a snapshot — the short zone, the compact address,
+place) is a bounded Nominatim search: the nearest venue within 75 m whose name matches, an
+Eatery winning over a nearer shop that is not one, always confirmed by the user. A Venue that is
+not an Eatery keeps its snapshot like any other; anything else — a street, an address, a park, a
+car park — never carries one. Everything shown from a snapshot — the short zone, the compact address,
 the open state — is derived at render, and the hours are read by a small in-house parser
 (`src/lib/openingHours.ts`) rather than the 118 KB `opening_hours` package; a value it cannot
 read is shown as written.
