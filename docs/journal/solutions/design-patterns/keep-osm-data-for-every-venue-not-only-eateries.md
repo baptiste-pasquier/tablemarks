@@ -30,10 +30,12 @@ draft carried no identity, so the duplicate check fell back to the 50 m radius.
 ## Guidance
 
 **Two questions, two predicates.** `isEatery` (a fixed class list) only orders search results:
-eateries first, the rest folded. `isVenue` (OSM category `amenity`, `shop`, `craft`, `tourism`,
-`leisure` or `office`) decides whether a picked or matched object brings its identity and snapshot
-(hours, phone, website, zone). A street, an address, a building or an area never does — that was
-the original reason for the filter (review #2), and it still holds.
+eateries first, the rest folded. `isVenue` (an eatery, or OSM category `shop`, `craft` or
+`office`) decides whether a picked or matched object brings its identity and snapshot (hours,
+phone, website, zone). A street, an address, a park or a car park never does — that was the
+original reason for the filter (review #2), and it still holds. Whole `amenity`, `leisure` and
+`tourism` categories were tried first and dropped in review: beside eateries they hold parks, car
+parks, toilets and viewpoints.
 
 **Matching a name to OSM** (`matchNear`: pasted link, "Complete") accepts any venue but ranks an
 eatery above a nearer venue that is not one, so "Paul" finds the bakery before "Optique Paul". The
