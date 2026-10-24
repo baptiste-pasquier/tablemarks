@@ -26,10 +26,29 @@ const EATERY_CLASSES: ReadonlySet<string> = new Set([
   'amenity=food_court',
   'shop=bakery',
   'shop=pastry',
+  'shop=deli',
+])
+
+/**
+ * The OSM categories of an establishment, as opposed to a street, an address, a building or an
+ * area. Every eatery is one; a shop that is not an eatery still is, and keeps its OSM data.
+ */
+const VENUE_CATEGORIES: ReadonlySet<string> = new Set([
+  'amenity',
+  'shop',
+  'craft',
+  'tourism',
+  'leisure',
+  'office',
 ])
 
 export function isEatery(candidate: Pick<GeoCandidate, 'osmClass'>): boolean {
   return candidate.osmClass !== undefined && EATERY_CLASSES.has(candidate.osmClass)
+}
+
+export function isVenue(candidate: Pick<GeoCandidate, 'osmClass'>): boolean {
+  const category = candidate.osmClass?.split('=')[0]
+  return category !== undefined && VENUE_CATEGORIES.has(category)
 }
 
 function asOsmType(value: string | undefined): OsmType | undefined {

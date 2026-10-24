@@ -1,4 +1,4 @@
-import { candidateFrom, isEatery, type NominatimRow } from './osmTags'
+import { candidateFrom, isEatery, isVenue, type NominatimRow } from './osmTags'
 import i18n from '../i18n/config'
 import { foldText } from '../lib/foldText'
 import { haversineMeters } from '../lib/geo'
@@ -145,9 +145,10 @@ export function lookupOsm(
 }
 
 /**
- * The OpenStreetMap object a known position and name most likely are: the nearest eatery within
+ * The OpenStreetMap object a known position and name most likely are: the nearest venue within
  * `MATCH_RADIUS_M` whose folded name shares every word with the other, in either direction
- * ("Mokonuts" meets "Mokonuts Cafe and Bakery", "Servan" meets "Le Servan"). Null when none
+ * ("Mokonuts" meets "Mokonuts Cafe and Bakery", "Servan" meets "Le Servan"). An eatery wins over
+ * a nearer venue that is not one, so "Paul" finds the bakery before "Optique Paul". Null when none
  * qualifies. Throws when the request fails, so a caller can tell "nothing there" from "could not
  * ask".
  */
@@ -160,16 +161,13 @@ export async function matchNear(
   const wanted = foldName(name)
   if (!wanted) return null
   const rows = await provider.search(name, { near: { lat, lng }, signal })
-  let best: GeoCandidate | null = null
-  let bestDistance = MATCH_RADIUS_M
-  for (const c of rows) {
-    const got = foldName(c.name)
-    if (!c.osm || !isEatery(c) || !got || !wholeWordMatch(wanted, got)) continue
-    const distance = haversineMeters(lat, lng, c.lat, c.lng)
-    if (distance <= bestDistance) {
-      best = c
-      bestDistance = distance
-    }
-  }
-  return best
+  const matches = rows
+    .filter((c) => {
+      const got = foldName(c.name)
+      return c.osm && isVenue(c) && got && wholeWordMatch(wanted, got)
+    })
+    .map((c) => ({ c, distance: haversineMeters(lat, lng, c.lat, c.lng) }))
+    .filter((m) => m.distance <= MATCH_RADIUS_M)
+  matches.sort((a, b) => Number(isEatery(b.c)) - Number(isEatery(a.c)) || a.distance - b.distance)
+  return matches[0]?.c ?? null
 }

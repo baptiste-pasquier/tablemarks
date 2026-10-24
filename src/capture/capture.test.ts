@@ -241,6 +241,27 @@ describe('capturePaste', () => {
     expect(draft.match?.osm).toEqual(onTheBab)
   })
 
+  it('saves a deli picked from search next to a saved restaurant', async () => {
+    // Naturale (shop=deli) is ~20 m from Gallika, rue du Faubourg-Poissonnière.
+    await commitCapture(
+      draftFromCandidate({
+        name: 'Gallika',
+        lat: 48.8736494,
+        lng: 2.3477888,
+        osmClass: 'amenity=fast_food',
+        osm: { type: 'node', id: 13930496841, checkedAt: 'x' },
+      }),
+    )
+    const naturale = draftFromCandidate({
+      name: 'Naturale',
+      lat: 48.8736786,
+      lng: 2.3480574,
+      osmClass: 'shop=deli',
+      osm: { type: 'node', id: 13195359529, checkedAt: 'x' },
+    })
+    expect((await commitCapture(naturale)).status).toBe('created')
+  })
+
   it('flags a duplicate at commit for a search pick of an already-saved OSM object', async () => {
     const candidate = {
       name: 'Chez Marcel',
@@ -325,8 +346,15 @@ describe('draftFromCandidate', () => {
 
   // review #2: picking a street or address from "N other results" used to store the street's own
   // OSM snapshot — "Correct"/"Refresh" then targeted the street, and "Complete" never came back.
-  it('drops the OSM snapshot of a non-eatery result', () => {
+  it('drops the OSM snapshot of a street or an address result', () => {
     expect(draftFromCandidate(STREET).match).toBeUndefined()
+    expect(draftFromCandidate({ ...STREET, osmClass: 'place=house' }).match).toBeUndefined()
+  })
+
+  // A shop that is not an eatery is still a place: its identity, hours and phone are kept.
+  it('keeps the OSM snapshot of a venue that is not an eatery', () => {
+    const shop = { ...EATERY, osmClass: 'shop=chocolate' }
+    expect(draftFromCandidate(shop).match).toEqual(shop)
   })
 
   it('keeps the OSM snapshot of an eatery result', () => {

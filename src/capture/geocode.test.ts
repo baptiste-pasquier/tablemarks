@@ -164,13 +164,26 @@ describe('matchNear', () => {
   })
 
   it.each([
-    ['a non-eatery', { osmClass: 'shop=leather' }],
+    ['a street', { osmClass: 'highway=residential' }],
     ['a place past 75 m', { lat: HERE.lat + 0.001 }],
     ['another name', { name: 'Double Dragon' }],
     ['a row without an OSM identity', { osm: undefined }],
   ])('ignores %s', async (_label, over) => {
     provide([candidate(over)])
     expect(await matchNear('Le Servan', HERE.lat, HERE.lng)).toBeNull()
+  })
+
+  it('matches a venue that is not an eatery when no eatery matches', async () => {
+    provide([candidate({ osmClass: 'shop=chocolate' })])
+    expect((await matchNear('Le Servan', HERE.lat, HERE.lng))?.osmClass).toBe('shop=chocolate')
+  })
+
+  it('prefers a farther eatery over a nearer venue that is not one', async () => {
+    provide([
+      candidate({ osmClass: 'shop=optician', osm: { type: 'node', id: 2, checkedAt: 'x' } }),
+      candidate({ lat: HERE.lat + 0.0003 }),
+    ])
+    expect((await matchNear('Le Servan', HERE.lat, HERE.lng))?.osm?.id).toBe(1)
   })
 
   it('does not search for an empty name', async () => {
