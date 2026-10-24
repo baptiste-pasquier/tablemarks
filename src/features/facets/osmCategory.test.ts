@@ -13,6 +13,10 @@ describe('suggestCategory', () => {
     [{ cuisineTag: ' Japanese ' }, 'japanese'],
     [{ osmClass: 'amenity=cafe' }, 'coffee_shop'],
     [{ osmClass: 'shop=pastry' }, 'pastry'],
+    [{ osmClass: 'amenity=biergarten' }, 'bar'],
+    [{ osmClass: 'shop=ice_cream' }, 'ice_cream'],
+    [{ osmClass: 'shop=coffee' }, 'coffee_shop'],
+    [{ osmClass: 'shop=tea' }, 'coffee_shop'],
     [{ cuisineTag: 'coffee_shop', osmClass: 'amenity=bar' }, 'coffee_shop'],
   ] as const)('%o → %s', (input, expected) => {
     expect(suggestCategory(input)).toBe(expected)

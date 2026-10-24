@@ -27,9 +27,16 @@ const EATERY_CLASSES: ReadonlySet<string> = new Set([
   'amenity=pub',
   'amenity=ice_cream',
   'amenity=food_court',
+  'amenity=biergarten',
   'shop=bakery',
   'shop=pastry',
   'shop=deli',
+  'shop=ice_cream',
+  'shop=chocolate',
+  'shop=confectionery',
+  'shop=coffee',
+  'shop=tea',
+  'craft=caterer',
 ])
 
 /**
@@ -39,14 +46,22 @@ const EATERY_CLASSES: ReadonlySet<string> = new Set([
  */
 const VENUE_CATEGORIES: ReadonlySet<string> = new Set(['shop', 'craft', 'office'])
 
+/** Classes from the categories left out above that are businesses: a hotel, a covered market. */
+const VENUE_CLASSES: ReadonlySet<string> = new Set(['tourism=hotel', 'amenity=marketplace'])
+
 export function isEatery(candidate: Pick<GeoCandidate, 'osmClass'>): boolean {
   return candidate.osmClass !== undefined && EATERY_CLASSES.has(candidate.osmClass)
 }
 
-/** An establishment whose OSM data a place may keep: an eatery, a shop, a craft or an office. */
+/** An establishment whose OSM data a place may keep: an eatery, a shop, a craft, an office… */
 export function isVenue(candidate: Pick<GeoCandidate, 'osmClass'>): boolean {
-  const category = candidate.osmClass?.split('=')[0]
-  return isEatery(candidate) || (category !== undefined && VENUE_CATEGORIES.has(category))
+  const { osmClass } = candidate
+  if (osmClass === undefined) return false
+  return (
+    isEatery(candidate) ||
+    VENUE_CLASSES.has(osmClass) ||
+    VENUE_CATEGORIES.has(osmClass.split('=')[0])
+  )
 }
 
 function asOsmType(value: string | undefined): OsmType | undefined {

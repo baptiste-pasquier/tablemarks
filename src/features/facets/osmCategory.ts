@@ -19,8 +19,12 @@ const CLASS_CATEGORIES: Readonly<Record<string, CuisineKey>> = {
   'amenity=bar': 'bar',
   'amenity=pub': 'bar',
   'amenity=ice_cream': 'ice_cream',
+  'amenity=biergarten': 'bar',
   'shop=bakery': 'bakery',
   'shop=pastry': 'pastry',
+  'shop=ice_cream': 'ice_cream',
+  'shop=coffee': 'coffee_shop',
+  'shop=tea': 'coffee_shop',
 }
 
 /**
